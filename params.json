@@ -1,0 +1,5 @@
+{
+	"router": "Paris",
+	"inProj": "epsg:4326",
+	"outProj": "epsg:3857"
+}
