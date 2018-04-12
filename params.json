@@ -1,5 +1,17 @@
 {
 	"router": "Paris",
-	"inProj": "epsg:4326",
-	"outProj": "epsg:3857"
+	"proj": {
+		"inProj": "epsg:4326",
+		"outProj": "epsg:3857"
+	},
+	"fig_params": {
+		"width": 400,
+		"height": 400,
+		"alpha_tile": 0.25,
+		"alpha_surf": 0.5,
+		"alpha_cont": 0.85,
+		"line_width_surf": 0.5,
+		"line_width_cont": 4,
+		"field": "time"
+	}
 }
