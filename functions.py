@@ -10,6 +10,8 @@ import pandas as pd
 from pandas.io.json import json_normalize
 import geopandas as gpd
 from pyproj import Proj, transform
+import geojson
+from geopy.geocoders import Nominatim
 
 from bokeh.palettes import Viridis, Spectral, Plasma
 from bokeh.io import show, output_notebook, output_file
@@ -18,8 +20,12 @@ from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool, LinearColorMapper
 from bokeh.layouts import row, widgetbox, gridplot
 
-import geojson
+geolocator = Nominatim()
 
+def geocode(adress):
+    location = geolocator.geocode(adress)
+    
+    return location.latitude, location.longitude
 
 
 def _convert_epsg(inProj, outProj, geojson_):
@@ -41,12 +47,12 @@ def _convert_epsg(inProj, outProj, geojson_):
 #
 #    return geojson_
 
-def _cutoffs(nb_iter, step):
+def _cutoffs(nb_iter, step):    
     end = step*(nb_iter+1)
     list_time = []
     cutoffs = ""
-    
-    for i in range(600, end, step):
+
+    for i in range(step, end, step):
         cutoffs += "&cutoffSec=" + str(i)
         list_time.append(i)
     
@@ -54,6 +60,8 @@ def _cutoffs(nb_iter, step):
     
 def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict_palette, inProj, outProj):
     
+    step = int(step)
+    nb_iter = int(nb_iter)
     if nb_iter > 11:
         print ("Please select a number of iterations inferior to 11")
         return
@@ -88,13 +96,15 @@ def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict
     gdf = _convert_epsg(inProj, outProj, geojson_)
     datasource = _convert_GeoPandas_to_Bokeh_format(gdf)
     
-    return datasource, colors, json_response
+    return datasource, colors
     
 #df['features'][0]['properties']['time']
 
 def _palette(list_time, dict_palette):
     
     palette_nb = len(list_time)
+    
+    dict_colors = {}
     
     for item,value in dict_palette.items():
         if palette_nb > 11 or palette_nb < 3:
@@ -106,9 +116,9 @@ def _palette(list_time, dict_palette):
         #Create time/colors dict
 #        dict_color = {time:color for time, color in zip(list_time, colors)}
         
-        dict_palette[item] = colors
+        dict_colors[item] = colors
     
-    return dict_palette
+    return dict_colors
 
 def _convert_GeoPandas_to_Bokeh_format(gdf):
     """

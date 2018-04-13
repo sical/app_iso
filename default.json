@@ -1,0 +1,15 @@
+{
+	"from_place":"48.842021, 2.349900",
+	"adress":"79 Rue Mouffetard, 75005 Paris",
+	"time_":"08:00",
+	"modes":"TRANSIT,WALK",
+	"max_dist":"800",
+	"step":600,
+	"nb_iter":"3",
+	"year_min":2018,
+	"month_min":4,
+	"day_min":4,
+	"year_max":2018,
+	"month_max":4,
+	"day_max":29
+}
