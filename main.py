@@ -91,7 +91,6 @@ dict_palette = {}
 dict_palette["viridis"] = Viridis 
 dict_palette["spectral"] = Spectral 
 dict_palette["plasma"] = Plasma 
-step = step
 
 #Run with defaults
 TOOLS = "pan,wheel_zoom,box_zoom,reset,hover,save"
@@ -107,15 +106,17 @@ data = get_iso(router,
                inProj, 
                outProj)
     
-geo_source = data[0]
-colors = data[1]
+source_polys = data[0]
+source_pts = data[1]
+colors = data[2]
 
 l_viridis = make_plot(
     colors, 
     "viridis", 
     params, 
     TOOLS, 
-    geo_source,
+    source_polys,
+    source_pts,
     STAMEN_TONER)
 
 x_range = l_viridis[0].x_range
@@ -126,7 +127,8 @@ l_plasma = make_plot(
         "plasma", 
         params, 
         TOOLS, 
-        geo_source,
+        source_polys,
+        source_pts,
         STAMEN_TONER,
         x_range=x_range,
         y_range=y_range
@@ -137,7 +139,8 @@ l_spectral = make_plot(
         "spectral", 
         params, 
         TOOLS, 
-        geo_source,
+        source_polys,
+        source_pts,
         STAMEN_TONER,
         x_range=x_range,
         y_range=y_range
@@ -168,8 +171,9 @@ def run():
                    inProj, 
                    outProj)
     
-    geo_source = data[0]
-    colors = data[1]
+    source_polys = data[0]
+    source_pts = data[1]
+    colors = data[2]
     
     
     for l in [("viridis",l_viridis), 
@@ -186,7 +190,7 @@ def run():
                 fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
                 line_color='white', 
                 line_width=params["fig_params"]["line_width_surf"], 
-                source=geo_source
+                source=source_polys
                 )
          
         l[1][1].multi_line(
@@ -195,15 +199,27 @@ def run():
                 line_alpha= params["fig_params"]["alpha_cont"], 
                 color={'field': 'time', 'transform': color_mapper},
                 line_width=params["fig_params"]["line_width_cont"], 
-                source=geo_source)
+                source=source_polys)
+        
+#        print(len(source_pts.data["xs"]))
+
+        l[1][2].circle(
+                'x', 
+                'y', 
+                line_alpha= params["fig_params"]["alpha_surf"], 
+                color={'field': 'time', 'transform': color_mapper},
+                line_width=params["fig_params"]["line_width_surf"], 
+                size=3,
+                source=source_pts
+                )
     
     
 button.on_click(run)
 
 #data = get_iso(router, from_place, time_, date, modes, max_dist, step, nb_iter, dict_palette, inProj, outProj)
 
-#geo_source = GeoJSONDataSource(geojson=str(data[0]))
-#geo_source = data[0]
+#source_polys = GeoJSONDataSource(geojson=str(data[0]))
+#source_polys = data[0]
 #colors = data[1]
 
 

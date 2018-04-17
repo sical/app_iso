@@ -12,6 +12,7 @@ import geopandas as gpd
 from pyproj import Proj, transform
 import geojson
 from geopy.geocoders import Nominatim
+from shapely.geometry import MultiPoint
 
 from bokeh.palettes import Viridis, Spectral, Plasma
 from bokeh.io import show, output_notebook, output_file
@@ -46,6 +47,17 @@ def _convert_epsg(inProj, outProj, geojson_):
 #                    xy[0], xy[1] = transform(inProj, outProj, xy[0], xy[1])
 #
 #    return geojson_
+
+def m_poly_to_pts(multipoly):
+    list_pts = []
+    for x in multipoly:
+        list_pts.extend(list(x.exterior.coords))      
+    
+    x = [pt[0] for pt in list_pts]
+    y = [pt[1] for pt in list_pts]
+    
+    return x,y
+
 
 def _cutoffs(nb_iter, step):    
     end = step*(nb_iter+1)
@@ -93,12 +105,37 @@ def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict
     
     str_json = str(json_response).replace("'", '"')
     geojson_ = geojson.loads(str_json)
-    gdf = _convert_epsg(inProj, outProj, geojson_)
-    datasource = _convert_GeoPandas_to_Bokeh_format(gdf)
+    gdf_poly = _convert_epsg(inProj, outProj, geojson_)
     
-    return datasource, colors
+    gdf_point = gdf_poly.copy()
     
-#df['features'][0]['properties']['time']
+    gdf_point['pts'] = gdf_point["geometry"].apply(lambda x: m_poly_to_pts(x))
+    gdf_point = gdf_point.drop(columns=["geometry"])
+    gdf_point[['xs', 'ys']] = gdf_point['pts'].apply(pd.Series)
+    gdf_point["new_time"] = None
+    
+    #Create points ColumnDataSource
+    l_time = []
+    l_xs = []
+    l_ys = []
+    
+    for line in gdf_point.itertuples():
+        l_xs.extend(line.xs)
+        l_ys.extend(line.ys)
+        l_time.extend([line.time,]*len(line.xs))
+    
+    l_time = [int(x) for x in l_time]        
+    points = ColumnDataSource(data=dict(
+            x=l_xs, 
+            y=l_ys, 
+            time=l_time
+            )
+        )
+    
+    datasource_poly = _convert_GeoPandas_to_Bokeh_format(gdf_poly, 'polygon')
+    
+    return datasource_poly, points, colors
+    
 
 def _palette(list_time, dict_palette):
     
@@ -120,7 +157,7 @@ def _palette(list_time, dict_palette):
     
     return dict_colors
 
-def _convert_GeoPandas_to_Bokeh_format(gdf):
+def _convert_GeoPandas_to_Bokeh_format(gdf, shape_type):
     """
     Function to convert a GeoPandas GeoDataFrame to a Bokeh
     ColumnDataSource object.
@@ -136,15 +173,15 @@ def _convert_GeoPandas_to_Bokeh_format(gdf):
     gdf_new['xs'] = gdf.apply(_getGeometryCoords, 
                              geom='geometry', 
                              coord_type='x', 
-                             shape_type='polygon', 
+                             shape_type=shape_type, 
                              axis=1)
     
     gdf_new['ys'] = gdf.apply(_getGeometryCoords, 
                              geom='geometry', 
                              coord_type='y', 
-                             shape_type='polygon', 
+                             shape_type=shape_type, 
                              axis=1)
-    
+
     return ColumnDataSource(gdf_new)
 
 
@@ -165,11 +202,11 @@ def _getGeometryCoords(line, geom, coord_type, shape_type):
         exterior = line[geom].geoms[0].exterior
         if coord_type == 'x':
             # Get the x coordinates of the exterior
-            return list( exterior.coords.xy[0] )    
+            return list(exterior.coords.xy[0] )    
         
         elif coord_type == 'y':
             # Get the y coordinates of the exterior
-            return list( exterior.coords.xy[1] )
+            return list(exterior.coords.xy[1] )
 
     elif shape_type == 'point':
         exterior = line[geom]
@@ -186,7 +223,8 @@ def make_plot(colors,
              palette_name, 
              params, 
              TOOLS, 
-             source,
+             source_polys,
+             source_pts,
              tile_provider,
              x_range=None,
              y_range=None):
@@ -222,7 +260,7 @@ def make_plot(colors,
                           fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
                           line_color='white', 
                           line_width=params["fig_params"]["line_width_surf"], 
-                          source=source)
+                          source=source_polys)
     
     p_surface_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
     ########
@@ -246,11 +284,37 @@ def make_plot(colors,
                              line_alpha= params["fig_params"]["alpha_cont"], 
                              color={'field': 'time', 'transform': color_mapper},
                              line_width=params["fig_params"]["line_width_cont"], 
-                             source=source)
+                             source=source_polys)
     
     p_contour_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
     
-    list_plot = [p_surface_cat, p_contour_cat]
+    
+    # POINTS 
+    p_points_cat = figure(
+            title=palette_name.upper() + " categorized points",  
+            tools=TOOLS, 
+            x_axis_location=None, 
+            y_axis_location=None, 
+            width=params["fig_params"]["width"], 
+            height=params["fig_params"]["height"],
+            x_range=x_range,
+            y_range=y_range)
+    
+    p_points_cat.grid.grid_line_color = None
+    p_points_cat.circle(
+            'x', 
+            'y', 
+            line_alpha= params["fig_params"]["alpha_surf"], 
+            color={'field': 'time', 'transform': color_mapper},
+            line_width=params["fig_params"]["line_width_surf"], 
+            size=3,
+            source=source_pts
+            )
+
+    
+    p_points_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
+    
+    list_plot = [p_surface_cat, p_contour_cat, p_points_cat]
     
     return list_plot
     
