@@ -12,6 +12,7 @@ from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool, LinearC
 from bokeh.layouts import row, widgetbox, gridplot, column
 from bokeh.models.widgets import TextInput, Button, CheckboxGroup, DatePicker
 
+import osmnx as ox
 import json
 
 from functions import get_iso, make_plot, geocode
@@ -76,16 +77,6 @@ l_widget = [
         [adress_in, button]
         ]
 
-
- 
-#from_place = 48.863043, 2.339759
-#time_ = "08:00" #HH:MM format
-#date = "04-05-2018" #MM-DD-YYYY format
-#modes = "TRANSIT,WALK"
-#max_dist = 800
-#step = 600
-#nb_iter = 3
-
 #Set the dict_colors
 dict_palette = {}
 dict_palette["viridis"] = Viridis 
@@ -106,9 +97,10 @@ data = get_iso(router,
                inProj, 
                outProj)
     
-source_polys = data[0]
-source_pts = data[1]
-colors = data[2]
+source_polys = data['poly']
+source_pts = data['points']
+colors = data['colors']
+buildings = data['buildings']
 
 l_viridis = make_plot(
     colors, 
@@ -117,6 +109,7 @@ l_viridis = make_plot(
     TOOLS, 
     source_polys,
     source_pts,
+    buildings,
     STAMEN_TONER)
 
 x_range = l_viridis[0].x_range
@@ -129,6 +122,7 @@ l_plasma = make_plot(
         TOOLS, 
         source_polys,
         source_pts,
+        buildings,
         STAMEN_TONER,
         x_range=x_range,
         y_range=y_range
@@ -141,11 +135,11 @@ l_spectral = make_plot(
         TOOLS, 
         source_polys,
         source_pts,
+        buildings,
         STAMEN_TONER,
         x_range=x_range,
         y_range=y_range
-                      )
-
+                      )    
 
 def run():
     date_value = date_.value
@@ -171,9 +165,9 @@ def run():
                    inProj, 
                    outProj)
     
-    source_polys = data[0]
-    source_pts = data[1]
-    colors = data[2]
+    source_polys = data['poly']
+    source_pts = data['points']
+    colors = data['colors']
     
     
     for l in [("viridis",l_viridis), 

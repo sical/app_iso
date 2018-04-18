@@ -13,6 +13,9 @@ from pyproj import Proj, transform
 import geojson
 from geopy.geocoders import Nominatim
 from shapely.geometry import MultiPoint
+import osmnx as ox
+import json
+import numpy as np
 
 from bokeh.palettes import Viridis, Spectral, Plasma
 from bokeh.io import show, output_notebook, output_file
@@ -21,7 +24,57 @@ from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool, LinearColorMapper
 from bokeh.layouts import row, widgetbox, gridplot
 
+from transformations import getCoords
+
 geolocator = Nominatim()
+
+def network_to_datasource(poly):
+    a =1 
+
+
+def gdf_to_geojson(gdf, properties):
+    """
+    Inspired by: http://geoffboeing.com/2015/10/exporting-python-data-geojson/
+    """
+    
+    geojson = {"type":"FeatureCollection", "features":[]}
+    for line in gdf.itertuples():
+        feature = {"type":"Feature",
+                   "properties":{},
+                   "geometry":{"type":"Polygon",
+                               "coordinates":[]}}
+        feature["geometry"]["coordinates"] = [[np.dstack((pt[0],pt[1])) for pt in line.geometry.exterior.coords.xy]]
+        for prop in properties:
+            feature["properties"][prop] = line[properties.index(prop)]
+        geojson["features"].append(feature)
+    return json.dumps(geojson)
+    
+def buildings_to_datasource(polygon):
+    buildings = ox.buildings.buildings_from_polygon(polygon, retain_invalid=False)
+    buildings = buildings.to_crs({"init":"epsg:3857"})
+    all_buildings = buildings.geometry.unary_union
+    one_build = gpd.GeoDataFrame()
+    one_build["geometry"] = all_buildings
+    one_build.set_geometry("geometry", inplace=True, crs={'init':'epsg:3857'})
+    
+    buildings_json = gdf_to_geojson(one_build, list(one_build.columns.values))
+    
+    print (buildings_json)
+    
+#    one_build.geometry.simplify(40)
+    
+#    print (all_buildings)
+#    print (one_build["geometry"])
+    
+#    sys.exit()
+#    datasource_buildings = _convert_GeoPandas_to_Bokeh_format(one_build, 'polygon')
+    
+#    print ( "============================================")
+#    print (datasource_buildings.data['xs'])
+#    
+#    print ("============================================")
+    
+    return GeoJSONDataSource(geojson=buildings_json)
 
 def geocode(adress):
     location = geolocator.geocode(adress)
@@ -69,6 +122,35 @@ def _cutoffs(nb_iter, step):
         list_time.append(i)
     
     return cutoffs, list_time
+
+
+def create_pts(gdf_poly):
+    gdf_point = gdf_poly.copy()
+    
+    gdf_point['pts'] = gdf_point["geometry"].apply(lambda x: m_poly_to_pts(x))
+    gdf_point = gdf_point.drop(columns=["geometry"])
+    gdf_point[['xs', 'ys']] = gdf_point['pts'].apply(pd.Series)
+    gdf_point["new_time"] = None
+    
+    #Create points ColumnDataSource
+    l_time = []
+    l_xs = []
+    l_ys = []
+    
+    for line in gdf_point.itertuples():
+        l_xs.extend(line.xs)
+        l_ys.extend(line.ys)
+        l_time.extend([line.time,]*len(line.xs))
+    
+    l_time = [int(x) for x in l_time]        
+    points = ColumnDataSource(data=dict(
+            x=l_xs, 
+            y=l_ys, 
+            time=l_time
+            )
+        )
+    
+    return points
     
 def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict_palette, inProj, outProj):
     
@@ -98,43 +180,34 @@ def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict
     code = r.status_code
 
     if code == 200:
-        json_response = r.json()
+        json_response = json.dumps(r.json())
     else:
         print ('ERROR:', code)
         return
     
-    str_json = str(json_response).replace("'", '"')
-    geojson_ = geojson.loads(str_json)
+#    str_json = str(json_response).replace("'", '"')
+    
+    geojson_ = geojson.loads(json_response)
     gdf_poly = _convert_epsg(inProj, outProj, geojson_)
     
-    gdf_point = gdf_poly.copy()
-    
-    gdf_point['pts'] = gdf_point["geometry"].apply(lambda x: m_poly_to_pts(x))
-    gdf_point = gdf_point.drop(columns=["geometry"])
-    gdf_point[['xs', 'ys']] = gdf_point['pts'].apply(pd.Series)
-    gdf_point["new_time"] = None
-    
-    #Create points ColumnDataSource
-    l_time = []
-    l_xs = []
-    l_ys = []
-    
-    for line in gdf_point.itertuples():
-        l_xs.extend(line.xs)
-        l_ys.extend(line.ys)
-        l_time.extend([line.time,]*len(line.xs))
-    
-    l_time = [int(x) for x in l_time]        
-    points = ColumnDataSource(data=dict(
-            x=l_xs, 
-            y=l_ys, 
-            time=l_time
-            )
-        )
+    points = create_pts(gdf_poly)
     
     datasource_poly = _convert_GeoPandas_to_Bokeh_format(gdf_poly, 'polygon')
     
-    return datasource_poly, points, colors
+    poly_for_osmnx = gdf_poly.copy().to_crs({"init":"epsg:4326"})
+    
+    polygon = poly_for_osmnx["geometry"].iloc[-1]
+    
+    buildings = buildings_to_datasource(polygon)
+#    print (buildings.data['xs'])
+    
+#    sys.exit()
+    
+    return {'poly':datasource_poly, 
+            'points':points,
+            'colors':colors,
+            'buildings':buildings
+            }
     
 
 def _palette(list_time, dict_palette):
@@ -185,6 +258,25 @@ def _convert_GeoPandas_to_Bokeh_format(gdf, shape_type):
     return ColumnDataSource(gdf_new)
 
 
+def getPolyCoords(line, geom, coord_type):
+    """
+    
+    Returns the coordinates ('x' or 'y') of edges of a Polygon exterior
+    Source: https://automating-gis-processes.github.io/2016/Lesson5-interactive-map-bokeh.html
+    
+    """
+
+    # Parse the exterior of the coordinate
+    exterior = line[geom].exterior
+
+    if coord_type == 'x':
+        # Get the x coordinates of the exterior
+        return list( exterior.coords.xy[0] )
+    elif coord_type == 'y':
+        # Get the y coordinates of the exterior
+        return list( exterior.coords.xy[1] )
+
+
 def _getGeometryCoords(line, geom, coord_type, shape_type):
     """
     Returns the coordinates ('x' or 'y') of edges of a Polygon exterior.
@@ -200,6 +292,7 @@ def _getGeometryCoords(line, geom, coord_type, shape_type):
     # Parse the exterior of the coordinate
     if shape_type == 'polygon':
         exterior = line[geom].geoms[0].exterior
+        
         if coord_type == 'x':
             # Get the x coordinates of the exterior
             return list(exterior.coords.xy[0] )    
@@ -225,6 +318,7 @@ def make_plot(colors,
              TOOLS, 
              source_polys,
              source_pts,
+             buildings,
              tile_provider,
              x_range=None,
              y_range=None):
@@ -262,6 +356,14 @@ def make_plot(colors,
                           line_width=params["fig_params"]["line_width_surf"], 
                           source=source_polys)
     
+    p_surface_cat.patches('xs', 
+                          'ys', 
+                          fill_alpha= params["fig_params"]["alpha_surf"], 
+                          fill_color= "red", 
+                          line_color='white', 
+                          line_width=params["fig_params"]["line_width_surf"], 
+                          source=buildings)
+    
     p_surface_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
     ########
     
@@ -285,6 +387,14 @@ def make_plot(colors,
                              color={'field': 'time', 'transform': color_mapper},
                              line_width=params["fig_params"]["line_width_cont"], 
                              source=source_polys)
+    
+    p_contour_cat.patches('xs', 
+                          'ys', 
+                          fill_alpha= params["fig_params"]["alpha_surf"], 
+                          fill_color= "red", 
+                          line_color='white', 
+                          line_width=params["fig_params"]["line_width_surf"], 
+                          source=buildings)
     
     p_contour_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
     
@@ -310,6 +420,16 @@ def make_plot(colors,
             size=3,
             source=source_pts
             )
+#    print ("################################")
+#    print(buildings["xs"])
+    
+    p_points_cat.patches('xs', 
+                          'ys', 
+                          fill_alpha= params["fig_params"]["alpha_surf"], 
+                          fill_color= "red", 
+                          line_color='white', 
+                          line_width=params["fig_params"]["line_width_surf"], 
+                          source=buildings)
 
     
     p_points_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
