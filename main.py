@@ -167,6 +167,7 @@ def run():
     
     source_polys = data['poly']
     source_pts = data['points']
+    source_buildings = data['buildings']
     colors = data['colors']
     
     
@@ -186,6 +187,17 @@ def run():
                 line_width=params["fig_params"]["line_width_surf"], 
                 source=source_polys
                 )
+        
+        l[1][0].patches(
+                'xs', 
+                'ys', 
+                fill_alpha= params["fig_params"]["alpha_building"], 
+                fill_color= "black", 
+                line_color='white', 
+                line_width=params["fig_params"]["line_width_building"], 
+                source=source_buildings,
+                legend="batiments"
+              )
          
         l[1][1].multi_line(
                 'xs', 
@@ -194,6 +206,17 @@ def run():
                 color={'field': 'time', 'transform': color_mapper},
                 line_width=params["fig_params"]["line_width_cont"], 
                 source=source_polys)
+        
+        l[1][1].patches(
+                'xs', 
+                'ys', 
+                fill_alpha= params["fig_params"]["alpha_building"], 
+                fill_color= "black", 
+                line_color='white', 
+                line_width=params["fig_params"]["line_width_building"], 
+                source=source_buildings,
+                legend="batiments"
+              )
         
 #        print(len(source_pts.data["xs"]))
 
@@ -206,6 +229,17 @@ def run():
                 size=3,
                 source=source_pts
                 )
+        
+        l[1][2].patches(
+                'xs', 
+                'ys', 
+                fill_alpha= params["fig_params"]["alpha_building"], 
+                fill_color= "black", 
+                line_color='white', 
+                line_width=params["fig_params"]["line_width_building"], 
+                source=source_buildings,
+                legend="batiments"
+              )
     
     
 button.on_click(run)
