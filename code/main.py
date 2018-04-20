@@ -18,7 +18,7 @@ import json
 from functions import get_iso, make_plot, geocode
 
 #Parameters
-params = "./app_iso/params.json"
+params = "./code/params/params.json"
 params = json.load(open(params))
 
 router = params["router"]
@@ -28,7 +28,7 @@ inProj = params["proj"]["inProj"]
 outProj = params["proj"]["outProj"]
 
 #Default
-default = "./app_iso/default.json"
+default = "./code/params/default.json"
 default = json.load(open(default))
 from_place = default["from_place"]
 adress = default["adress"]
