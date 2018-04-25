@@ -60,16 +60,6 @@ step_in = TextInput(value=str(int(step/60)), title="Entrez une duree en minutes:
 modes_in = TextInput(value=modes, title="Entrez des modes:")
 max_dist_in = TextInput(value=max_dist, title="Entrez une distance maximum de marche (en mètres)")
     
-    
-#def get_value(attrname, old, new):
-#    
-#    print(date_.value)
-    
-
-#date_.on_change('value', get_value)
-
-#chbx_modes = CheckboxGroup(
-#        labels=["Transports collectifs", "Voiture"], active=[0, 1])
 
 l_widget = [
         [date_, time_in],
@@ -84,7 +74,7 @@ dict_palette["spectral"] = Spectral
 dict_palette["plasma"] = Plasma 
 
 #Run with defaults
-TOOLS = "pan,wheel_zoom,box_zoom,reset,hover,save"
+TOOLS = "pan,wheel_zoom,reset,hover,save"
 data = get_iso(router, 
                from_place, 
                time_in, 
@@ -101,6 +91,7 @@ source_polys = data['poly']
 source_pts = data['points']
 colors = data['colors']
 buildings = data['buildings']
+network = data['network']
 
 l_viridis = make_plot(
     colors, 
@@ -110,7 +101,11 @@ l_viridis = make_plot(
     source_polys,
     source_pts,
     buildings,
-    STAMEN_TONER)
+    network,
+    STAMEN_TONER,
+    x_range = [243978, 276951],
+    y_range = [6234235, 6265465]
+    )
 
 x_range = l_viridis[0].x_range
 y_range = l_viridis[0].y_range
@@ -123,6 +118,7 @@ l_plasma = make_plot(
         source_polys,
         source_pts,
         buildings,
+        network,
         STAMEN_TONER,
         x_range=x_range,
         y_range=y_range
@@ -136,6 +132,7 @@ l_spectral = make_plot(
         source_polys,
         source_pts,
         buildings,
+        network,
         STAMEN_TONER,
         x_range=x_range,
         y_range=y_range
@@ -167,8 +164,9 @@ def run():
     
     source_polys = data['poly']
     source_pts = data['points']
-    source_buildings = data['buildings']
+    buildings = data['buildings']
     colors = data['colors']
+    network = data['network']
     
     
     for l in [("viridis",l_viridis), 
@@ -177,88 +175,106 @@ def run():
             
         
         color_mapper = LinearColorMapper(palette=colors[l[0]])
-
-        l[1][0].patches(
-                'xs', 
-                'ys', 
+        
+        options_buildings = dict(
+            fill_alpha= params["fig_params"]["alpha_building"],
+            fill_color= "black", 
+            line_color='white', 
+            line_width=params["fig_params"]["line_width_building"], 
+            source=buildings,
+            legend="batiments"
+            )
+    
+        options_iso_surf = dict(
                 fill_alpha= params["fig_params"]["alpha_surf"], 
                 fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
                 line_color='white', 
                 line_width=params["fig_params"]["line_width_surf"], 
-                source=source_polys
+                source=source_polys,
+                legend="isochrones"
+                )
+        
+        options_iso_contours = dict(
+                line_alpha= params["fig_params"]["alpha_cont"],
+                line_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=source_polys,
+                legend="isochrones"
+                )
+        
+        options_iso_pts = dict(
+                line_alpha= params["fig_params"]["alpha_surf"], 
+                color={'field': 'time', 'transform': color_mapper},
+                line_width=params["fig_params"]["line_width_surf"], 
+                size=3,
+                source=source_pts,
+                legend="isopoints"
+                )
+        
+        options_network = dict(
+                line_alpha= params["fig_params"]["alpha_network"], 
+                line_color=params["fig_params"]["color_network"],
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=network,
+                legend="network"
+                )
+
+        l[1][0].patches(
+                'xs', 
+                'ys', 
+                **options_iso_surf
                 )
         
         l[1][0].patches(
                 'xs', 
                 'ys', 
-                fill_alpha= params["fig_params"]["alpha_building"], 
-                fill_color= "black", 
-                line_color='white', 
-                line_width=params["fig_params"]["line_width_building"], 
-                source=source_buildings,
-                legend="batiments"
+                **options_buildings
+              )
+        
+        l[1][0].multi_line(
+                'xs', 
+                'ys', 
+                **options_network
               )
          
         l[1][1].multi_line(
                 'xs', 
                 'ys', 
-                line_alpha= params["fig_params"]["alpha_cont"], 
-                color={'field': 'time', 'transform': color_mapper},
-                line_width=params["fig_params"]["line_width_cont"], 
-                source=source_polys)
+                **options_iso_contours)
         
         l[1][1].patches(
                 'xs', 
                 'ys', 
-                fill_alpha= params["fig_params"]["alpha_building"], 
-                fill_color= "black", 
-                line_color='white', 
-                line_width=params["fig_params"]["line_width_building"], 
-                source=source_buildings,
-                legend="batiments"
+                **options_buildings
               )
         
-#        print(len(source_pts.data["xs"]))
+        l[1][1].multi_line(
+                'xs', 
+                'ys', 
+                **options_network
+              )
 
         l[1][2].circle(
                 'x', 
                 'y', 
-                line_alpha= params["fig_params"]["alpha_surf"], 
-                color={'field': 'time', 'transform': color_mapper},
-                line_width=params["fig_params"]["line_width_surf"], 
-                size=3,
-                source=source_pts
+                **options_iso_pts
                 )
         
         l[1][2].patches(
                 'xs', 
                 'ys', 
-                fill_alpha= params["fig_params"]["alpha_building"], 
-                fill_color= "black", 
-                line_color='white', 
-                line_width=params["fig_params"]["line_width_building"], 
-                source=source_buildings,
-                legend="batiments"
+                **options_buildings
+              )
+        
+        l[1][2].multi_line(
+                'xs', 
+                'ys', 
+                **options_network
               )
     
     
 button.on_click(run)
 
-#data = get_iso(router, from_place, time_, date, modes, max_dist, step, nb_iter, dict_palette, inProj, outProj)
-
-#source_polys = GeoJSONDataSource(geojson=str(data[0]))
-#source_polys = data[0]
-#colors = data[1]
-
-
-
-
-
-#hover = p.select_one(HoverTool)
-#hover.point_policy = "follow_mouse"
-#hover.tooltips = [("Provincia:", "@provincia")]
-
-output_file("Iso_app.html", title="Testing isochrone")
 
 layout = row(
             gridplot(

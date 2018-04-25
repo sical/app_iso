@@ -11,6 +11,8 @@
 		"alpha_surf": 0.5,
 		"alpha_cont": 0.85,
 		"alpha_building": 0.0,
+		"alpha_network": 0.6,
+		"color_network": "black",
 		"line_width_surf": 0.5,
 		"line_width_cont": 4,
 		"line_width_building": 1, 

@@ -23,11 +23,9 @@ from bokeh.plotting import figure, show, output_file
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool, LinearColorMapper
 from bokeh.layouts import row, widgetbox, gridplot
+import datashader as ds
 
 geolocator = Nominatim()
-
-def network_to_datasource(poly):
-    a =1 
 
 
 def gdf_to_geojson(gdf, properties):
@@ -74,14 +72,41 @@ def buildings_to_datasource(polygon):
     buildings = ox.buildings.buildings_from_polygon(polygon, retain_invalid=False)
     buildings.geometry.simplify(0.8, preserve_topology=False)
     buildings = buildings.to_crs({"init":"epsg:3857"})
-#    all_buildings = buildings.geometry.unary_union
-#    one_build = gpd.GeoDataFrame()
-#    one_build["geometry"] = all_buildings
-#    one_build.set_geometry("geometry", inplace=True, crs={'init':'epsg:4326'})
     
     buildings_json = gdf_to_geojson(buildings, [])
     
     return GeoJSONDataSource(geojson=buildings_json)
+
+def _line_xs_ys(line):     
+    xs = line.xy[0]
+    ys = line.xy[1]
+    
+    return (xs,ys)
+
+def network_to_datasource(polygon):
+    G = ox.graph_from_polygon(polygon)
+    nodes, edges = ox.graph_to_gdfs(G)
+    edges = edges.to_crs({"init":"epsg:3857"})
+    edges['pts'] = edges["geometry"].apply(lambda x: _line_xs_ys(x))
+    edges[['xs', 'ys']] = edges['pts'].apply(pd.Series)
+    edges = edges.drop('geometry', axis=1)
+    xs = []
+    ys = []
+    
+    for x in edges['xs']:
+        xs.append(x.tolist())
+        
+    for y in edges['ys']:
+        ys.append(y.tolist())
+    
+    edges = ColumnDataSource(dict(
+            xs = xs,
+            ys = ys
+            )
+    )
+    
+    return edges
+    
 
 def geocode(adress):
     location = geolocator.geocode(adress)
@@ -192,8 +217,6 @@ def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict
         print ('ERROR:', code)
         return
     
-#    str_json = str(json_response).replace("'", '"')
-    
     geojson_ = geojson.loads(json_response)
     gdf_poly = _convert_epsg(inProj, outProj, geojson_)
     
@@ -206,21 +229,20 @@ def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict
     polygon = poly_for_osmnx["geometry"].iloc[-1]
     
     buildings = buildings_to_datasource(polygon)
-#    print (buildings.data['xs'])
     
-#    sys.exit()
+    network = network_to_datasource(polygon)
     
     return {'poly':datasource_poly, 
             'points':points,
             'colors':colors,
-            'buildings':buildings
+            'buildings':buildings,
+            'network':network
             }
     
 
 def _palette(list_time, dict_palette):
     
     palette_nb = len(list_time)
-    
     dict_colors = {}
     
     for item,value in dict_palette.items():
@@ -228,11 +250,7 @@ def _palette(list_time, dict_palette):
             print ("Please select a number inferior to 11 and superior to 3")
             return
 
-        colors = value[palette_nb]
-    
-        #Create time/colors dict
-#        dict_color = {time:color for time, color in zip(list_time, colors)}
-        
+        colors = value[palette_nb]    
         dict_colors[item] = colors
     
     return dict_colors
@@ -326,6 +344,7 @@ def make_plot(colors,
              source_polys,
              source_pts,
              buildings,
+             network,
              tile_provider,
              x_range=None,
              y_range=None):
@@ -341,6 +360,50 @@ def make_plot(colors,
             }
             )
     
+    options_buildings = dict(
+            fill_alpha= params["fig_params"]["alpha_building"],
+            fill_color= "black", 
+            line_color='white', 
+            line_width=params["fig_params"]["line_width_building"], 
+            source=buildings,
+            legend="batiments"
+            )
+    
+    options_iso_surf = dict(
+            fill_alpha= params["fig_params"]["alpha_surf"], 
+            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+            line_color='white', 
+            line_width=params["fig_params"]["line_width_surf"], 
+            source=source_polys,
+            legend="isochrones"
+            )
+    
+    options_iso_contours = dict(
+            line_alpha= params["fig_params"]["alpha_cont"], 
+            line_color={'field': params["fig_params"]["field"], 'transform': color_mapper},
+            line_width=params["fig_params"]["line_width_surf"], 
+            source=source_polys,
+            legend="isochrones"
+            )
+    
+    options_iso_pts = dict(
+            line_alpha= params["fig_params"]["alpha_surf"], 
+            color={'field': 'time', 'transform': color_mapper},
+            line_width=params["fig_params"]["line_width_surf"], 
+            size=3,
+            source=source_pts,
+            legend="isopoints"
+            )
+    
+    options_network = dict(
+                line_alpha= params["fig_params"]["alpha_network"], 
+                line_color=params["fig_params"]["color_network"],
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=network,
+                legend="network"
+                )
+    
+    
     
     # SURFACE
     if x_range is None and y_range is None:
@@ -350,7 +413,10 @@ def make_plot(colors,
                 x_axis_location=None, 
                 y_axis_location=None, 
                 width=params["fig_params"]["width"], 
-                height=params["fig_params"]["height"])
+                height=params["fig_params"]["height"],
+                match_aspect=True, 
+                aspect_scale=1
+                )
                 
     else:
         p_surface_cat = figure(
@@ -361,8 +427,11 @@ def make_plot(colors,
                 width=params["fig_params"]["width"], 
                 height=params["fig_params"]["height"],
                 x_range=x_range,
-                y_range=y_range)
-        
+                y_range=y_range,
+                match_aspect=True, 
+                aspect_scale=1
+                )
+    
     p_surface_cat.patches('xs', 
                           'ys', 
                           fill_alpha= 0.5, 
@@ -371,22 +440,17 @@ def make_plot(colors,
     
     p_surface_cat.patches('xs', 
                           'ys', 
-                          fill_alpha= params["fig_params"]["alpha_building"], 
-                          fill_color= "black", 
-                          line_color='white', 
-                          line_width=params["fig_params"]["line_width_building"], 
-                          source=buildings,
-                          legend="batiments")
+                          **options_buildings)
     
     p_surface_cat.grid.grid_line_color = None
+
     p_surface_cat.patches('xs', 
                           'ys', 
-                          fill_alpha= params["fig_params"]["alpha_surf"], 
-                          fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                          line_color='white', 
-                          line_width=params["fig_params"]["line_width_surf"], 
-                          source=source_polys,
-                          legend="isochrones")
+                          **options_iso_surf)
+    
+    p_surface_cat.multi_line('xs', 
+                          'ys', 
+                          **options_network)
     
     
     p_surface_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
@@ -407,7 +471,10 @@ def make_plot(colors,
             width=params["fig_params"]["width"], 
             height=params["fig_params"]["height"],
             x_range=x_range,
-            y_range=y_range)
+            y_range=y_range,
+            match_aspect=True, 
+            aspect_scale=1
+            )
     
     p_contour_cat.patches('xs', 
                           'ys', 
@@ -417,21 +484,16 @@ def make_plot(colors,
     
     p_contour_cat.patches('xs', 
                           'ys', 
-                          fill_alpha= params["fig_params"]["alpha_building"], 
-                          fill_color= "black", 
-                          line_color='white', 
-                          line_width=params["fig_params"]["line_width_building"], 
-                          source=buildings,
-                          legend="batiments")
+                          **options_buildings)
     
     p_contour_cat.grid.grid_line_color = None
     p_contour_cat.multi_line('xs', 
                              'ys', 
-                             line_alpha= params["fig_params"]["alpha_cont"], 
-                             color={'field': 'time', 'transform': color_mapper},
-                             line_width=params["fig_params"]["line_width_cont"], 
-                             source=source_polys,
-                             legend="isocontours")
+                             **options_iso_contours)
+    
+    p_surface_cat.multi_line('xs', 
+                          'ys', 
+                          **options_network)
     
     p_contour_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
     p_contour_cat.legend.location = "top_left"
@@ -447,7 +509,10 @@ def make_plot(colors,
             width=params["fig_params"]["width"], 
             height=params["fig_params"]["height"],
             x_range=x_range,
-            y_range=y_range)
+            y_range=y_range,
+            match_aspect=True, 
+            aspect_scale=1
+            )
     
     p_points_cat.patches('xs', 
                           'ys', 
@@ -457,23 +522,17 @@ def make_plot(colors,
     
     p_points_cat.patches('xs', 
                           'ys', 
-                          fill_alpha= params["fig_params"]["alpha_building"], 
-                          fill_color= "black", 
-                          line_color='white', 
-                          line_width=params["fig_params"]["line_width_building"], 
-                          source=buildings,
-                          legend="batiments")
+                          **options_buildings)
+    
+    p_surface_cat.multi_line('xs', 
+                          'ys', 
+                          **options_network)
     
     p_points_cat.grid.grid_line_color = None
     p_points_cat.circle(
             'x', 
             'y', 
-            line_alpha= params["fig_params"]["alpha_surf"], 
-            color={'field': 'time', 'transform': color_mapper},
-            line_width=params["fig_params"]["line_width_surf"], 
-            size=3,
-            source=source_pts,
-            legend="isopoints"
+            **options_iso_pts
             )
 #    print ("################################")
 #    print(buildings["xs"])
