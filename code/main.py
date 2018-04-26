@@ -5,17 +5,17 @@
 from datetime import date
 
 from bokeh.palettes import Viridis, Spectral, Plasma
-from bokeh.io import show, output_notebook, output_file, curdoc
-from bokeh.plotting import figure, show, output_file
+from bokeh.io import show, curdoc
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
-from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool, LinearColorMapper
-from bokeh.layouts import row, widgetbox, gridplot, column
-from bokeh.models.widgets import TextInput, Button, CheckboxGroup, DatePicker
+from bokeh.models import LinearColorMapper
+from bokeh.layouts import row, gridplot
+from bokeh.models.widgets import TextInput, Button, DatePicker
 
-import osmnx as ox
 import json
 
-from functions import get_iso, make_plot, geocode
+from get_iso import get_iso
+from make_plot import make_plot
+from functions import geocode
 
 #Parameters
 params = "./code/params/params.json"
@@ -73,19 +73,24 @@ dict_palette["viridis"] = Viridis
 dict_palette["spectral"] = Spectral 
 dict_palette["plasma"] = Plasma 
 
+params_iso = {
+        'router': router,
+        'from_place': from_place,
+        'time_in': time_in,
+        'min_date': min_date,
+        'modes': modes,
+        'max_dist': max_dist,
+        'step': step,
+        'nb_iter': nb_iter,
+        'dict_palette': dict_palette,
+        'inProj': inProj,
+        'outProj': outProj
+            }
+
+
 #Run with defaults
 TOOLS = "pan,wheel_zoom,reset,hover,save"
-data = get_iso(router, 
-               from_place, 
-               time_in, 
-               min_date.isoformat(), 
-               modes, 
-               max_dist, 
-               step, 
-               nb_iter, 
-               dict_palette, 
-               inProj, 
-               outProj)
+data = get_iso(params_iso)
     
 source_polys = data['poly']
 source_pts = data['points']
@@ -93,50 +98,33 @@ colors = data['colors']
 buildings = data['buildings']
 network = data['network']
 
-l_viridis = make_plot(
-    colors, 
-    "viridis", 
-    params, 
-    TOOLS, 
-    source_polys,
-    source_pts,
-    buildings,
-    network,
-    STAMEN_TONER,
-    x_range = [243978, 276951],
-    y_range = [6234235, 6265465]
-    )
+
+params_plot = {
+            'colors':colors, 
+            'palette_name':"viridis", 
+            'params':params, 
+            'tools':TOOLS, 
+            'source_polys':source_polys,
+            'source_pts':source_pts,
+            'buildings':buildings,
+            'network':network,
+            'tile_provider':STAMEN_TONER,
+            'x_range':[243978, 276951],
+            'y_range':[6234235, 6265465]
+            }
+
+l_viridis = make_plot(params_plot)
 
 x_range = l_viridis[0].x_range
 y_range = l_viridis[0].y_range
+params_plot['palette_name'] = "plasma"
+params_plot['x_range'] = x_range
+params_plot['y_range'] = y_range
 
-l_plasma = make_plot(
-        colors, 
-        "plasma", 
-        params, 
-        TOOLS, 
-        source_polys,
-        source_pts,
-        buildings,
-        network,
-        STAMEN_TONER,
-        x_range=x_range,
-        y_range=y_range
-                      )
+l_plasma = make_plot(params_plot)
 
-l_spectral = make_plot(
-        colors, 
-        "spectral", 
-        params, 
-        TOOLS, 
-        source_polys,
-        source_pts,
-        buildings,
-        network,
-        STAMEN_TONER,
-        x_range=x_range,
-        y_range=y_range
-                      )    
+params_plot['palette_name'] = "spectral"
+l_spectral = make_plot(params_plot)    
 
 def run():
     date_value = date_.value
@@ -197,7 +185,7 @@ def run():
         options_iso_contours = dict(
                 line_alpha= params["fig_params"]["alpha_cont"],
                 line_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                line_width=params["fig_params"]["line_width_surf"], 
+                line_width=params["fig_params"]["line_width_cont"], 
                 source=source_polys,
                 legend="isochrones"
                 )

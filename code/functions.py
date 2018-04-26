@@ -5,35 +5,21 @@ Created on Thu Apr 12 13:31:04 2018
 @author: thomas
 """
 
-import requests
 import pandas as pd
-from pandas.io.json import json_normalize
 import geopandas as gpd
-from pyproj import Proj, transform
-import geojson
 from geopy.geocoders import Nominatim
-from shapely.geometry import MultiPoint
 import osmnx as ox
 import json
-import numpy as np
 
-from bokeh.palettes import Viridis, Spectral, Plasma
-from bokeh.io import show, output_notebook, output_file
-from bokeh.plotting import figure, show, output_file
-from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
-from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool, LinearColorMapper
-from bokeh.layouts import row, widgetbox, gridplot
-import datashader as ds
+from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 
 geolocator = Nominatim()
 
 
 def gdf_to_geojson(gdf, properties):
     """
-    @param gdf: GeoDataframe (polygons)
-    @type gdf: GeoPandas GeoDataframe
-    @param properties: list of property columns
-    @type properties: list
+    @param gdf (GeoPandas GeoDataframe): GeoDataframe (polygons) 
+    @param properties (list): list of property columns
     
     Explanations for reverse and nested lists: 
         - https://tools.ietf.org/html/rfc7946#section-3.1.6
@@ -44,7 +30,7 @@ def gdf_to_geojson(gdf, properties):
     Returns GeoJson object that could be used in bokeh as GeoJsonDataSource
     """
     
-    geojson = {"type":"FeatureCollection", "features":[]}
+    geojson_ = {"type":"FeatureCollection", "features":[]}
     for line in gdf.itertuples():
         feature = {"type":"Feature",
                    "properties":{},
@@ -63,12 +49,21 @@ def gdf_to_geojson(gdf, properties):
             for prop in properties:
                 feature["properties"][prop] = line[properties.index(prop)]
         
-            geojson["features"].append(feature)
+            geojson_["features"].append(feature)
         else:
             feature.pop(properties, None)
-    return json.dumps(geojson)
+    return json.dumps(geojson_)
     
 def buildings_to_datasource(polygon):
+    """
+    Get buildings by requesting OSM via osmnx, perimeter: polygon and transform 
+    them into Bokeh GeoJSONDataSource after a reprojection into EPSG 3857
+    
+    @param polygon (Shapely Polygon): Polygon for request's spatial bounds
+    
+    Returns Bokeh GeoJSONDataSource 
+    
+    """
     buildings = ox.buildings.buildings_from_polygon(polygon, retain_invalid=False)
     buildings.geometry.simplify(0.8, preserve_topology=False)
     buildings = buildings.to_crs({"init":"epsg:3857"})
@@ -77,13 +72,30 @@ def buildings_to_datasource(polygon):
     
     return GeoJSONDataSource(geojson=buildings_json)
 
-def _line_xs_ys(line):     
+def _line_xs_ys(line):
+    """
+    Get Shapely line and extracts coordinates to return a tuple of xs and ys
+    
+    @param line (Shapely Linestring): Linestring
+    
+    Returns tuple of xs and ys
+    """
+    
     xs = line.xy[0]
     ys = line.xy[1]
     
     return (xs,ys)
 
 def network_to_datasource(polygon):
+    """
+    Osmx request (with polygon as perimeter) to get network graph, reprojection to EPSG 3857, extract
+    coordinates via  _line_xs_ys and returns Bokeh ColumnDataSource
+    
+    @param polygon (Shapely Polygon): Polygon for request's spatial bounds
+    
+    Returns Bokeh ColumnDataSource
+    """
+    
     G = ox.graph_from_polygon(polygon)
     nodes, edges = ox.graph_to_gdfs(G)
     edges = edges.to_crs({"init":"epsg:3857"})
@@ -109,12 +121,30 @@ def network_to_datasource(polygon):
     
 
 def geocode(adress):
+    """
+    Use geopy.geolocator (Nominatim) to get latitude and longitude (EPSG 4326) 
+    of an adress
+    
+    @param adress (str): postal adress
+    
+    Returns latitude and longitude
+    
+    """
     location = geolocator.geocode(adress)
     
     return location.latitude, location.longitude
 
 
 def _convert_epsg(inProj, outProj, geojson_):
+    """
+    Reprojection of a GeoDataFrame
+    
+    @param inProj (str): epsg string
+    @param outProj (str): epsg string
+    @geojson_ (geojson): geojson object
+    
+    Returns GeoDataFrame with changed coordinates
+    """
     gdf = gpd.GeoDataFrame.from_features(geojson_["features"])
     gdf.crs = {'init': inProj}
     gdf = gdf.to_crs({'init': outProj})
@@ -134,6 +164,13 @@ def _convert_epsg(inProj, outProj, geojson_):
 #    return geojson_
 
 def m_poly_to_pts(multipoly):
+    """
+    Transforms a Shapely MultiPolygon to a tuple of x and y points
+    
+    @param multipoly (Shapely MultiPolygon)
+    
+    Returns tuple of x and y points
+    """
     list_pts = []
     for x in multipoly:
         list_pts.extend(list(x.exterior.coords))      
@@ -144,7 +181,14 @@ def m_poly_to_pts(multipoly):
     return x,y
 
 
-def _cutoffs(nb_iter, step):    
+def _cutoffs(nb_iter, step):
+    """
+    Returns a string for OTP API for step and seconds by step
+    Returns a list of time values
+    
+    @param nb_iter (number): numer of iterations
+    @param step (number): number of steps
+    """
     end = step*(nb_iter+1)
     list_time = []
     cutoffs = ""
@@ -157,6 +201,13 @@ def _cutoffs(nb_iter, step):
 
 
 def create_pts(gdf_poly):
+    """
+    Create points ColumnDataSource from GeoDataFrame of polygons
+    
+    @param gdf_poly (GeoDataFrame): GeoDataFrame polygonss
+    
+    Returns ColumnDataSource
+    """
     gdf_point = gdf_poly.copy()
     
     gdf_point['pts'] = gdf_point["geometry"].apply(lambda x: m_poly_to_pts(x))
@@ -184,63 +235,15 @@ def create_pts(gdf_poly):
     
     return points
     
-def get_iso(router, from_place, time, date, modes, max_dist, step, nb_iter, dict_palette, inProj, outProj):
-    
-    step = int(step)
-    nb_iter = int(nb_iter)
-    if nb_iter > 11:
-        print ("Please select a number of iterations inferior to 11")
-        return
-    cut_time = _cutoffs(nb_iter, step)
-    cutoffs = cut_time[0]
-    list_time = cut_time[1]
-    
-#    dict_color = _palette(list_time, palette)[0]
-    colors = _palette(list_time, dict_palette)
-    
-    url = "http://localhost:8080/otp/routers/{}/isochrone?fromPlace={}&mode={}&date={}&time={}&maxWalkDistance={}{}".format(
-        router,
-        from_place,
-        modes,
-        date,
-        time,
-        max_dist,
-        cutoffs)
-
-    headers = {'accept': 'application/json'}
-    r = requests.get(url, headers=headers)
-    code = r.status_code
-
-    if code == 200:
-        json_response = json.dumps(r.json())
-    else:
-        print ('ERROR:', code)
-        return
-    
-    geojson_ = geojson.loads(json_response)
-    gdf_poly = _convert_epsg(inProj, outProj, geojson_)
-    
-    points = create_pts(gdf_poly)
-    
-    datasource_poly = _convert_GeoPandas_to_Bokeh_format(gdf_poly, 'polygon')
-    
-    poly_for_osmnx = gdf_poly.copy().to_crs({"init":"epsg:4326"})
-    
-    polygon = poly_for_osmnx["geometry"].iloc[-1]
-    
-    buildings = buildings_to_datasource(polygon)
-    
-    network = network_to_datasource(polygon)
-    
-    return {'poly':datasource_poly, 
-            'points':points,
-            'colors':colors,
-            'buildings':buildings,
-            'network':network
-            }
-    
 
 def _palette(list_time, dict_palette):
+    """
+    Returns a dict of colors => key: number, value: hexcolor
+    
+    @param list_time (list): list of time values
+    @param dict_palette (dict): dict of palette colors
+    
+    """
     
     palette_nb = len(list_time)
     dict_colors = {}
@@ -262,10 +265,10 @@ def _convert_GeoPandas_to_Bokeh_format(gdf, shape_type):
     
     Source: http://michael-harmon.com/blog/IntroToBokeh.html
     
-    :param: (GeoDataFrame) gdf: GeoPandas GeoDataFrame with polygon(s) under
+    @param gdf (GeoDataFrame): GeoPandas GeoDataFrame with polygon(s) under
                                 the column name 'geometry.'
                                 
-    :return: ColumnDataSource for Bokeh.
+    Returns ColumnDataSource for Bokeh.
     """
     gdf_new = gdf.drop('geometry', axis=1).copy()
     gdf_new['xs'] = gdf.apply(_getGeometryCoords, 
@@ -285,8 +288,11 @@ def _convert_GeoPandas_to_Bokeh_format(gdf, shape_type):
 
 def getPolyCoords(line, geom, coord_type):
     """
+    @param line (Shapely LineString): line
+    @param geom (str): geometry column name
+    @param coord_type (str): x or y 
     
-    Returns the coordinates ('x' or 'y') of edges of a Polygon exterior
+    Returns the list of coordinates ('x' or 'y') of edges of a Polygon exterior
     Source: https://automating-gis-processes.github.io/2016/Lesson5-interactive-map-bokeh.html
     
     """
@@ -308,10 +314,9 @@ def _getGeometryCoords(line, geom, coord_type, shape_type):
     
     Source: http://michael-harmon.com/blog/IntroToBokeh.html
     
-    :param: (GeoPandas Series) line : The row of each of the GeoPandas DataFrame.
-    :param: (str) geom : The column name.
-    :param: (str) coord_type : Whether it's 'x' or 'y' coordinate.
-    :param: (str) shape_type
+    @param line (GeoPandas Series): The row of each of the GeoPandas DataFrame.
+    @param geom (str): The column name.
+    @param coord_type (str): Whether it's 'x' or 'y' coordinate.
     """
     
     # Parse the exterior of the coordinate
@@ -337,210 +342,5 @@ def _getGeometryCoords(line, geom, coord_type, shape_type):
             # Get the y coordinates of the exterior
             return  exterior.coords.xy[1][0]
         
-def make_plot(colors, 
-             palette_name, 
-             params, 
-             TOOLS, 
-             source_polys,
-             source_pts,
-             buildings,
-             network,
-             tile_provider,
-             x_range=None,
-             y_range=None):
-    
-    color_mapper = LinearColorMapper(palette=colors[palette_name])
-    
-    xs_opacity = [[140750, 386600, 386600, 140750],]
-    ys_opacity = [[6138497, 6138497, 6369840, 6369840],]
-    
-    opacity_layer = ColumnDataSource(
-            {'xs':xs_opacity,
-             'ys':ys_opacity
-            }
-            )
-    
-    options_buildings = dict(
-            fill_alpha= params["fig_params"]["alpha_building"],
-            fill_color= "black", 
-            line_color='white', 
-            line_width=params["fig_params"]["line_width_building"], 
-            source=buildings,
-            legend="batiments"
-            )
-    
-    options_iso_surf = dict(
-            fill_alpha= params["fig_params"]["alpha_surf"], 
-            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-            line_color='white', 
-            line_width=params["fig_params"]["line_width_surf"], 
-            source=source_polys,
-            legend="isochrones"
-            )
-    
-    options_iso_contours = dict(
-            line_alpha= params["fig_params"]["alpha_cont"], 
-            line_color={'field': params["fig_params"]["field"], 'transform': color_mapper},
-            line_width=params["fig_params"]["line_width_surf"], 
-            source=source_polys,
-            legend="isochrones"
-            )
-    
-    options_iso_pts = dict(
-            line_alpha= params["fig_params"]["alpha_surf"], 
-            color={'field': 'time', 'transform': color_mapper},
-            line_width=params["fig_params"]["line_width_surf"], 
-            size=3,
-            source=source_pts,
-            legend="isopoints"
-            )
-    
-    options_network = dict(
-                line_alpha= params["fig_params"]["alpha_network"], 
-                line_color=params["fig_params"]["color_network"],
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=network,
-                legend="network"
-                )
-    
-    
-    
-    # SURFACE
-    if x_range is None and y_range is None:
-        p_surface_cat = figure(
-                title= palette_name.upper() + " categorized surface", 
-                tools=TOOLS, 
-                x_axis_location=None, 
-                y_axis_location=None, 
-                width=params["fig_params"]["width"], 
-                height=params["fig_params"]["height"],
-                match_aspect=True, 
-                aspect_scale=1
-                )
-                
-    else:
-        p_surface_cat = figure(
-                title= palette_name.upper() + " categorized surface", 
-                tools=TOOLS, 
-                x_axis_location=None, 
-                y_axis_location=None, 
-                width=params["fig_params"]["width"], 
-                height=params["fig_params"]["height"],
-                x_range=x_range,
-                y_range=y_range,
-                match_aspect=True, 
-                aspect_scale=1
-                )
-    
-    p_surface_cat.patches('xs', 
-                          'ys', 
-                          fill_alpha= 0.5, 
-                          fill_color= "black",
-                          source=opacity_layer)
-    
-    p_surface_cat.patches('xs', 
-                          'ys', 
-                          **options_buildings)
-    
-    p_surface_cat.grid.grid_line_color = None
 
-    p_surface_cat.patches('xs', 
-                          'ys', 
-                          **options_iso_surf)
-    
-    p_surface_cat.multi_line('xs', 
-                             'ys', 
-                             **options_network)
-    
-    
-    p_surface_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
-    p_surface_cat.legend.location = "top_left"
-    p_surface_cat.legend.click_policy="hide"
-    
-    ########
-    
-    x_range = p_surface_cat.x_range
-    y_range = p_surface_cat.y_range
-    
-    # CONTOUR 
-    p_contour_cat = figure(
-            title=palette_name.upper() + " categorized contour",  
-            tools=TOOLS, 
-            x_axis_location=None, 
-            y_axis_location=None, 
-            width=params["fig_params"]["width"], 
-            height=params["fig_params"]["height"],
-            x_range=x_range,
-            y_range=y_range,
-            match_aspect=True, 
-            aspect_scale=1
-            )
-    
-    p_contour_cat.patches('xs', 
-                          'ys', 
-                          fill_alpha= 0.5, 
-                          fill_color= "black",
-                          source=opacity_layer)
-    
-    p_contour_cat.patches('xs', 
-                          'ys', 
-                          **options_buildings)
-    
-    p_contour_cat.grid.grid_line_color = None
-    p_contour_cat.multi_line('xs', 
-                             'ys', 
-                             **options_iso_contours)
-    
-    p_contour_cat.multi_line('xs', 
-                          'ys', 
-                          **options_network)
-    
-    p_contour_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
-    p_contour_cat.legend.location = "top_left"
-    p_contour_cat.legend.click_policy="hide"
-    
-    
-    # POINTS 
-    p_points_cat = figure(
-            title=palette_name.upper() + " categorized points",  
-            tools=TOOLS, 
-            x_axis_location=None, 
-            y_axis_location=None, 
-            width=params["fig_params"]["width"], 
-            height=params["fig_params"]["height"],
-            x_range=x_range,
-            y_range=y_range,
-            match_aspect=True, 
-            aspect_scale=1
-            )
-    
-    p_points_cat.patches('xs', 
-                          'ys', 
-                          fill_alpha= 0.5, 
-                          fill_color= "black",
-                          source=opacity_layer)
-    
-    p_points_cat.patches('xs', 
-                          'ys', 
-                          **options_buildings)
-    
-    p_points_cat.multi_line('xs', 
-                          'ys', 
-                          **options_network)
-    
-    p_points_cat.grid.grid_line_color = None
-    p_points_cat.circle(
-            'x', 
-            'y', 
-            **options_iso_pts
-            )
-
-    
-    p_points_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
-    p_points_cat.legend.location = "top_left"
-    p_points_cat.legend.click_policy="hide"
-    
-    list_plot = [p_surface_cat, p_contour_cat, p_points_cat]
-    
-    return list_plot
     
