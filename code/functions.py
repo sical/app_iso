@@ -449,8 +449,8 @@ def make_plot(colors,
                           **options_iso_surf)
     
     p_surface_cat.multi_line('xs', 
-                          'ys', 
-                          **options_network)
+                             'ys', 
+                             **options_network)
     
     
     p_surface_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
@@ -491,7 +491,7 @@ def make_plot(colors,
                              'ys', 
                              **options_iso_contours)
     
-    p_surface_cat.multi_line('xs', 
+    p_contour_cat.multi_line('xs', 
                           'ys', 
                           **options_network)
     
@@ -524,7 +524,7 @@ def make_plot(colors,
                           'ys', 
                           **options_buildings)
     
-    p_surface_cat.multi_line('xs', 
+    p_points_cat.multi_line('xs', 
                           'ys', 
                           **options_network)
     
@@ -534,8 +534,6 @@ def make_plot(colors,
             'y', 
             **options_iso_pts
             )
-#    print ("################################")
-#    print(buildings["xs"])
 
     
     p_points_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
