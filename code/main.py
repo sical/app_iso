@@ -89,7 +89,7 @@ params_iso = {
 
 
 #Run with defaults
-TOOLS = "pan,wheel_zoom,reset,hover,save"
+TOOLS = "pan,wheel_zoom,reset,save"
 data = get_iso(params_iso)
     
 source_polys = data['poly']
@@ -138,17 +138,21 @@ def run():
     modes = modes_in.value
     max_dist = max_dist_in.value    
     
-    data = get_iso(router, 
-                   from_place, 
-                   time_value,
-                   date_value, 
-                   modes, 
-                   max_dist, 
-                   step_value, 
-                   nb_iter_value, 
-                   dict_palette, 
-                   inProj, 
-                   outProj)
+    params_iso = {
+        'router': router,
+        'from_place': from_place,
+        'time_in': time_value,
+        'min_date': min_date,
+        'modes': modes,
+        'max_dist': max_dist,
+        'step': step_value,
+        'nb_iter': nb_iter_value,
+        'dict_palette': dict_palette,
+        'inProj': inProj,
+        'outProj': outProj
+            }
+    
+    data = get_iso(params_iso)
     
     source_polys = data['poly']
     source_pts = data['points']
