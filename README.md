@@ -1,9 +1,11 @@
 # app_iso
-# Development of an isochrones visualisation app
-
-#Installation steps
+### Development of an isochrones visualisation app
+ 	 
+# Installation steps
 ## OpenTripPlanner server installation
-- Clone the Github repository
+- Clone the Github repository (uses git-lfs)
+- Verify that you have java8 (not compatible java9)
+
 - Then open a console and write (*otp directory is the directory where the jar file is: [...]\app_iso\otp*):
 ```
 cd [path/to/otp/directory]
@@ -29,3 +31,12 @@ bokeh serve code
 - Then open http://localhost:5006/code in your browser. Wait a minute (*this app is not really optimized for the moment and could take time for the first run*)
 
 - That's it. 
+
+## macOS/conda installation notes
+
+```
+conda create -n isochrones
+source activate isochrones
+conda config --add channels conda-forge
+conda install -n isochrones geopandas ipython bokeh requests osmnx jsonschema pandas pyproj geojson geopy Shapely numpy
+```
