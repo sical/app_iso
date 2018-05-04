@@ -76,7 +76,7 @@ dict_palette["plasma"] = Plasma
 params_iso = {
         'router': router,
         'from_place': from_place,
-        'time_in': time_in,
+        'time_in': time_in.value,
         'min_date': min_date,
         'modes': modes,
         'max_dist': max_dist,
@@ -95,8 +95,8 @@ data = get_iso(params_iso)
 source_polys = data['poly']
 source_pts = data['points']
 colors = data['colors']
-buildings = data['buildings']
-network = data['network']
+#buildings = data['buildings']
+#network = data['network']
 
 
 params_plot = {
@@ -106,8 +106,8 @@ params_plot = {
             'tools':TOOLS, 
             'source_polys':source_polys,
             'source_pts':source_pts,
-            'buildings':buildings,
-            'network':network,
+#            'buildings':buildings,
+#            'network':network,
             'tile_provider':STAMEN_TONER,
             'x_range':[243978, 276951],
             'y_range':[6234235, 6265465]
@@ -155,8 +155,8 @@ def run():
     data = get_iso(params_iso)
     
     source_polys = data['poly']
-    source_pts = data['points']
-    buildings = data['buildings']
+#    source_pts = data['points']
+#    buildings = data['buildings']
     colors = data['colors']
     network = data['network']
     
@@ -168,14 +168,14 @@ def run():
         
         color_mapper = LinearColorMapper(palette=colors[l[0]])
         
-        options_buildings = dict(
-            fill_alpha= params["fig_params"]["alpha_building"],
-            fill_color= "black", 
-            line_color='white', 
-            line_width=params["fig_params"]["line_width_building"], 
-            source=buildings,
-            legend="batiments"
-            )
+#        options_buildings = dict(
+#            fill_alpha= params["fig_params"]["alpha_building"],
+#            fill_color= "black", 
+#            line_color='white', 
+#            line_width=params["fig_params"]["line_width_building"], 
+#            source=buildings,
+#            legend="batiments"
+#            )
     
         options_iso_surf = dict(
                 fill_alpha= params["fig_params"]["alpha_surf"], 
@@ -203,13 +203,13 @@ def run():
                 legend="isopoints"
                 )
         
-        options_network = dict(
-                line_alpha= params["fig_params"]["alpha_network"], 
-                line_color=params["fig_params"]["color_network"],
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=network,
-                legend="network"
-                )
+#        options_network = dict(
+#                line_alpha= params["fig_params"]["alpha_network"], 
+#                line_color=params["fig_params"]["color_network"],
+#                line_width=params["fig_params"]["line_width_surf"], 
+#                source=network,
+#                legend="network"
+#                )
 
         l[1][0].patches(
                 'xs', 
@@ -217,34 +217,34 @@ def run():
                 **options_iso_surf
                 )
         
-        l[1][0].patches(
-                'xs', 
-                'ys', 
-                **options_buildings
-              )
+#        l[1][0].patches(
+#                'xs', 
+#                'ys', 
+#                **options_buildings
+#              )
         
-        l[1][0].multi_line(
-                'xs', 
-                'ys', 
-                **options_network
-              )
+#        l[1][0].multi_line(
+#                'xs', 
+#                'ys', 
+#                **options_network
+#              )
          
         l[1][1].multi_line(
                 'xs', 
                 'ys', 
                 **options_iso_contours)
         
-        l[1][1].patches(
-                'xs', 
-                'ys', 
-                **options_buildings
-              )
+#        l[1][1].patches(
+#                'xs', 
+#                'ys', 
+#                **options_buildings
+#              )
         
-        l[1][1].multi_line(
-                'xs', 
-                'ys', 
-                **options_network
-              )
+#        l[1][1].multi_line(
+#                'xs', 
+#                'ys', 
+#                **options_network
+#              )
 
         l[1][2].circle(
                 'x', 
@@ -252,17 +252,17 @@ def run():
                 **options_iso_pts
                 )
         
-        l[1][2].patches(
-                'xs', 
-                'ys', 
-                **options_buildings
-              )
+#        l[1][2].patches(
+#                'xs', 
+#                'ys', 
+#                **options_buildings
+#              )
         
-        l[1][2].multi_line(
-                'xs', 
-                'ys', 
-                **options_network
-              )
+#        l[1][2].multi_line(
+#                'xs', 
+#                'ys', 
+#                **options_network
+#              )
     
     
 button.on_click(run)

@@ -68,6 +68,7 @@ def get_iso(params):
         time_in,
         max_dist,
         cutoffs)
+    
 
     headers = {'accept': 'application/json'}
     r = requests.get(url, headers=headers)
@@ -86,17 +87,17 @@ def get_iso(params):
     
     datasource_poly = _convert_GeoPandas_to_Bokeh_format(gdf_poly, 'polygon')
     
-    poly_for_osmnx = gdf_poly.copy().to_crs({"init":"epsg:4326"})
+#    poly_for_osmnx = gdf_poly.copy().to_crs({"init":"epsg:4326"})
     
-    polygon = poly_for_osmnx["geometry"].iloc[-1]
+#    polygon = poly_for_osmnx["geometry"].iloc[-1]
     
-    buildings = buildings_to_datasource(polygon)
-    
-    network = network_to_datasource(polygon)
+#    buildings = buildings_to_datasource(polygon)
+#    
+#    network = network_to_datasource(polygon)
     
     return {'poly':datasource_poly, 
             'points':points,
             'colors':colors,
-            'buildings':buildings,
-            'network':network
+#            'buildings':buildings,
+#            'network':network
             }

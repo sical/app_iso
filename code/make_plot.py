@@ -41,8 +41,8 @@ def make_plot(params_plot):
     TOOLS = params_plot['tools'] 
     source_polys = params_plot['source_polys']
     source_pts = params_plot['source_pts']
-    buildings = params_plot['buildings']
-    network = params_plot['network']
+#    buildings = params_plot['buildings']
+#    network = params_plot['network']
     tile_provider = params_plot['tile_provider']
     x_range = params_plot['x_range']
     y_range = params_plot['y_range']
@@ -58,14 +58,14 @@ def make_plot(params_plot):
             }
             )
     
-    options_buildings = dict(
-            fill_alpha= params["fig_params"]["alpha_building"],
-            fill_color= "black", 
-            line_color='white', 
-            line_width=params["fig_params"]["line_width_building"], 
-            source=buildings,
-            legend="batiments"
-            )
+#    options_buildings = dict(
+#            fill_alpha= params["fig_params"]["alpha_building"],
+#            fill_color= "black", 
+#            line_color='white', 
+#            line_width=params["fig_params"]["line_width_building"], 
+#            source=buildings,
+#            legend="batiments"
+#            )
     
     options_iso_surf = dict(
             fill_alpha= params["fig_params"]["alpha_surf"], 
@@ -93,13 +93,13 @@ def make_plot(params_plot):
             legend="isopoints"
             )
     
-    options_network = dict(
-                line_alpha= params["fig_params"]["alpha_network"], 
-                line_color=params["fig_params"]["color_network"],
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=network,
-                legend="network"
-                )
+#    options_network = dict(
+#                line_alpha= params["fig_params"]["alpha_network"], 
+#                line_color=params["fig_params"]["color_network"],
+#                line_width=params["fig_params"]["line_width_surf"], 
+#                source=network,
+#                legend="network"
+#                )
     
     # SURFACE
     if x_range is None and y_range is None:
@@ -134,9 +134,9 @@ def make_plot(params_plot):
                           fill_color= "black",
                           source=opacity_layer)
     
-    p_surface_cat.patches('xs', 
-                          'ys', 
-                          **options_buildings)
+#    p_surface_cat.patches('xs', 
+#                          'ys', 
+#                          **options_buildings)
     
     p_surface_cat.grid.grid_line_color = None
 
@@ -144,9 +144,9 @@ def make_plot(params_plot):
                           'ys', 
                           **options_iso_surf)
     
-    p_surface_cat.multi_line('xs', 
-                             'ys', 
-                             **options_network)
+#    p_surface_cat.multi_line('xs', 
+#                             'ys', 
+#                             **options_network)
     
     
     p_surface_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
@@ -178,18 +178,18 @@ def make_plot(params_plot):
                           fill_color= "black",
                           source=opacity_layer)
     
-    p_contour_cat.patches('xs', 
-                          'ys', 
-                          **options_buildings)
+#    p_contour_cat.patches('xs', 
+#                          'ys', 
+#                          **options_buildings)
     
     p_contour_cat.grid.grid_line_color = None
     p_contour_cat.multi_line('xs', 
                              'ys', 
                              **options_iso_contours)
     
-    p_contour_cat.multi_line('xs', 
-                          'ys', 
-                          **options_network)
+#    p_contour_cat.multi_line('xs', 
+#                          'ys', 
+#                          **options_network)
     
     p_contour_cat.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
     p_contour_cat.legend.location = "top_left"
@@ -216,13 +216,13 @@ def make_plot(params_plot):
                           fill_color= "black",
                           source=opacity_layer)
     
-    p_points_cat.patches('xs', 
-                          'ys', 
-                          **options_buildings)
+#    p_points_cat.patches('xs', 
+#                          'ys', 
+#                          **options_buildings)
     
-    p_points_cat.multi_line('xs', 
-                          'ys', 
-                          **options_network)
+#    p_points_cat.multi_line('xs', 
+#                          'ys', 
+#                          **options_network)
     
     p_points_cat.grid.grid_line_color = None
     p_points_cat.circle(
