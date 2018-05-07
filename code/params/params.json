@@ -1,5 +1,4 @@
 {
-	"token": "your_navitia_api_token",
 	"proj": {
 		"inProj": "epsg:4326",
 		"outProj": "epsg:3857"

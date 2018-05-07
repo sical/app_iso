@@ -46,7 +46,7 @@ def gdf_to_geojson(gdf, properties):
             l_poly = []
             for pt in poly.exterior.coords:
                 l_poly.extend([[pt[0],pt[1]]])
-            l_tmp.append(list(reversed(l_poly)))
+            l_tmp.append(l_poly)
         feature["geometry"]["coordinates"] = [list(reversed(l_tmp))]
         
         if (properties != []) or (properties is not None):

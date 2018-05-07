@@ -3,6 +3,7 @@
 
 """
 from datetime import date
+import os
 
 from bokeh.palettes import Viridis, Spectral, Plasma
 from bokeh.io import show, curdoc
@@ -10,6 +11,8 @@ from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import LinearColorMapper
 from bokeh.layouts import row, gridplot
 from bokeh.models.widgets import TextInput, Button, DatePicker
+from dotenv import load_dotenv
+from pathlib import Path
 
 import json
 
@@ -18,6 +21,11 @@ from make_plot import make_plot
 from functions import geocode
 
 #Parameters
+env_path = Path('./code/') / '.env'
+load_dotenv(dotenv_path=env_path)
+
+TOKEN = os.getenv("NAVITIA_TOKEN")
+
 params = "./code/params/params.json"
 params = json.load(open(params))
 
@@ -68,10 +76,10 @@ dict_palette["viridis"] = Viridis
 #dict_palette["plasma"] = Plasma 
 
 params_iso = {
-        'token':params['token'],
+        'token': TOKEN,
         'from_place': from_place,
         'time_in': time_in.value,
-        'min_date': min_date,
+        'min_date': min_date.isoformat(),
         'step': step,
         'nb_iter': nb_iter,
         'dict_palette': dict_palette,
@@ -126,26 +134,30 @@ def run():
     step_value = int(step_in.value) * 60
     adress = adress_in.value
     from_place = geocode(adress)
+    from_place = str(from_place[0]) + ";" + str(from_place[1])
     
-    data = get_iso(
-                   from_place, 
-                   time_value,
-                   date_value,
-                   step_value, 
-                   nb_iter_value, 
-                   dict_palette, 
-                   inProj, 
-                   outProj
-                   )
+    params_iso = {
+        'token': TOKEN,
+        'from_place': from_place,
+        'time_in': time_value,
+        'min_date': date_value,
+        'step': step_value,
+        'nb_iter': nb_iter_value,
+        'dict_palette': dict_palette,
+        'inProj': inProj,
+        'outProj': outProj
+            }
+    
+    data = get_iso(params_iso)
     
     source_polys = data['poly']
     source_pts = data['points']
 #    buildings = data['buildings']
-    colors = data['colors']
+    colors = data['colors']['viridis']
 #    network = data['network']
             
         
-    color_mapper = LinearColorMapper(palette=colors[l_viridis[0]])
+    color_mapper = LinearColorMapper(palette=colors)
     
 #        options_buildings = dict(
 #            fill_alpha= params["fig_params"]["alpha_building"],
@@ -190,7 +202,7 @@ def run():
 #                legend="network"
 #                )
 
-    l_viridis[1][0].patches(
+    l_viridis[0].patches(
             'xs', 
             'ys', 
             **options_iso_surf
@@ -208,7 +220,7 @@ def run():
 #                **options_network
 #              )
      
-    l_viridis[1][1].multi_line(
+    l_viridis[1].multi_line(
             'xs', 
             'ys', 
             **options_iso_contours)
@@ -225,7 +237,7 @@ def run():
 #                **options_network
 #              )
 
-    l_viridis[1][2].circle(
+    l_viridis[2].circle(
             'x', 
             'y', 
             **options_iso_pts

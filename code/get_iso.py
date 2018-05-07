@@ -38,7 +38,7 @@ def get_iso(params):
     buildings and network
     """
     
-    token = params['token']
+    TOKEN = params['token']
     from_place = params['from_place']
     time_in = params['time_in']
     min_date = params['min_date']  #format YYYYMMDDThhmmss
@@ -48,7 +48,7 @@ def get_iso(params):
     inProj = params['inProj']
     outProj = params['outProj']
     
-    date_time = min_date.isoformat() + "T" + time_in
+    date_time = min_date + "T" + time_in
     
     step = int(step)
     nb_iter = int(nb_iter)
@@ -66,10 +66,9 @@ def get_iso(params):
             date_time,
             cutoffs
             )
-
     headers = {
             'accept': 'application/json',
-            'Authorization': token
+            'Authorization': TOKEN
             }
     
     r = requests.get(url, headers=headers)
