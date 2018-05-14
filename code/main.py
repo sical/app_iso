@@ -5,12 +5,12 @@
 from datetime import date
 import os
 
-from bokeh.palettes import Viridis, Spectral, Plasma
+from bokeh.palettes import Viridis, Spectral, Plasma, Set1
 from bokeh.io import show, curdoc
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
-from bokeh.models import LinearColorMapper
+from bokeh.models import LinearColorMapper, Slider
+from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup
 from bokeh.layouts import row, gridplot
-from bokeh.models.widgets import TextInput, Button, DatePicker
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -19,6 +19,7 @@ import json
 from get_iso import get_iso
 from make_plot import make_plot
 from functions import geocode
+from bokeh_tools import colors_slider
 
 #Parameters
 env_path = Path('./code/') / '.env'
@@ -53,27 +54,51 @@ day_max = default["day_max"]
 min_date = date(year_min, month_min, day_min)
 max_date = date(year_max, month_max, day_max)
 
-#WIDGETS
+#############
+#  WIDGETS  #
+#############.
 button = Button(label="C'est parti !", button_type="success")
 
+#API
 adress_in = TextInput(value=adress, title="Entrez une adresse:")
 time_in = TextInput(value=time_, title="Entrez un horaire (HH:MM):")
 date_ = DatePicker(max_date=max_date, min_date=min_date)
 nb_iter_in = TextInput(value=nb_iter, title="Entrez un nombre d'etapes:")
 step_in = TextInput(value=str(int(step/60)), title="Entrez une duree en minutes:")
+
+#SHAPES
+radio_button_shapes = RadioButtonGroup(
+        labels=["Points", "Lines", "Polygons"], 
+        active=0
+        )
+
+#COLORS
+#color_gradient = make_color_gradient()
+#taptool = color_gradient.select(type=TapTool)
+#url = "http://www.colors.commutercreative.com/@color/"
+#test = taptool.callback = OpenURL(url=url)
+color_vis, red_slider, green_slider, blue_slider = colors_slider()
+opacity = Slider(start=0.1, end=1, value=0.5, step=.1,
+                     title="Opacite")
+
+#OPACITY
     
 
 l_widget = [
         [date_, time_in],
         [nb_iter_in, step_in],
-        [adress_in, button]
+        [adress_in, button],
+        [radio_button_shapes],
+        [red_slider, green_slider, blue_slider],
+        [color_vis]
         ]
 
 #Set the dict_colors
 dict_palette = {}
 dict_palette["viridis"] = Viridis 
-#dict_palette["spectral"] = Spectral 
-#dict_palette["plasma"] = Plasma 
+dict_palette["spectral"] = Spectral 
+dict_palette["plasma"] = Plasma 
+dict_palette["primary"] = Set1
 
 params_iso = {
         'token': TOKEN,
@@ -98,7 +123,10 @@ colors = data['colors']
 #buildings = data['buildings']
 #network = data['network']
 
+
+
 params_plot = {
+#            'shape': shape,
             'colors':colors, 
             'palette_name':"viridis", 
             'params':params, 
@@ -135,6 +163,8 @@ def run():
     adress = adress_in.value
     from_place = geocode(adress)
     from_place = str(from_place[0]) + ";" + str(from_place[1])
+    
+    col = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
     
     params_iso = {
         'token': TOKEN,
