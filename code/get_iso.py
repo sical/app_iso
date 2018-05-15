@@ -30,7 +30,6 @@ def get_iso(params):
             - min_date: datetime object
             - step: integer, number of seconds for an isochrone's step ex=> 600 
             - nb_iter: string, number of isochrone's step=> "3"
-            - dict_palette: dict, key=name, value=colors palette
             - inProj: string, epsg of input =>"epsg:4326" 
             - outProj: string, epsg for output => "epsg:3857"
     
@@ -44,7 +43,7 @@ def get_iso(params):
     min_date = params['min_date']  #format YYYYMMDDThhmmss
     step = params['step']
     nb_iter = params['nb_iter']
-    dict_palette = params['dict_palette']
+    shape = params['shape']
     inProj = params['inProj']
     outProj = params['outProj']
     
@@ -58,7 +57,6 @@ def get_iso(params):
     
     cutoffs, list_time = _cutoffs(nb_iter, step)
 #    list_time = [step*i for i in range(1, nb_iter+1)]
-    colors = _palette(list_time, dict_palette)
     gdf_polys = []
 
     url='https://api.navitia.io/v1/coverage/fr-idf/isochrones?from={}&datetime={}{}'.format(
@@ -101,8 +99,11 @@ def get_iso(params):
     
     poly_json = gdf_to_geojson(gdf_poly, ['time'])
     
-    points = create_pts(gdf_poly)
-    polys = GeoJSONDataSource(geojson=str(poly_json))
+    if shape == "poly" or shape == "line":
+        source = GeoJSONDataSource(geojson=str(poly_json))
+    else:
+        source = create_pts(gdf_poly)
+    
     
 #    datasource_poly = _convert_GeoPandas_to_Bokeh_format(gdf_poly)
     
@@ -116,9 +117,8 @@ def get_iso(params):
 #    network = network_to_datasource(polygon)
     
     return {
-            'poly':polys, 
-            'points':points,
-            'colors':colors,
+            'source':source,
+            'shape':shape
 #            'buildings':buildings,
 #            'network':network
             }
