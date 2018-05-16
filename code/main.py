@@ -6,10 +6,10 @@ from datetime import date
 import os
 
 from bokeh.palettes import Viridis, Spectral, Plasma, Set1
-from bokeh.io import show, curdoc
+from bokeh.io import show, curdoc, export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import LinearColorMapper, Slider, ColumnDataSource
-from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup
+from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup, Dropdown
 from bokeh.layouts import row, column, gridplot, widgetbox
 from dotenv import load_dotenv
 from pathlib import Path
@@ -84,6 +84,9 @@ color_vis, red_slider, green_slider, blue_slider = colors_slider()
 opacity = Slider(start=0.1, end=1, value=0.5, step=.1,
                      title="Opacite")
 
+#EXPORT
+menu = [("PNG", "png"), ("SVG", "svg")]
+save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
 
 l_widget = [
         [date_, time_in],
@@ -94,7 +97,8 @@ l_widget = [
                 column(color_vis)
                 )
         ],
-        [button,clear]
+        [button,clear],
+        [save_]
         ]
 
 #Set the dict_colors
@@ -225,7 +229,8 @@ def run():
         p_shape.patches(
             'xs', 
             'ys', 
-            **options_iso_surf
+            **options_iso_surf,
+            name="polys"
             )
         
     elif shape == "line":
@@ -242,7 +247,9 @@ def run():
         p_shape.multi_line(
             'xs', 
             'ys', 
-            **options_iso_contours)
+            **options_iso_contours,
+            name="lines"
+            )
         
     else:
         options_iso_pts = dict(
@@ -259,10 +266,10 @@ def run():
         p_shape.circle(
             'x', 
             'y', 
-            **options_iso_pts
+            **options_iso_pts,
+            name="points"
             )
         
-    layout.children[0] = p_shape
     
 #        options_network = dict(
 #                line_alpha= params["fig_params"]["alpha_network"], 
@@ -311,13 +318,36 @@ def run():
 #                'ys', 
 #                **options_network
 #              )
+        
+        p_shape.output_backend = "svg"
+        export_svgs(p_shape, filename="plot.svg")
+
 def clear_plots():
-    global params_plot
-    p_shape = make_plot(params_plot)
-    layout.children[0] = p_shape
+#    global params_plot
+#    p_shape = make_plot(params_plot)
+#    layout.children[0] = p_shape
+    
+    names = ["points", "polys", "lines"]
+
+    for name in names:
+        if p_shape.select(name=name):
+            glyphs = p_shape.select(name=name)
+            glyphs.visible = False
+            
+def save_handeler(attr, old, new):
+#    title = p_shape.title.__dict__["_property_values"]["text"]
+    title = "TEST"
+    if new == 'png':
+        export_png(layout, filename="%s.png" % title)
+    elif  new == 'svg':
+        p_shape.output_backend = "svg"
+        export_svgs(layout, filename="%s.svg" % title)  
+        
+save_.on_change('value', save_handeler)            
     
 button.on_click(run)
-#clear.on_click(clear_plots)
+clear.on_click(clear_plots)
+
 
 
 layout = row(
