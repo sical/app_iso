@@ -13,8 +13,9 @@ from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup
 from bokeh.layouts import row, column, gridplot, widgetbox
 from dotenv import load_dotenv
 from pathlib import Path
-
+from copy import deepcopy
 import json
+from datetime import datetime
 
 from get_iso import get_iso
 from make_plot import make_plot
@@ -74,15 +75,13 @@ radio_button_shapes = RadioButtonGroup(
         )
 
 #COLORS
-#color_gradient = make_color_gradient()
-#taptool = color_gradient.select(type=TapTool)
-#url = "http://www.colors.commutercreative.com/@color/"
-#test = taptool.callback = OpenURL(url=url)
 color_vis, red_slider, green_slider, blue_slider = colors_slider()
 
 #OPACITY
 opacity = Slider(start=0.1, end=1, value=0.5, step=.1,
                      title="Opacite")
+opacity_tile = Slider(start=0.0, end=1, value=0.5, step=.1,
+                     title="Tuiles opacite")
 
 #EXPORT
 menu = [("PNG", "png"), ("SVG", "svg")]
@@ -97,6 +96,7 @@ l_widget = [
                 column(color_vis)
                 )
         ],
+        [opacity_tile],
         [button,clear],
         [save_]
         ]
@@ -122,7 +122,7 @@ l_widget = [
 
 
 #Run with defaults
-TOOLS = "pan,wheel_zoom,reset,save"
+TOOLS = "pan,wheel_zoom,reset,save, redo, undo"
 #data = get_iso(params_iso)
     
 #source_polys = data['poly']
@@ -319,8 +319,8 @@ def run():
 #                **options_network
 #              )
         
-        p_shape.output_backend = "svg"
-        export_svgs(p_shape, filename="plot.svg")
+    p_shape.legend.location = "top_right"
+    p_shape.legend.click_policy="hide"
 
 def clear_plots():
 #    global params_plot
@@ -336,18 +336,22 @@ def clear_plots():
             
 def save_handeler(attr, old, new):
 #    title = p_shape.title.__dict__["_property_values"]["text"]
-    title = "TEST"
+    name = datetime.now().strftime("%d_%b_%Y_%HH_%MM_%SS")
+    title = "export_" + name
     if new == 'png':
         export_png(layout, filename="%s.png" % title)
     elif  new == 'svg':
         p_shape.output_backend = "svg"
-        export_svgs(layout, filename="%s.svg" % title)  
+        export_svgs(layout, filename="%s.svg" % title) 
         
+def tile_opacity(attrname, old, new):
+    p_shape.select(name="tile")[0].alpha=new
+
+
 save_.on_change('value', save_handeler)            
-    
 button.on_click(run)
 clear.on_click(clear_plots)
-
+opacity_tile.on_change('value', tile_opacity)
 
 
 layout = row(

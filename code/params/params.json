@@ -6,7 +6,7 @@
 	"fig_params": {
 		"width": 800,
 		"height": 800,
-		"alpha_tile": 0.25,
+		"alpha_tile": 0.5,
 		"alpha_surf": 0.5,
 		"alpha_cont": 0.85,
 		"alpha_building": 0.0,

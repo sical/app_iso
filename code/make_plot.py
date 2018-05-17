@@ -135,8 +135,6 @@ def make_plot(params_plot):
 #                             **options_network)
     
     
-    p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"])
-    p_shape.legend.location = "top_left"
-    p_shape.legend.click_policy="hide"
+    p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
     
     return p_shape
