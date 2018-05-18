@@ -9,7 +9,7 @@ from bokeh.palettes import Viridis, Spectral, Plasma, Set1
 from bokeh.io import show, curdoc, export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import LinearColorMapper, Slider, ColumnDataSource
-from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup, Dropdown
+from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs
 from bokeh.layouts import row, column, gridplot, widgetbox
 from dotenv import load_dotenv
 from pathlib import Path
@@ -20,7 +20,7 @@ from datetime import datetime
 from get_iso import get_iso
 from make_plot import make_plot
 from functions import geocode
-from bokeh_tools import colors_slider
+from bokeh_tools import colors_slider, colors_radio
 
 #Parameters
 env_path = Path('./code/') / '.env'
@@ -49,7 +49,11 @@ day_min = default["day_min"]
 year_max = default["year_max"]
 month_max = default["month_max"]
 day_max = default["day_max"]
-
+counter_polys = 0 
+counter_lines = 0 
+counter_points = 0 
+color_choice = 0
+names = []
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -82,19 +86,29 @@ opacity = Slider(start=0.1, end=1, value=0.5, step=.1,
                      title="Opacite")
 opacity_tile = Slider(start=0.0, end=1, value=0.5, step=.1,
                      title="Tuiles opacite")
+viridis = Slider(start=0.0, end=1, value=0.5, step=.1,
+                     title="caca")
 
 #EXPORT
 menu = [("PNG", "png"), ("SVG", "svg")]
 save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
 
+
+panel_slide = row(
+                widgetbox(red_slider, green_slider, blue_slider, opacity),
+                column(color_vis)
+                )
+
+tab_slide_colors = Panel(child=panel_slide, title="Sliders colors")
+panel_viridis = colors_radio(Viridis[5])
+tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
+
 l_widget = [
         [date_, time_in],
         [adress_in, step_in],
         [radio_button_shapes],
-        [row(
-                widgetbox(red_slider, green_slider, blue_slider, opacity),
-                column(color_vis)
-                )
+        [
+                Tabs(tabs=[ tab_slide_colors, tab_viridis ])
         ],
         [opacity_tile],
         [button,clear],
@@ -162,6 +176,13 @@ y_range = p_shape.y_range
 #l_spectral = make_plot(params_plot)    
 
 def run():
+    global counter_polys
+    global counter_lines
+    global counter_points
+    global names
+    global p_shape
+    global color_choice
+    
     date_value = date_.value
     if date_value is None:
         date_value = date_.min_date.isoformat()
@@ -172,7 +193,10 @@ def run():
     from_place = geocode(adress)
     from_place = str(from_place[0]) + ";" + str(from_place[1])
     
-    color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
+    if color_choice == 0:
+        color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
+    else:
+        color_value = Viridis[5][panel_viridis.children[0].children[0].active]
     
     if radio_button_shapes.active == 0:
         shape = "point"
@@ -215,6 +239,7 @@ def run():
 #            )
 
     if shape == "poly":
+        name = "polys" + str(counter_polys)
         options_iso_surf = dict(
 #                fill_alpha= params["fig_params"]["alpha_surf"], 
     #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
@@ -223,17 +248,20 @@ def run():
                 line_color='white', 
                 line_width=params["fig_params"]["line_width_surf"], 
                 source=source,
-                legend="Isochrone_polys"
+                legend="Isochrone_polys" + str(counter_polys)
                 )
         
         p_shape.patches(
             'xs', 
             'ys', 
             **options_iso_surf,
-            name="polys"
+            name=name
             )
         
+        counter_polys += 1 
+        
     elif shape == "line":
+        name = "lines"  + str(counter_lines)
         options_iso_contours = dict(
 #                line_alpha= params["fig_params"]["alpha_cont"],
     #            line_color={'field': params["fig_params"]["field"], 'transform': color_mapper},
@@ -241,17 +269,20 @@ def run():
                 line_alpha = opacity.value,
                 line_width=params["fig_params"]["line_width_cont"], 
                 source=source,
-                legend="Isochrone_lines"
+                legend="Isochrone_lines" + str(counter_lines)
                 )
         
         p_shape.multi_line(
             'xs', 
             'ys', 
             **options_iso_contours,
-            name="lines"
+            name=name
             )
         
+        counter_lines += 1
+        
     else:
+        name="points"  + str(counter_polys)
         options_iso_pts = dict(
 #                line_alpha= params["fig_params"]["alpha_surf"], 
     #            color={'field': 'time', 'transform': color_mapper},
@@ -260,15 +291,17 @@ def run():
                 line_width=params["fig_params"]["line_width_surf"], 
                 size=3,
                 source=source,
-                legend="Isochrone_points"
+                legend="Isochrone_points" + str(counter_points)
                 )
         
         p_shape.circle(
             'x', 
             'y', 
             **options_iso_pts,
-            name="points"
+            name="points"  + str(counter_polys)
             )
+        
+        counter_points += 1
         
     
 #        options_network = dict(
@@ -321,18 +354,31 @@ def run():
         
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
+    
+    names.append(name)
+    
 
-def clear_plots():
-#    global params_plot
+def clear_plots(params_plot):
+    global counter_polys
+    global counter_lines
+    global counter_points
+    global names
+    global p_shape
 #    p_shape = make_plot(params_plot)
 #    layout.children[0] = p_shape
     
-    names = ["points", "polys", "lines"]
+#    names = ["points", "polys", "lines"]
 
     for name in names:
         if p_shape.select(name=name):
             glyphs = p_shape.select(name=name)
-            glyphs.visible = False
+            glyphs.remove()
+    
+    counter_polys = 0
+    counter_lines = 0
+    counter_points = 0
+    names = []
+    p_shape = make_plot(params_plot)
             
 def save_handeler(attr, old, new):
 #    title = p_shape.title.__dict__["_property_values"]["text"]
@@ -347,12 +393,25 @@ def save_handeler(attr, old, new):
 def tile_opacity(attrname, old, new):
     p_shape.select(name="tile")[0].alpha=new
 
+def color_sliders(attrname, old, new):
+    global color_choice
+    color_choice = 0
+    
+def color_hex(attrname, old, new):
+    global color_choice
+    color_choice = 1
+    
+    
 
 save_.on_change('value', save_handeler)            
 button.on_click(run)
-clear.on_click(clear_plots)
+clear.on_click(clear_plots(params_plot))
 opacity_tile.on_change('value', tile_opacity)
-
+red_slider.on_change('value',color_sliders)
+blue_slider.on_change('value',color_sliders)
+green_slider.on_change('value',color_sliders)
+opacity.on_change('value', color_sliders)
+panel_viridis.children[0].children[0].on_change('active',color_hex)
 
 layout = row(
         p_shape,

@@ -7,7 +7,9 @@ Created on Mon May 14 15:58:54 2018
 import colorsys
 
 from bokeh.models import ColumnDataSource, HoverTool, TapTool, Slider, CustomJS
+from bokeh.models.widgets import Tabs, Div, RadioGroup
 from bokeh.plotting import figure, curdoc
+from bokeh.layouts import row, widgetbox
 
 def generate_color_range(N, I):
     '''
@@ -132,3 +134,28 @@ def colors_slider():
     callback.args['blue_slider'] = blue_slider
     
     return p1, red_slider, green_slider, blue_slider
+
+def colors_radio(colors):
+    divs = []
+    labels = []
+    for color in colors:
+        text = """{}""".format(color)
+        div = Div(text="",
+                style={
+                        'background-color':color,
+                        'color':"white"
+                        },
+                width=60, 
+                height=12)
+        divs.append(div)
+        labels.append(text)
+        
+    viridis_group = RadioGroup(
+            labels=labels, 
+            active=0,
+            width=100)
+    
+    panel = row(
+                    [viridis_group, widgetbox(divs)]
+                    )
+    return panel
