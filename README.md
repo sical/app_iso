@@ -2,14 +2,30 @@
 # Development of an isochrones visualisation app
 
 ## Installation steps
+### Clone the repo
+- Clone the Github repository and use the iso_design branch
+
+### Python packages
 - Install required Python packages using requirements.txt file
 - This command should work (*if not conda or pip install the 11 packages*)
 ```
 while read requirement; do conda install --yes $requirement; done < requirements.txt
 ```
+
+### Navitia token
+- You have to use a token to use Navitia API
+- So you need to register [here](https://www.navitia.io/register/) to get a token
+- Create a file named "*.env*" in the "*code*" directory ... (*see figure*)
+![token](./screenshots/token.png)
+- ... with only one line in it (*never push your .env file on Github !*):
+
+```
+NAVITIA_TOKEN=""
+```
+- Put your Navitia token between the quotation marks and save your file
+
 ## Running the Bokeh app
-- Clone the Github repository and use the iso_design branch
-- Then open a Anaconda command prompt (*or a system command prompt but with access to the right anaconda python environment) and write:
+- Then open a Anaconda command prompt (*or a system command prompt but with access to the right anaconda python environment*) and write:
 ```
 cd [path/to/app_iso/directory]
 bokeh serve code
@@ -54,5 +70,5 @@ bokeh serve code
 - Reset button make the side controls panel to disappear (*bug: currently work on it*)
 - Export button/function needs to be debugged (*known Bokeh problems with svg/png exports when using map tiles*)
 - Code needs a serious cleaning
-- Some isochrones are not correctly shown on map (*probably a Navitia API issue because it is a beta version)
+- Some isochrones are not correctly shown on map (*probably a Navitia API issue because it is a beta version*)
 - Bokeh doesn't support MultiPolygons with holes (*need to find a workaround*)
