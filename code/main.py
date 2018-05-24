@@ -7,9 +7,10 @@ import os
 
 from bokeh.palettes import Viridis, Spectral, Plasma, Set1
 from bokeh.io import show, curdoc, export_png, export_svgs
+from bokeh.plotting import figure
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import LinearColorMapper, Slider, ColumnDataSource
-from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs
+from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn
 from bokeh.layouts import row, column, gridplot, widgetbox
 from dotenv import load_dotenv
 from pathlib import Path
@@ -78,30 +79,40 @@ radio_button_shapes = RadioButtonGroup(
         active=2
         )
 
-#COLORS
-color_vis, red_slider, green_slider, blue_slider = colors_slider()
-
 #OPACITY
 opacity = Slider(start=0.1, end=1, value=0.5, step=.1,
                      title="Opacite")
 opacity_tile = Slider(start=0.0, end=1, value=0.5, step=.1,
                      title="Tuiles opacite")
-viridis = Slider(start=0.0, end=1, value=0.5, step=.1,
-                     title="caca")
+viridis = Slider(start=0.1, end=1, value=0.5, step=.1,
+                     title="Viridis_opacite")
+
+#COLORS
+color_vis, red_slider, green_slider, blue_slider = colors_slider()
+panel_slide = row(
+                widgetbox(red_slider, green_slider, blue_slider, opacity),
+                column(color_vis)
+                )
+tab_slide_colors = Panel(child=panel_slide, title="Sliders colors")
+panel_viridis = colors_radio(Viridis[5])
+tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
+
+
 
 #EXPORT
 menu = [("PNG", "png"), ("SVG", "svg")]
 save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
 
 
-panel_slide = row(
-                widgetbox(red_slider, green_slider, blue_slider, opacity),
-                column(color_vis)
-                )
 
-tab_slide_colors = Panel(child=panel_slide, title="Sliders colors")
-panel_viridis = colors_radio(Viridis[5])
-tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
+
+
+
+#columns = [
+#        TableColumn(field="dates", title="Date", formatter=DateFormatter()),
+#        TableColumn(field="downloads", title="Downloads"),
+#    ]
+#data_table = DataTable(source=source, columns=columns, width=400, height=280)
 
 l_widget = [
         [date_, time_in],
@@ -358,27 +369,40 @@ def run():
     names.append(name)
     
 
-def clear_plots(params_plot):
+def clear_plots():
     global counter_polys
     global counter_lines
     global counter_points
     global names
     global p_shape
-#    p_shape = make_plot(params_plot)
-#    layout.children[0] = p_shape
+    global params_plot
     
-#    names = ["points", "polys", "lines"]
-
-    for name in names:
-        if p_shape.select(name=name):
-            glyphs = p_shape.select(name=name)
-            glyphs.remove()
+    params = params_plot['params']
+    TOOLS = params_plot['tools'] 
+    tile_provider = params_plot['tile_provider']
+    p_shape = figure(
+            title= "Isochrone", 
+            tools=TOOLS, 
+            x_axis_location=None, 
+            y_axis_location=None, 
+            width=params["fig_params"]["width"], 
+            height=params["fig_params"]["height"],
+            match_aspect=True, 
+            aspect_scale=1
+            )
+    
+    p_shape.grid.grid_line_color = None
+    
+    p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
+    layout.children[0] = p_shape
     
     counter_polys = 0
     counter_lines = 0
     counter_points = 0
     names = []
-    p_shape = make_plot(params_plot)
+    p_shape.legend.location = "top_right"
+    p_shape.legend.click_policy="hide"
+    
             
 def save_handeler(attr, old, new):
 #    title = p_shape.title.__dict__["_property_values"]["text"]
@@ -405,7 +429,7 @@ def color_hex(attrname, old, new):
 
 save_.on_change('value', save_handeler)            
 button.on_click(run)
-clear.on_click(clear_plots(params_plot))
+clear.on_click(clear_plots)
 opacity_tile.on_change('value', tile_opacity)
 red_slider.on_change('value',color_sliders)
 blue_slider.on_change('value',color_sliders)

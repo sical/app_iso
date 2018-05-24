@@ -4,7 +4,7 @@
 	"time_":"08:00",
 	"modes":"TRANSIT,WALK",
 	"max_dist":"800",
-	"step":600,
+	"step":1200,
 	"nb_iter":"3",
 	"year_min":2018,
 	"month_min":5,

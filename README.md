@@ -1,31 +1,58 @@
 # app_iso
 # Development of an isochrones visualisation app
 
-#Installation steps
-## OpenTripPlanner server installation
-- Clone the Github repository
-- Then open a console and write (*otp directory is the directory where the jar file is: [...]\app_iso\otp*):
+## Installation steps
+- Install required Python packages using requirements.txt file
+- This command should work (*if not conda or pip install the 11 packages*)
 ```
-cd [path/to/otp/directory]
-java -Xmx6G -jar otp-1.2.0-shaded.jar --router Paris --graphs graphs --server
+while read requirement; do conda install --yes $requirement; done < requirements.txt
 ```
-- Then wait until you see "*Grizzly server running*" (can take a couple of minutes depending of you computer specs)
-- You can check if OTP is ready here: http://localhost:8080 (*you must see a map and the possibility to measure accessibility from a point to another stop*)
-
 ## Running the Bokeh app
-- Python libraries needed: => ***See requirements.txt file***
-- If you want to install all this libraries without difficulties, we recommend to donwload and install [Anaconda](https://www.anaconda.com/download/) but you can also install these via pip (*not recommended*)
-- Once done, go in the root directory and open a console and run:
+- Clone the Github repository and use the iso_design branch
+- Then open a Anaconda command prompt (*or a system command prompt but with access to the right anaconda python environment) and write:
 ```
+cd [path/to/app_iso/directory]
 bokeh serve code
 ```
-- Your console should show something like:
-
+- Bokeh server will start running and you should see something like this in the command prompt:
 ```
-018-04-20 19:11:59,045 Starting Bokeh server version 0.12.13 (running on Tornado 4.5.3)
-2018-04-20 19:11:59,048 Bokeh app running at: http://localhost:5006/code
-2018-04-20 19:11:59,049 Starting Bokeh server with process id: 70796
+2018-05-24 14:13:56,529 Starting Bokeh server version 0.12.14 (running on Tornado 4.5.3)
+2018-05-24 14:13:56,532 Bokeh app running at: http://localhost:5006/code
+2018-05-24 14:13:56,539 Starting Bokeh server with process id: 50804
 ```
-- Then open http://localhost:5006/code in your browser. Wait a minute (*this app is not really optimized for the moment and could take time for the first run*)
+- Then in your browser, go to http://localhost:5006/code
+- You should see this: ![app](./screenshots/app.png)
+- You should see this in command prompt:
+```
+2018-05-24 15:12:11,345 200 GET /code (::1) 1114.46ms
+2018-05-24 15:12:11,650 101 GET /code/ws?bokeh-protocol-version=1.0&bokeh-session-id=D4EU0HRjtcutsalbFuqdZ6GpubyO60UWGzmlXkJeJjvh (::1) 0.99ms
+2018-05-24 15:12:11,651 WebSocket connection opened
+2018-05-24 15:12:11,653 ServerConnection created
+```
+- If there are errors please report them (*error messages should appear in the command prompt*)
 
-- That's it. 
+## Usage
+- Here you can choose a date, adress, time and duration:
+![control_1](./screenshots/control_1.png)
+- You can choose between MultiPoints, MultiPolygons and MultiLines:
+![control_2](./screenshots/control_2.png)
+- You chan choose to use any color using Sliders colors ...
+![control_3](./screenshots/control_3.png)
+- ... or colorblindness colors using Viridis colors
+![control_4](./screenshots/control_4.png)
+- Tile opacity could be used anytime you want (*update when sliding*)
+![control_5](./screenshots/control_5.png)
+- Click on "C'est parti !" button to get the isochrone
+![control_6](./screenshots/control_6.png)
+- You should get something like this (you chan show/hide layer by clicking on it in legend):
+![control_8](./screenshots/control_8.png)
+
+## Known issues
+- Only this side controls are usable (*Pan/Drag and Scroll/Pich*) (*tests with others but not working as wanted for now*):
+![control_7](./screenshots/control_7.png)
+- Impossible geolocation with some adresses (*no error message for now, only empty map*)
+- Reset button make the side controls panel to disappear (*bug: currently work on it*)
+- Export button/function needs to be debugged (*known Bokeh problems with svg/png exports when using map tiles*)
+- Code needs a serious cleaning
+- Some isochrones are not correctly shown on map (*probably a Navitia API issue because it is a beta version)
+- Bokeh doesn't support MultiPolygons with holes (*need to find a workaround*)
