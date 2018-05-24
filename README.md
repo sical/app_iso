@@ -65,7 +65,9 @@ bokeh serve code
 
 ## Known issues
 - Only this side controls are usable (*Pan/Drag and Scroll/Pich*) (*tests with others but not working as wanted for now*):
+
 ![control_7](./screenshots/control_7.png)
+
 - Impossible geolocation with some adresses (*no error message for now, only empty map*)
 - Reset button make the side controls panel to disappear (*bug: currently work on it*)
 - Export button/function needs to be debugged (*known Bokeh problems with svg/png exports when using map tiles*)
