@@ -6,7 +6,7 @@ Created on Thu Apr 26 16:55:25 2018
 """
 
 import requests
-from geojson import Feature, MultiPolygon, FeatureCollection
+from geojson import Feature, MultiPolygon, FeatureCollection, Polygon
 import geojson
 import json
 import geopandas as gpd
@@ -81,9 +81,16 @@ def get_iso(params):
     geojson_ = geojson.loads(json_response)
     
     for iso,duration in zip(geojson_['isochrones'], list_time):
-        multi = Feature(geometry=MultiPolygon(iso["geojson"]["coordinates"]), properties={"time":duration})
+        multi = Feature(
+                geometry=MultiPolygon(
+                        iso["geojson"]["coordinates"]
+                        ), 
+                properties={"time":duration}
+                )
         gdf_polys.append(multi)
         
+    
+    
 #    geojson_ = geojson.loads(json_response)
 #    poly_json = geojson_['isochrones'][0]
 ##        coord = [[[[x[0],x[1]] for x in poly_json["geojson"]["coordinates"][0][0]]]]

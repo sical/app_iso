@@ -60,6 +60,9 @@ names = []
 min_date = date(year_min, month_min, day_min)
 max_date = date(year_max, month_max, day_max)
 
+#Set ColumnDataSource
+source_poly = {}
+
 #############
 #  WIDGETS  #
 #############

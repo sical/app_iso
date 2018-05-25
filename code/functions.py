@@ -17,6 +17,47 @@ from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 geolocator = Nominatim()
 
 
+#def gdf_to_geojson(gdf, properties):
+#    """
+#    @param gdf (GeoPandas GeoDataframe): GeoDataframe (polygons) 
+#    @param properties (list): list of property columns
+#    
+#    Explanations for reverse and nested lists: 
+#        - https://tools.ietf.org/html/rfc7946#section-3.1.6
+#        - https://tools.ietf.org/html/rfc7946#appendix-A.3
+#    
+#    Inspired by: http://geoffboeing.com/2015/10/exporting-python-data-geojson/
+#    
+#    Returns GeoJson object that could be used in bokeh as GeoJsonDataSource
+#    """
+#    
+#    geojson_ = {"type":"FeatureCollection", "features":[]}
+#    for line in gdf.itertuples():
+#        feature = {"type":"Feature",
+#                   "properties":{},
+#                   "geometry":{
+#                           "type":"MultiPolygon",
+#                           "coordinates":[]
+#                           }
+#                   }
+#        
+#        l_tmp = []
+#        for poly in line.geometry:
+#            l_poly = []
+#            for pt in poly.exterior.coords:
+#                l_poly.extend([[pt[0],pt[1]]])
+#            l_tmp.append(l_poly)
+#        feature["geometry"]["coordinates"] = [list(reversed(l_tmp))]
+#        
+#        if (properties != []) or (properties is not None):
+#            for prop in properties:
+#                feature["properties"][prop] = line[properties.index(prop)]
+#        
+#            geojson_["features"].append(feature)
+#        else:
+#            feature.pop(properties, None)
+#    return json.dumps(geojson_)
+
 def gdf_to_geojson(gdf, properties):
     """
     @param gdf (GeoPandas GeoDataframe): GeoDataframe (polygons) 
@@ -33,29 +74,26 @@ def gdf_to_geojson(gdf, properties):
     
     geojson_ = {"type":"FeatureCollection", "features":[]}
     for line in gdf.itertuples():
-        feature = {"type":"Feature",
-                   "properties":{},
-                   "geometry":{
-                           "type":"MultiPolygon",
-                           "coordinates":[]
-                           }
-                   }
-        
-        l_tmp = []
         for poly in line.geometry:
             l_poly = []
             for pt in poly.exterior.coords:
                 l_poly.extend([[pt[0],pt[1]]])
-            l_tmp.append(l_poly)
-        feature["geometry"]["coordinates"] = [list(reversed(l_tmp))]
+            feature = {"type":"Feature",
+                   "properties":{},
+                   "geometry":{
+                           "type":"Polygon",
+                           "coordinates":[]
+                           }
+                   }
+            feature["geometry"]["coordinates"] = [list(reversed(l_poly))]
         
-        if (properties != []) or (properties is not None):
-            for prop in properties:
-                feature["properties"][prop] = line[properties.index(prop)]
-        
-            geojson_["features"].append(feature)
-        else:
-            feature.pop(properties, None)
+            if (properties != []) or (properties is not None):
+                for prop in properties:
+                    feature["properties"][prop] = line[properties.index(prop)]
+            
+                geojson_["features"].append(feature)
+            else:
+                feature.pop(properties, None)
     return json.dumps(geojson_)
     
 def buildings_to_datasource(polygon):
@@ -474,3 +512,28 @@ def getCoords(row, geom_col, coord_type):
 
     else:
         return list( multiGeomHandler(geom, coord_type, gtype) )
+    
+def explode(gdf):
+    """ 
+    Explodes a geodataframe 
+    
+    Will explode muti-part geometries into single geometries. Original index is
+    stored in column level_0 and zero-based count of geometries per multi-
+    geometry is stored in level_1
+    
+    Args:
+        gdf (gpd.GeoDataFrame) : input geodataframe with multi-geometries
+        
+    Returns:
+        gdf (gpd.GeoDataFrame) : exploded geodataframe with a new index 
+                                 and two new columns: level_0 and level_1
+                                 
+    Source: https://gist.github.com/mhweber/cf36bb4e09df9deee5eb54dc6be74d26
+        
+    """
+    gs = gdf.explode()
+    gdf2 = gs.reset_index().rename(columns={0: 'geometry'})
+    gdf_out = gdf2.merge(gdf.drop('geometry', axis=1), left_on='level_0', right_index=True)
+    gdf_out = gdf_out.set_index(['level_0', 'level_1']).set_geometry('geometry')
+    gdf_out.crs = gdf.crs
+    return gdf_out
