@@ -14,7 +14,7 @@ from shapely.ops import unary_union, cascaded_union
 from bokeh.models import GeoJSONDataSource
 
 
-from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, _convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson
+from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, _convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats
 
 def get_iso(params):
     """
@@ -46,6 +46,8 @@ def get_iso(params):
     shape = params['shape']
     inProj = params['inProj']
     outProj = params['outProj']
+    coeff_ampl = 0.8 # See Brinkhoff et al. paper
+    coeff_conv = 0.2 # See Brinkhoff et al. paper
     
     date_time = min_date + "T" + time_in
     
@@ -104,7 +106,17 @@ def get_iso(params):
     gdf_poly = gdf_poly.to_crs({'init': outProj})
     gdf_poly = gdf_poly.sort_values(by='time', ascending=False)
     
-    poly_json = gdf_to_geojson(gdf_poly, ['time'])
+    poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time'])
+    
+    #STATS
+    gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
+    stats = get_stats(gdf_stats, coeff_ampl, coeff_conv)
+    
+    print (stats)
+    
+#    gdf_poly['area'] = stats['area']
+#    gdf_poly['nb'] = stats['nb']
+#    gdf_poly['distance'] = stats['distance']
     
     if shape == "poly" or shape == "line":
         source = GeoJSONDataSource(geojson=str(poly_json))

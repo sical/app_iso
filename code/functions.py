@@ -4,7 +4,7 @@ Created on Thu Apr 12 13:31:04 2018
 
 @author: thomas
 """
-
+import math
 import pandas as pd
 import geopandas as gpd
 from geopy.geocoders import Nominatim
@@ -94,7 +94,7 @@ def gdf_to_geojson(gdf, properties):
                 geojson_["features"].append(feature)
             else:
                 feature.pop(properties, None)
-    return json.dumps(geojson_)
+    return json.dumps(geojson_), geojson_
     
 def buildings_to_datasource(polygon):
     """
@@ -512,28 +512,109 @@ def getCoords(row, geom_col, coord_type):
 
     else:
         return list( multiGeomHandler(geom, coord_type, gtype) )
-    
-def explode(gdf):
-    """ 
-    Explodes a geodataframe 
-    
-    Will explode muti-part geometries into single geometries. Original index is
-    stored in column level_0 and zero-based count of geometries per multi-
-    geometry is stored in level_1
-    
-    Args:
-        gdf (gpd.GeoDataFrame) : input geodataframe with multi-geometries
-        
-    Returns:
-        gdf (gpd.GeoDataFrame) : exploded geodataframe with a new index 
-                                 and two new columns: level_0 and level_1
-                                 
-    Source: https://gist.github.com/mhweber/cf36bb4e09df9deee5eb54dc6be74d26
-        
+
+#def getAngle(pt1, pt2):
+#    x_diff = pt2.x - pt1.x
+#    y_diff = pt2.y - pt1.y
+#    return math.atan2(y_diff, x_diff)
+
+def get_notches(poly):
     """
-    gs = gdf.explode()
-    gdf2 = gs.reset_index().rename(columns={0: 'geometry'})
-    gdf_out = gdf2.merge(gdf.drop('geometry', axis=1), left_on='level_0', right_index=True)
-    gdf_out = gdf_out.set_index(['level_0', 'level_1']).set_geometry('geometry')
-    gdf_out.crs = gdf.crs
-    return gdf_out
+    Determine the number of notches in a polygon object and calculate 
+    normalized notches of polygon
+    
+    Based on: 
+        "Measuring the Complexity of Polygonal Objects" 
+        (Thomas Brinkhoff, Hans-Peter Kriegel, Ralf Schneider, Alexander Braun)
+        http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.73.1045&rep=rep1&type=pdf
+        
+        https://github.com/pondrejk/PolygonComplexity/blob/master/PolygonComplexity.py
+    
+    Returns normalized notches
+    """
+    notches = 0 
+    coords = list(poly.exterior.coords)
+    for i, pt in enumerate(coords[:-1]):
+        x_diff = coords[i+1][0] - pt[0]
+        y_diff = coords[i+1][1] - pt[1]
+        angle = math.atan2(y_diff, x_diff)
+        if angle > math.pi:
+            notches += 1
+            
+    if notches != 0:
+        notches_norm = notches / (len(coords)-3)
+    else:
+        notches_norm = 0 
+        
+    return notches_norm
+    
+def get_stats(gdf, coeff_ampl, coeff_conv):
+    """
+    Get polygon's amplitude of vibration:
+    
+    ampl(pol) = (boundary(pol) - boundary(convexhull(pol))) / boundary(pol)
+    
+    Get deviation from convex hull:
+    conv(pol) = (area(convexhull(pol)) - area(pol)) / area(convexhull(pol))
+    
+    Measure complexity
+    
+     Based on: 
+        "Measuring the Complexity of Polygonal Objects" 
+        (Thomas Brinkhoff, Hans-Peter Kriegel, Ralf Schneider, Alexander Braun)
+        http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.73.1045&rep=rep1&type=pdf
+        
+        https://github.com/pondrejk/PolygonComplexity/blob/master/PolygonComplexity.py
+    
+    Get area, centroid, distance from each others, boudary, convex hull, 
+    perimeter, number of vertices
+    
+    Returns dict 
+    
+    """
+    nb = gdf['geometry'].count()
+    gdf['area'] = gdf['geometry'].area
+    tot_area = gdf['area'].sum()
+    gdf['centroid'] = gdf['geometry'].centroid
+#    gdf['distance'] = gdf['geometry'].distance()
+    gdf['boundary'] = gdf['geometry'].boundary
+    gdf['convex_hull'] = gdf['geometry'].convex_hull
+    gdf['convex_boundary'] = gdf['geometry'].convex_hull.boundary
+    gdf['convex_area'] = gdf['geometry'].convex_hull.area
+    gdf['nb_vertices'] = gdf['geometry'].apply(lambda x: len(list(x.exterior.coords)))
+    gdf['norm_notches'] = gdf['geometry'].apply(lambda x: get_notches(x))
+    
+    gdf['amplitude'] = gdf.apply(
+            lambda x:(
+                    x['boundary'].length - x['convex_boundary'].length
+                    ) / x['boundary'].length, 
+                    axis=1)
+    gdf['convex'] = gdf.apply(
+            lambda x: (
+                    x['convex_area'] - x['area']
+                    ) / x['convex_area'],
+                    axis=1)
+    gdf['complexity'] = gdf.apply(
+            lambda x: coeff_ampl*x['amplitude'] * x['norm_notches'] + coeff_conv * x['convex'],
+            axis=1
+            )
+    
+    mean_amplitude = gdf['amplitude'].mean()
+    mean_convex = gdf['convex'].mean()
+    mean_norm_notches = gdf['norm_notches'].mean()
+    mean_complexity = gdf['complexity'].mean()
+    
+    gdf['perimeter'] = gdf['geometry'].length
+    tot_perimeter = gdf['perimeter'].sum()
+    
+    return {
+            'area':tot_area,
+            'perimeter':tot_perimeter,
+#            'distance':mean_distance,
+            'nb':nb,
+            'amplitude': mean_amplitude,
+            'convex': mean_convex,
+            'norm_notches': mean_norm_notches,
+            'complexity': mean_complexity
+            }
+    

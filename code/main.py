@@ -17,6 +17,7 @@ from pathlib import Path
 from copy import deepcopy
 import json
 from datetime import datetime
+import pandas as pd
 
 from get_iso import get_iso
 from make_plot import make_plot
@@ -100,22 +101,10 @@ tab_slide_colors = Panel(child=panel_slide, title="Sliders colors")
 panel_viridis = colors_radio(Viridis[5])
 tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
 
-
-
 #EXPORT
 menu = [("PNG", "png"), ("SVG", "svg")]
 save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
 
-
-
-
-
-
-#columns = [
-#        TableColumn(field="dates", title="Date", formatter=DateFormatter()),
-#        TableColumn(field="downloads", title="Downloads"),
-#    ]
-#data_table = DataTable(source=source, columns=columns, width=400, height=280)
 
 l_widget = [
         [date_, time_in],
@@ -128,25 +117,6 @@ l_widget = [
         [button,clear],
         [save_]
         ]
-
-#Set the dict_colors
-#dict_palette = {}
-#dict_palette["viridis"] = Viridis 
-#dict_palette["spectral"] = Spectral 
-#dict_palette["plasma"] = Plasma 
-#dict_palette["primary"] = Set1
-
-#params_iso = {
-#        'token': TOKEN,
-#        'from_place': from_place,
-#        'time_in': time_in.value,
-#        'min_date': min_date.isoformat(),
-#        'step': step,
-#        'nb_iter': nb_iter,
-#        'shape': dict_palette,
-#        'inProj': inProj,
-#        'outProj': outProj
-#            }
 
 
 #Run with defaults
@@ -162,32 +132,28 @@ TOOLS = "pan,wheel_zoom,reset,save, redo, undo"
 
 
 params_plot = {
-#            'shape': shape,
-#            'colors':colors, 
-#            'palette_name':"viridis", 
             'params':params, 
             'tools':TOOLS, 
-#            'source_polys':source_polys,
-#            'source_pts':source_pts,
 #            'buildings':buildings,
 #            'network':network,
             'tile_provider':STAMEN_TONER,
-#            'x_range':[243978, 276951],
-#            'y_range':[6234235, 6265465]
             }
 
 p_shape = make_plot(params_plot)
 
-x_range = p_shape.x_range
-y_range = p_shape.y_range
-#params_plot['palette_name'] = "plasma"
-#params_plot['x_range'] = x_range
-#params_plot['y_range'] = y_range
-#
-#l_plasma = make_plot(params_plot)
-#
-#params_plot['palette_name'] = "spectral"
-#l_spectral = make_plot(params_plot)    
+#x_range = p_shape.x_range
+#y_range = p_shape.y_range
+
+#DATASOURCE
+#source = ColumnDataSource(data=dict(
+#    x=[1, 2, 3, 4, 5],
+#    y=[2, 5, 8, 2, 7],
+#    color=["navy", "orange", "olive", "firebrick", "gold"]
+#    ))
+
+columns = ["date", "time", "adress", "duration", "shape", "colors"]
+array_log = pd.DataFrame(columns=columns)
+  
 
 def run():
     global counter_polys
@@ -235,6 +201,7 @@ def run():
     
     source = data['source']
     shape = data['shape']
+    
 
 #    buildings = data['buildings']
 #    colors = data['colors']['viridis']
