@@ -14,7 +14,7 @@ from shapely.ops import unary_union, cascaded_union
 from bokeh.models import GeoJSONDataSource
 
 
-from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, _convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats
+from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats
 
 def get_iso(params):
     """
@@ -110,16 +110,22 @@ def get_iso(params):
     
     #STATS
     gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
-    stats = get_stats(gdf_stats, coeff_ampl, coeff_conv)
+    stats, gdf_stats = get_stats(gdf_stats, coeff_ampl, coeff_conv)
     
-    print (stats)
+    for key,value in stats.items():
+        gdf_stats[key] = value
+    
+    source_polys = convert_GeoPandas_to_Bokeh_format(gdf_stats)
+    
+    #INTEGRER TOUT CA A LA SOURCE POUR AFFICHAGE AVEC TABLEAU !
     
 #    gdf_poly['area'] = stats['area']
 #    gdf_poly['nb'] = stats['nb']
-#    gdf_poly['distance'] = stats['distance']
+#    gdf_poly['distance'] = stats['distance']s
     
     if shape == "poly" or shape == "line":
-        source = GeoJSONDataSource(geojson=str(poly_json))
+#        source = GeoJSONDataSource(geojson=str(poly_json))
+        source = source_polys
     else:
         source = create_pts(gdf_poly)
     

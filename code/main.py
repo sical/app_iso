@@ -129,7 +129,25 @@ TOOLS = "pan,wheel_zoom,reset,save, redo, undo"
 #buildings = data['buildings']
 #network = data['network']
 
-
+source_iso = ColumnDataSource(
+        data=dict(
+                xs=[], 
+                ys=[], 
+                adress=[],
+                time=[],
+                duration=[], 
+                color=[],
+                date=[],
+                shape=[],
+                area=[],
+                perimeter=[],
+                nb_componants=[],
+                amplitude=[],
+                convex=[],
+                norm_notches=[],
+                complexity=[]
+                )
+        )
 
 params_plot = {
             'params':params, 
@@ -137,6 +155,7 @@ params_plot = {
 #            'buildings':buildings,
 #            'network':network,
             'tile_provider':STAMEN_TONER,
+            'source_iso': source_iso
             }
 
 p_shape = make_plot(params_plot)
@@ -154,7 +173,6 @@ p_shape = make_plot(params_plot)
 columns = ["date", "time", "adress", "duration", "shape", "colors"]
 array_log = pd.DataFrame(columns=columns)
   
-
 def run():
     global counter_polys
     global counter_lines

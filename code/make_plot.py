@@ -10,6 +10,7 @@ from geopy.geocoders import Nominatim
 
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, LinearColorMapper
+from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
 
 geolocator = Nominatim()
 
@@ -44,6 +45,7 @@ def make_plot(params_plot):
 #    buildings = params_plot['buildings']
 #    network = params_plot['network']
     tile_provider = params_plot['tile_provider']
+    source = params_plot['source_iso']
 #    x_range = params_plot['x_range']
 #    y_range = params_plot['y_range']
     
@@ -111,6 +113,24 @@ def make_plot(params_plot):
             match_aspect=True, 
             aspect_scale=1
             )
+    
+    columns = [
+        TableColumn(field="adress", title="Adress"),
+        TableColumn(field="time", title="Time"),
+        TableColumn(field="duration", title="Duration"),
+        TableColumn(field="color", title="Color"),
+        TableColumn(field="date", title="Date"),
+        TableColumn(field="shape", title="Shape"),
+        TableColumn(field="area", title="Area"),
+        TableColumn(field="perimeter", title="Perimeter"),
+        TableColumn(field="nb", title="Number of componants"),
+        TableColumn(field="amplitude", title="Amplitude"),
+        TableColumn(field="convex", title="Deviation from convex hull"),
+        TableColumn(field="norm_notches", title="Normalized notches"),
+        TableColumn(field="complexity", title="Complexity")
+    ]
+    
+    data_table = DataTable(source=source, columns=columns, width=600, height=280)
     
 #    p_shape.patches(
 #            'xs',

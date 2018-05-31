@@ -335,7 +335,7 @@ def _palette(list_time, dict_palette):
     
     return dict_colors
 
-def _convert_GeoPandas_to_Bokeh_format(gdf):
+def convert_GeoPandas_to_Bokeh_format(gdf):
     """
     Function to convert a GeoPandas GeoDataFrame to a Bokeh
     ColumnDataSource object.
@@ -345,22 +345,24 @@ def _convert_GeoPandas_to_Bokeh_format(gdf):
                                 
     Returns ColumnDataSource for Bokeh.
     """
-#    gdf_new = gdf.drop('geometry', axis=1).copy()
-    gdf['xs'] = gdf.apply(
-            getCoords, 
-            geom_col="geometry", 
+    gdf_new = gdf.drop('geometry', axis=1).copy()
+    gdf_new['xs'] = gdf.apply(
+            _getGeometryCoords, 
+            geom ="geometry", 
             coord_type="x", 
+            shape_type="polygon",
             axis=1
             )
     
-    gdf['ys'] = gdf.apply(
-            getCoords, 
-            geom_col="geometry", 
+    gdf_new['ys'] = gdf.apply(
+            _getGeometryCoords, 
+            geom ="geometry", 
             coord_type="y", 
+            shape_type="polygon",
             axis=1
             )
 
-    return ColumnDataSource(gdf)
+    return ColumnDataSource(gdf_new)
 
 
 #def getPolyCoords(line, geom, coord_type):
@@ -398,7 +400,7 @@ def _getGeometryCoords(line, geom, coord_type, shape_type):
     
     # Parse the exterior of the coordinate
     if shape_type == 'polygon':
-        exterior = line[geom].geoms[0].exterior
+        exterior = line[geom].exterior
         
         if coord_type == 'x':
             # Get the x coordinates of the exterior
@@ -607,6 +609,9 @@ def get_stats(gdf, coeff_ampl, coeff_conv):
     gdf['perimeter'] = gdf['geometry'].length
     tot_perimeter = gdf['perimeter'].sum()
     
+    columns_drop = ["boundary", "convex_hull", "convex_boundary", "convex_area", "centroid"]
+    gdf = gdf.drop(columns_drop, axis=1)
+    
     return {
             'area':tot_area,
             'perimeter':tot_perimeter,
@@ -616,5 +621,5 @@ def get_stats(gdf, coeff_ampl, coeff_conv):
             'convex': mean_convex,
             'norm_notches': mean_norm_notches,
             'complexity': mean_complexity
-            }
+            }, gdf
     
