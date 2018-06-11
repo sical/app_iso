@@ -9,7 +9,7 @@ from geopy.geocoders import Nominatim
 
 
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, LinearColorMapper
+from bokeh.models import ColumnDataSource, LinearColorMapper, PolyEditTool
 from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
 
 geolocator = Nominatim()
@@ -129,6 +129,14 @@ def make_plot(params_plot):
         TableColumn(field="norm_notches", title="Normalized notches"),
         TableColumn(field="complexity", title="Complexity")
     ]
+    
+    # TODO, fix edit tool
+#    p1 = p_shape.patches([], [], fill_alpha=0.4)
+#    c1 = p_shape.circle([], [], size=10, color='red')
+#    edit_tool = PolyEditTool(renderers=[p1, p1], vertex_renderer=c1)
+#
+#    p_shape.add_tools(edit_tool)
+#    p_shape.toolbar.active_drag = edit_tool
     
     data_table = DataTable(source=source, columns=columns, width=600, height=280)
     

@@ -11,6 +11,7 @@ from geopy.geocoders import Nominatim
 import osmnx as ox
 import json
 import numpy as np
+from shapely.geometry import MultiPolygon
 
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 
@@ -74,9 +75,30 @@ def gdf_to_geojson(gdf, properties):
     
     geojson_ = {"type":"FeatureCollection", "features":[]}
     for line in gdf.itertuples():
-        for poly in line.geometry:
+        if (isinstance(line.geometry, MultiPolygon)):
+            for poly in line.geometry:
+                l_poly = []
+                for pt in poly.exterior.coords:
+                    l_poly.extend([[pt[0],pt[1]]])
+                feature = {"type":"Feature",
+                       "properties":{},
+                       "geometry":{
+                               "type":"Polygon",
+                               "coordinates":[]
+                               }
+                       }
+                feature["geometry"]["coordinates"] = [list(reversed(l_poly))]
+            
+                if (properties != []) or (properties is not None):
+                    for prop in properties:
+                        feature["properties"][prop] = line[properties.index(prop)]
+                
+                    geojson_["features"].append(feature)
+                else:
+                    feature.pop(properties, None)
+        else:
             l_poly = []
-            for pt in poly.exterior.coords:
+            for pt in line.geometry.exterior.coords:
                 l_poly.extend([[pt[0],pt[1]]])
             feature = {"type":"Feature",
                    "properties":{},
@@ -94,6 +116,7 @@ def gdf_to_geojson(gdf, properties):
                 geojson_["features"].append(feature)
             else:
                 feature.pop(properties, None)
+                
     return json.dumps(geojson_), geojson_
     
 def buildings_to_datasource(polygon):

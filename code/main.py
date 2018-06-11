@@ -10,7 +10,7 @@ from bokeh.io import show, curdoc, export_png, export_svgs
 from bokeh.plotting import figure
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import LinearColorMapper, Slider, ColumnDataSource
-from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn
+from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn, Div
 from bokeh.layouts import row, column, gridplot, widgetbox
 from dotenv import load_dotenv
 from pathlib import Path
@@ -25,11 +25,12 @@ from functions import geocode
 from bokeh_tools import colors_slider, colors_radio
 
 #Parameters
-env_path = Path('./code/') / '.env'
-load_dotenv(dotenv_path=env_path)
-
-TOKEN = os.getenv("NAVITIA_TOKEN")
-
+try:
+    env_path = Path('./code/') / '.env'
+    load_dotenv(dotenv_path=env_path)
+    TOKEN = os.getenv("NAVITIA_TOKEN")
+except:
+    TOKEN = os.getenv("NAVITIA_TOKEN")
 params = "./code/params/params.json"
 params = json.load(open(params))
 
@@ -63,6 +64,9 @@ max_date = date(year_max, month_max, day_max)
 
 #Set ColumnDataSource
 source_poly = {}
+
+#Set intersections
+gdf_poly_mask = None
 
 #############
 #  WIDGETS  #
@@ -101,6 +105,9 @@ tab_slide_colors = Panel(child=panel_slide, title="Sliders colors")
 panel_viridis = colors_radio(Viridis[5])
 tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
 
+#INPUT 
+div_alert = Div(text="")
+
 #EXPORT
 menu = [("PNG", "png"), ("SVG", "svg")]
 save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
@@ -109,7 +116,7 @@ save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
 l_widget = [
         [date_, time_in],
         [adress_in, step_in],
-        [radio_button_shapes],
+        [radio_button_shapes, div_alert],
         [
                 Tabs(tabs=[ tab_slide_colors, tab_viridis ])
         ],
@@ -120,7 +127,7 @@ l_widget = [
 
 
 #Run with defaults
-TOOLS = "pan,wheel_zoom,reset,save, redo, undo"
+TOOLS = "pan,wheel_zoom,reset"
 #data = get_iso(params_iso)
     
 #source_polys = data['poly']
@@ -172,6 +179,7 @@ p_shape = make_plot(params_plot)
 
 columns = ["date", "time", "adress", "duration", "shape", "colors"]
 array_log = pd.DataFrame(columns=columns)
+
   
 def run():
     global counter_polys
@@ -180,11 +188,15 @@ def run():
     global names
     global p_shape
     global color_choice
+    global gdf_poly_mask
     
     date_value = date_.value
-    if date_value is None:
-        date_value = date_.min_date.isoformat()
     time_value = time_in.value
+    
+    if date_value is None:
+        date_value = date.today()
+    if time_value is None:
+        time_value = datetime.datetime.now().time()
 #    nb_iter_value = int(nb_iter_in.value)
     step_value = int(step_in.value) * 60
     adress = adress_in.value
@@ -215,12 +227,33 @@ def run():
         'outProj': outProj
             }
     
-    data = get_iso(params_iso)
+#    try:
+    data = get_iso(params_iso, gdf_poly_mask)
+    gdf_poly_mask = data['gdf_poly_mask']
     
+    print ("MASK", gdf_poly_mask)
+
     source = data['source']
     shape = data['shape']
+    source_intersection = data['intersection']
     
-
+    if source_intersection is not None:
+        options_intersect = dict(
+#                fill_alpha= params["fig_params"]["alpha_surf"], 
+    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                fill_color="blue", 
+                fill_alpha = 0.75,
+                line_color="black", 
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=source_intersection,
+                legend="Intersection"
+                )
+        
+        intersections_patches = p_shape.patches(
+            'xs', 
+            'ys', 
+            **options_intersect
+            )
 #    buildings = data['buildings']
 #    colors = data['colors']['viridis']
 #    network = data['network']
@@ -250,7 +283,7 @@ def run():
                 legend="Isochrone_polys" + str(counter_polys)
                 )
         
-        p_shape.patches(
+        poly_patches = p_shape.patches(
             'xs', 
             'ys', 
             **options_iso_surf,
@@ -258,6 +291,16 @@ def run():
             )
         
         counter_polys += 1 
+        
+#        p1 = p_shape.patches([], [], fill_alpha=0.4)
+#
+#        c1 = p_shape.circle([], [], size=10, color='red')
+#        edit_tool = PolyEditTool(renderers=[p1, test], vertex_renderer=c1)
+##        poly_renderer.append(test)
+##        tool = PolyEditTool(renderers=poly_renderer)
+#        p_shape.add_tools(edit_tool)
+#        p_shape.toolbar.active_drag = edit_tool
+        
         
     elif shape == "line":
         name = "lines"  + str(counter_lines)
@@ -355,6 +398,11 @@ def run():
     p_shape.legend.click_policy="hide"
     
     names.append(name)
+    div_alert.text = ""
+        
+#    except:
+#        div_alert.text =  """<span style="color: red"><b>ALERTE: Verifiez vos parametres</b></span>"""
+        
     
 
 def clear_plots():

@@ -16,7 +16,7 @@ from bokeh.models import GeoJSONDataSource
 
 from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats
 
-def get_iso(params):
+def get_iso(params, gdf_poly_mask):
     """
     Request on OTP server to get isochrone via API
     Get also buildings and network on OSM via osmnx
@@ -49,7 +49,9 @@ def get_iso(params):
     coeff_ampl = 0.8 # See Brinkhoff et al. paper
     coeff_conv = 0.2 # See Brinkhoff et al. paper
     
-    date_time = min_date + "T" + time_in
+    print (min_date)
+    
+    date_time = min_date.isoformat() + "T" + time_in
     
     step = int(step)
     nb_iter = int(nb_iter)
@@ -73,6 +75,8 @@ def get_iso(params):
     
     r = requests.get(url, headers=headers)
     code = r.status_code
+    
+    print (url, code)
 
     if code == 200:
         json_response = json.dumps(r.json())
@@ -105,6 +109,25 @@ def get_iso(params):
     gdf_poly.crs = {'init': inProj}
     gdf_poly = gdf_poly.to_crs({'init': outProj})
     gdf_poly = gdf_poly.sort_values(by='time', ascending=False)
+    
+    if gdf_poly_mask is not None:
+        intersection = gpd.overlay(gdf_poly, gdf_poly_mask, how='intersection')
+        gdf_poly_mask = gdf_poly.copy()
+        print ("CHIASSE")
+        print (type(intersection), intersection)
+        intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
+        print ("CHIASSE2")
+        intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
+        print ("CHIASSE3")
+        stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
+        
+        for key,value in stats_intersection.items():
+            intersection[key] = value
+    
+            source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
+    else:
+        source_intersections = None
+        gdf_poly_mask = gdf_poly.copy()
     
     poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time'])
     
@@ -143,7 +166,9 @@ def get_iso(params):
     
     return {
             'source':source,
-            'shape':shape
+            'shape':shape,
+            'intersection':source_intersections,
+            'gdf_poly_mask': gdf_poly_mask
 #            'buildings':buildings,
 #            'network':network
             }
