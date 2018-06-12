@@ -112,19 +112,17 @@ def get_iso(params, gdf_poly_mask):
     
     if gdf_poly_mask is not None:
         intersection = gpd.overlay(gdf_poly, gdf_poly_mask, how='intersection')
-        gdf_poly_mask = gdf_poly.copy()
-        print ("CHIASSE")
-        print (type(intersection), intersection)
-        intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
-        print ("CHIASSE2")
-        intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
-        print ("CHIASSE3")
-        stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
         
-        for key,value in stats_intersection.items():
-            intersection[key] = value
+        intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
+        intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
+        gdf_poly_mask = intersection.copy().drop("time", axis=1)
+        stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
+        intersection.to_file("test.shp")
+        
+#        for key,value in stats_intersection.items():
+#            intersection[key] = value
     
-            source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
+        source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
     else:
         source_intersections = None
         gdf_poly_mask = gdf_poly.copy()

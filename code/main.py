@@ -167,6 +167,44 @@ params_plot = {
 
 p_shape = make_plot(params_plot)
 
+
+source_intersection = ColumnDataSource(
+        data=dict(
+                xs=[], 
+                ys=[], 
+                adress=[],
+                time=[],
+                duration=[], 
+                color=[],
+                date=[],
+                shape=[],
+                area=[],
+                perimeter=[],
+                nb_componants=[],
+                amplitude=[],
+                convex=[],
+                norm_notches=[],
+                complexity=[]
+                )
+        )
+
+options_intersect = dict(
+#                fill_alpha= params["fig_params"]["alpha_surf"], 
+    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                fill_color="blue", 
+                fill_alpha = 0.70,
+                line_color="black", 
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=source_intersection,
+                legend="Intersection"
+                )
+        
+p_shape.patches(
+    'xs', 
+    'ys', 
+    **options_intersect
+    )
+
 #x_range = p_shape.x_range
 #y_range = p_shape.y_range
 
@@ -230,30 +268,29 @@ def run():
 #    try:
     data = get_iso(params_iso, gdf_poly_mask)
     gdf_poly_mask = data['gdf_poly_mask']
-    
-    print ("MASK", gdf_poly_mask)
 
     source = data['source']
     shape = data['shape']
-    source_intersection = data['intersection']
+    data_intersection = data['intersection']
     
-    if source_intersection is not None:
-        options_intersect = dict(
-#                fill_alpha= params["fig_params"]["alpha_surf"], 
-    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                fill_color="blue", 
-                fill_alpha = 0.75,
-                line_color="black", 
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=source_intersection,
-                legend="Intersection"
-                )
-        
-        intersections_patches = p_shape.patches(
-            'xs', 
-            'ys', 
-            **options_intersect
-            )
+    if data_intersection is not None:
+        source_intersection.data = data_intersection.data
+#        options_intersect = dict(
+##                fill_alpha= params["fig_params"]["alpha_surf"], 
+#    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+#                fill_color="blue", 
+#                fill_alpha = 0.70,
+#                line_color="black", 
+#                line_width=params["fig_params"]["line_width_surf"], 
+#                source=source_intersection,
+#                legend="Intersection"
+#                )
+#        
+#        p_shape.patches(
+#            'xs', 
+#            'ys', 
+#            **options_intersect
+#            )
 #    buildings = data['buildings']
 #    colors = data['colors']['viridis']
 #    network = data['network']
@@ -333,7 +370,8 @@ def run():
                 line_width=params["fig_params"]["line_width_surf"], 
                 size=3,
                 source=source,
-                legend="Isochrone_points" + str(counter_points)
+                legend="Isochrone_points" + str(counter_points),
+                name="intersection"
                 )
         
         p_shape.circle(
