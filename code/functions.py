@@ -645,4 +645,3 @@ def get_stats(gdf, coeff_ampl, coeff_conv):
             'norm_notches': mean_norm_notches,
             'complexity': mean_complexity
             }, gdf
-    

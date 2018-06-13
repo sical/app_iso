@@ -5,12 +5,14 @@
 from datetime import date
 import os
 
+import requests
+
 from bokeh.palettes import Viridis, Spectral, Plasma, Set1
 from bokeh.io import show, curdoc, export_png, export_svgs
 from bokeh.plotting import figure
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
-from bokeh.models import LinearColorMapper, Slider, ColumnDataSource
-from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn, Div
+from bokeh.models import LinearColorMapper, Slider, ColumnDataSource, PointDrawTool, DataTable
+from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn, Div, Select
 from bokeh.layouts import row, column, gridplot, widgetbox
 from dotenv import load_dotenv
 from pathlib import Path
@@ -18,6 +20,8 @@ from copy import deepcopy
 import json
 from datetime import datetime
 import pandas as pd
+from shapely.wkt import loads as sh_loads
+from pyproj import transform, Proj
 
 from get_iso import get_iso
 from make_plot import make_plot
@@ -57,6 +61,7 @@ counter_lines = 0
 counter_points = 0 
 color_choice = 0
 names = []
+alert = """<span style="color: red"><b>{}</b></span>"""
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -67,6 +72,39 @@ source_poly = {}
 
 #Set intersections
 gdf_poly_mask = None
+
+#Get dict of coverage regions by Navitia
+url='https://api.navitia.io/v1/coverage/'
+headers = {
+        'accept': 'application/json',
+        'Authorization': TOKEN
+        }
+r = requests.get(url, headers=headers)
+code = r.status_code
+
+
+if code == 200:
+    coverage = r.json()['regions']
+else:
+    print ('ERROR:', code)
+
+dict_region = {}    
+
+for region in coverage:
+    status = region["status"]
+    if status == "running":
+        name = region["name"]
+        id_ = region["id"]
+        shape = sh_loads(region["shape"])
+        if name is not None:
+            dict_region[name] = {
+                    "id":id_,
+                    "shape":shape
+                    }
+
+for region, data in dict_region.items():
+    if data["id"] == "fr-idf":
+        default_region = region
 
 #############
 #  WIDGETS  #
@@ -85,6 +123,12 @@ step_in = TextInput(value=str(int(step/60)), title="Entrez une duree en minutes:
 radio_button_shapes = RadioButtonGroup(
         labels=["Points", "Lines", "Polygons"], 
         active=2
+        )
+
+#SHAPES
+radio_button_loc = RadioButtonGroup(
+        labels=["Point", "Adresse"], 
+        active=0
         )
 
 #OPACITY
@@ -112,11 +156,14 @@ div_alert = Div(text="")
 menu = [("PNG", "png"), ("SVG", "svg")]
 save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
 
+#SELECT REGION
+select = Select(title="Region:", value=default_region, options=list(dict_region.keys()))
 
 l_widget = [
+        [select, div_alert],
         [date_, time_in],
         [adress_in, step_in],
-        [radio_button_shapes, div_alert],
+        [radio_button_shapes, radio_button_loc],
         [
                 Tabs(tabs=[ tab_slide_colors, tab_viridis ])
         ],
@@ -124,7 +171,6 @@ l_widget = [
         [button,clear],
         [save_]
         ]
-
 
 #Run with defaults
 TOOLS = "pan,wheel_zoom,reset"
@@ -155,6 +201,7 @@ source_iso = ColumnDataSource(
                 complexity=[]
                 )
         )
+        
 
 params_plot = {
             'params':params, 
@@ -187,6 +234,42 @@ source_intersection = ColumnDataSource(
                 complexity=[]
                 )
         )
+        
+source_goto = ColumnDataSource(
+        data=dict(
+                x=[], 
+                y=[],
+                )
+        )
+
+options_goto = dict(
+                color="white",
+                alpha=0.0,
+#                fill_alpha = 1.0,
+#                line_color="white", 
+#                line_alpha = 0.0,
+                source = source_goto
+                )
+
+x, y = dict_region[select.value]["shape"][0].exterior.xy
+p_4326 = Proj(init='epsg:4326')
+p_3857 = Proj(init='epsg:3857')
+coords= [transform(p_4326, p_3857, lat, lon) for lat,lon in zip(list(x),list(y))]
+x = [coord[0] for coord in coords]
+y = [coord[1] for coord in coords]
+
+source_goto.data = dict(
+        x=x,
+        y=y
+        )
+
+p_shape.circle(
+    'x', 
+    'y', 
+    **options_goto
+    )
+
+
 
 options_intersect = dict(
 #                fill_alpha= params["fig_params"]["alpha_surf"], 
@@ -204,6 +287,21 @@ p_shape.patches(
     'ys', 
     **options_intersect
     )
+
+#DRAW POINT (add origine)
+source_point = ColumnDataSource({
+    'x': [], 
+    'y': []
+})
+
+renderer = p_shape.scatter(x='x', y='y', source=source_point, size=10)
+draw_tool = PointDrawTool(renderers=[renderer], empty_value='black')
+p_shape.add_tools(draw_tool)
+
+columns = [TableColumn(field="x", title="x"),
+           TableColumn(field="y", title="y")]
+table = DataTable(source=source_point, columns=columns, editable=True, height=200)
+#l_widget.append(table)
 
 #x_range = p_shape.x_range
 #y_range = p_shape.y_range
@@ -227,9 +325,16 @@ def run():
     global p_shape
     global color_choice
     global gdf_poly_mask
+    global alert
+    
+    alert.format("")
     
     date_value = date_.value
     time_value = time_in.value
+    
+    
+    
+    id_ = dict_region[select.value]["id"]
     
     if date_value is None:
         date_value = date.today()
@@ -238,8 +343,15 @@ def run():
 #    nb_iter_value = int(nb_iter_in.value)
     step_value = int(step_in.value) * 60
     adress = adress_in.value
-    from_place = geocode(adress)
-    from_place = str(from_place[0]) + ";" + str(from_place[1])
+    
+    if radio_button_loc.active == 1:
+        from_place = geocode(adress)
+        from_place = str(from_place[0]) + ";" + str(from_place[1])
+    else:
+        lat = source_point.data["x"][-1]
+        lon = source_point.data["y"][-1]
+        coords = transform(p_3857, p_4326, lat, lon)
+        from_place = str(coords[0]) + ";" + str(coords[1])
     
     if color_choice == 0:
         color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
@@ -266,12 +378,16 @@ def run():
             }
     
 #    try:
-    data = get_iso(params_iso, gdf_poly_mask)
+    data = get_iso(params_iso, gdf_poly_mask, id_)
     gdf_poly_mask = data['gdf_poly_mask']
 
     source = data['source']
     shape = data['shape']
     data_intersection = data['intersection']
+    status = data['status']
+    
+    if source is None:
+        shape = ""
     
     if data_intersection is not None:
         source_intersection.data = data_intersection.data
@@ -360,7 +476,7 @@ def run():
         
         counter_lines += 1
         
-    else:
+    elif shape == "point":
         name="points"  + str(counter_polys)
         options_iso_pts = dict(
 #                line_alpha= params["fig_params"]["alpha_surf"], 
@@ -382,6 +498,7 @@ def run():
             )
         
         counter_points += 1
+    
         
     
 #        options_network = dict(
@@ -435,8 +552,8 @@ def run():
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
     
-    names.append(name)
-    div_alert.text = ""
+#    names.append(name)
+    div_alert.text = alert.format(status)
         
 #    except:
 #        div_alert.text =  """<span style="color: red"><b>ALERTE: Verifiez vos parametres</b></span>"""
@@ -499,7 +616,19 @@ def color_hex(attrname, old, new):
     global color_choice
     color_choice = 1
     
+
+def goto(attrname, old, new):
+    x, y = dict_region[select.value]["shape"][0].exterior.xy
+    p_4326 = Proj(init='epsg:4326')
+    p_3857 = Proj(init='epsg:3857')
+    coords= [transform(p_4326, p_3857, lat, lon) for lat,lon in zip(list(x),list(y))]
+    x = [coord[0] for coord in coords]
+    y = [coord[1] for coord in coords]
     
+    source_goto.data = dict(
+            x=x,
+            y=y
+            )
 
 save_.on_change('value', save_handeler)            
 button.on_click(run)
@@ -510,12 +639,16 @@ blue_slider.on_change('value',color_sliders)
 green_slider.on_change('value',color_sliders)
 opacity.on_change('value', color_sliders)
 panel_viridis.children[0].children[0].on_change('active',color_hex)
+select.on_change('value',goto)
 
-layout = row(
-        p_shape,
-        gridplot(
-                l_widget
-                )
+layout = column(
+        row(
+            p_shape,
+            gridplot(
+                    l_widget
+            ),
+        ),
+        table
 )
 
 
