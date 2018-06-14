@@ -62,6 +62,8 @@ counter_points = 0
 color_choice = 0
 names = []
 alert = """<span style="color: red"><b>{}</b></span>"""
+selected = False
+color_value = "#7f7f7f"
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -173,7 +175,7 @@ l_widget = [
         ]
 
 #Run with defaults
-TOOLS = "pan,wheel_zoom,reset"
+TOOLS = "pan,wheel_zoom, tap, reset"
 #data = get_iso(params_iso)
     
 #source_polys = data['poly']
@@ -208,7 +210,7 @@ params_plot = {
             'tools':TOOLS, 
 #            'buildings':buildings,
 #            'network':network,
-            'tile_provider':STAMEN_TONER,
+            'tile_provider':STAMEN_TERRAIN_RETINA,
             'source_iso': source_iso
             }
 
@@ -274,19 +276,21 @@ p_shape.circle(
 options_intersect = dict(
 #                fill_alpha= params["fig_params"]["alpha_surf"], 
     #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                fill_color="blue", 
-                fill_alpha = 0.70,
-                line_color="black", 
-                line_width=params["fig_params"]["line_width_surf"], 
                 source=source_intersection,
+                color='blue',
+                alpha=0.70,
+#                fill_color="black", 
+#                fill_alpha = 0.70,
+#                line_color="black", 
+#                line_width=params["fig_params"]["line_width_surf"], 
                 legend="Intersection"
                 )
         
-p_shape.patches(
-    'xs', 
-    'ys', 
-    **options_intersect
-    )
+intersections = p_shape.patches(
+                                'xs', 
+                                'ys', 
+                                **options_intersect
+                                )
 
 #DRAW POINT (add origine)
 source_point = ColumnDataSource({
@@ -294,7 +298,15 @@ source_point = ColumnDataSource({
     'y': []
 })
 
-renderer = p_shape.scatter(x='x', y='y', source=source_point, size=10)
+renderer = p_shape.circle(
+        x='x', 
+        y='y', 
+        source=source_point, 
+        size=10,
+        fill_color='#5BC862',
+        fill_alpha=0.5,
+        line_color='black'
+        )
 draw_tool = PointDrawTool(renderers=[renderer], empty_value='black')
 p_shape.add_tools(draw_tool)
 
@@ -326,13 +338,12 @@ def run():
     global color_choice
     global gdf_poly_mask
     global alert
+    global color_value
     
     alert.format("")
     
     date_value = date_.value
     time_value = time_in.value
-    
-    
     
     id_ = dict_region[select.value]["id"]
     
@@ -353,10 +364,13 @@ def run():
         coords = transform(p_3857, p_4326, lat, lon)
         from_place = str(coords[0]) + ";" + str(coords[1])
     
-    if color_choice == 0:
-        color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
-    else:
-        color_value = Viridis[5][panel_viridis.children[0].children[0].active]
+#    if color_choice == 0:
+#        color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
+#    else:
+#        color_value = Viridis[5][panel_viridis.children[0].children[0].active]
+        
+        
+#    source_intersection.data['color'] = [color_value,]
     
     if radio_button_shapes.active == 0:
         shape = "point"
@@ -391,6 +405,12 @@ def run():
     
     if data_intersection is not None:
         source_intersection.data = data_intersection.data
+#        count = source_intersection.data['xs'].size
+#        source_intersection.data['color'] = ["red" for i in range(0,count)]
+#        for x,y in source_intersection.data.items():
+#            print (x,y)
+#        print (source_intersection.data['color'])
+        
 #        options_intersect = dict(
 ##                fill_alpha= params["fig_params"]["alpha_surf"], 
 #    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
@@ -610,11 +630,18 @@ def tile_opacity(attrname, old, new):
 
 def color_sliders(attrname, old, new):
     global color_choice
+    global color_value
     color_choice = 0
+    color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
+    if selected is True:
+        glyph = intersections.glyph
+        glyph.fill_color = color_value
     
 def color_hex(attrname, old, new):
     global color_choice
+    global color_value
     color_choice = 1
+    color_value = Viridis[5][panel_viridis.children[0].children[0].active]
     
 
 def goto(attrname, old, new):
@@ -630,6 +657,18 @@ def goto(attrname, old, new):
             y=y
             )
 
+    
+def selection(attrname, old, new):
+    global selected
+    selected = True
+#    selections = new['1d']['indices']
+#    
+#    for index in selections:
+#        print (source_intersection.data.keys())
+#        patch_name =  source_intersection.data['color'][index]
+#        source_intersection.data['color'][index] = "black"
+#        print("TapTool callback executed on Patch {}".format(patch_name))
+
 save_.on_change('value', save_handeler)            
 button.on_click(run)
 clear.on_click(clear_plots)
@@ -640,6 +679,8 @@ green_slider.on_change('value',color_sliders)
 opacity.on_change('value', color_sliders)
 panel_viridis.children[0].children[0].on_change('active',color_hex)
 select.on_change('value',goto)
+
+intersections.data_source.on_change('selected',selection)
 
 layout = column(
         row(
