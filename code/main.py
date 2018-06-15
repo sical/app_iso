@@ -12,7 +12,8 @@ from bokeh.io import show, curdoc, export_png, export_svgs
 from bokeh.plotting import figure
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import LinearColorMapper, Slider, ColumnDataSource, PointDrawTool, DataTable
-from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn, Div, Select
+from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn, Div, Select, CheckboxButtonGroup
+from bokeh.models.glyphs import Patches
 from bokeh.layouts import row, column, gridplot, widgetbox
 from dotenv import load_dotenv
 from pathlib import Path
@@ -63,6 +64,7 @@ color_choice = 0
 names = []
 alert = """<span style="color: red"><b>{}</b></span>"""
 selected = False
+old_selections = []
 color_value = "#7f7f7f"
 
 #Set range date
@@ -127,16 +129,16 @@ radio_button_shapes = RadioButtonGroup(
         active=2
         )
 
-#SHAPES
+#POINT/ADRESS
 radio_button_loc = RadioButtonGroup(
         labels=["Point", "Adresse"], 
         active=0
         )
 
 #OPACITY
-opacity = Slider(start=0.1, end=1, value=0.5, step=.1,
+opacity = Slider(start=0.0, end=1.0, value=0.5, step=.1,
                      title="Opacite")
-opacity_tile = Slider(start=0.0, end=1, value=0.5, step=.1,
+opacity_tile = Slider(start=0.0, end=1.0, value=0.5, step=.1,
                      title="Tuiles opacite")
 viridis = Slider(start=0.1, end=1, value=0.5, step=.1,
                      title="Viridis_opacite")
@@ -150,6 +152,15 @@ panel_slide = row(
 tab_slide_colors = Panel(child=panel_slide, title="Sliders colors")
 panel_viridis = colors_radio(Viridis[5])
 tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
+
+#INTERSECTION TYPE AND COLOR
+intersection_color = CheckboxButtonGroup(
+        labels=["Intersection_contour", "Intersection_fond"], 
+        active=[])
+panel_intersection_color = Panel(child=intersection_color, title="Intersection colors")
+slider_contour = Slider(start=0, end=30, value=1, step=1,
+                     title="Taille contour")
+panel_contour = Panel(child=slider_contour, title="Taille contour")
 
 #INPUT 
 div_alert = Div(text="")
@@ -169,13 +180,13 @@ l_widget = [
         [
                 Tabs(tabs=[ tab_slide_colors, tab_viridis ])
         ],
-        [opacity_tile],
+        [opacity_tile, Tabs(tabs=[ panel_intersection_color, panel_contour ])],
         [button,clear],
         [save_]
         ]
 
 #Run with defaults
-TOOLS = "pan,wheel_zoom, tap, reset"
+TOOLS = "pan,wheel_zoom,reset"
 #data = get_iso(params_iso)
     
 #source_polys = data['poly']
@@ -221,15 +232,10 @@ source_intersection = ColumnDataSource(
         data=dict(
                 xs=[], 
                 ys=[], 
-                adress=[],
                 time=[],
-                duration=[], 
                 color=[],
-                date=[],
-                shape=[],
                 area=[],
                 perimeter=[],
-                nb_componants=[],
                 amplitude=[],
                 convex=[],
                 norm_notches=[],
@@ -277,7 +283,7 @@ options_intersect = dict(
 #                fill_alpha= params["fig_params"]["alpha_surf"], 
     #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
                 source=source_intersection,
-                color='blue',
+                color='color',
                 alpha=0.70,
 #                fill_color="black", 
 #                fill_alpha = 0.70,
@@ -404,7 +410,7 @@ def run():
         shape = ""
     
     if data_intersection is not None:
-        source_intersection.data = data_intersection.data
+        source_intersection.data.update(data_intersection.data)
 #        count = source_intersection.data['xs'].size
 #        source_intersection.data['color'] = ["red" for i in range(0,count)]
 #        for x,y in source_intersection.data.items():
@@ -631,18 +637,27 @@ def tile_opacity(attrname, old, new):
 def color_sliders(attrname, old, new):
     global color_choice
     global color_value
-    color_choice = 0
+#    color_choice = 0
     color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
-    if selected is True:
-        glyph = intersections.glyph
-        glyph.fill_color = color_value
+    color_select()
     
 def color_hex(attrname, old, new):
     global color_choice
     global color_value
-    color_choice = 1
+#    color_choice = 1
     color_value = Viridis[5][panel_viridis.children[0].children[0].active]
-    
+    color_select()
+
+def color_select():
+    glyph = intersections.glyph
+
+    if intersection_color.active == [0]:
+        glyph.line_color = color_value
+    elif intersection_color.active == [1]:
+        glyph.fill_color = color_value
+    elif intersection_color.active == [0,1]:
+        glyph.line_color = color_value
+        glyph.fill_color = color_value
 
 def goto(attrname, old, new):
     x, y = dict_region[select.value]["shape"][0].exterior.xy
@@ -656,18 +671,21 @@ def goto(attrname, old, new):
             x=x,
             y=y
             )
-
+def contour_update(attrname, old, new):
+    glyph = intersections.glyph
+    glyph.line_width = slider_contour.value
     
-def selection(attrname, old, new):
-    global selected
-    selected = True
+#def selection(attrname, old, new):
+##    global selected
+##    print ("YES")
+##    if selected is False:
+##        selected = True
+##    else:
+##        selected = False
 #    selections = new['1d']['indices']
 #    
-#    for index in selections:
-#        print (source_intersection.data.keys())
-#        patch_name =  source_intersection.data['color'][index]
-#        source_intersection.data['color'][index] = "black"
-#        print("TapTool callback executed on Patch {}".format(patch_name))
+#    if selections == old_selections:
+#        selected = False
 
 save_.on_change('value', save_handeler)            
 button.on_click(run)
@@ -679,8 +697,9 @@ green_slider.on_change('value',color_sliders)
 opacity.on_change('value', color_sliders)
 panel_viridis.children[0].children[0].on_change('active',color_hex)
 select.on_change('value',goto)
+slider_contour.on_change('value', contour_update)
 
-intersections.data_source.on_change('selected',selection)
+#intersections.data_source.on_change('selected',selection)
 
 layout = column(
         row(

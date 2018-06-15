@@ -16,6 +16,30 @@ from bokeh.models import GeoJSONDataSource
 
 from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats
 
+def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv):
+    if gdf_overlay is not None:
+            intersection = gpd.overlay(gdf_poly, gdf_overlay, how=how)
+            
+            intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
+            intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
+            if intersection.empty is False:
+                gdf_overlay = intersection.copy().drop("time", axis=1)
+                stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
+            
+    #        for key,value in stats_intersection.items():
+    #            intersection[key] = value
+                intersection["color"] = ["black" for i in range(0,intersection["area"].size)]
+                source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
+            else:
+                source_intersections = None
+                gdf_overlay = gdf_poly.copy()
+                
+    else:
+        source_intersections = None
+        gdf_overlay = gdf_poly.copy()
+        
+    return source_intersections, gdf_overlay
+
 def get_iso(params, gdf_poly_mask, id_):
     """
     Request on OTP server to get isochrone via API
@@ -106,6 +130,7 @@ def get_iso(params, gdf_poly_mask, id_):
         gdf_poly = gdf_poly.to_crs({'init': outProj})
         gdf_poly = gdf_poly.sort_values(by='time', ascending=False)
         
+        
         if gdf_poly_mask is not None:
             intersection = gpd.overlay(gdf_poly, gdf_poly_mask, how='intersection')
             
@@ -117,7 +142,7 @@ def get_iso(params, gdf_poly_mask, id_):
             
     #        for key,value in stats_intersection.items():
     #            intersection[key] = value
-        
+                intersection["color"] = ["black" for i in range(0,intersection["area"].size)]
                 source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
             else:
                 source_intersections = None
