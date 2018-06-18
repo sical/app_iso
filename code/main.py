@@ -135,6 +135,12 @@ radio_button_loc = RadioButtonGroup(
         active=0
         )
 
+#INTERSECTION MODE
+radio_button_intersection = RadioButtonGroup(
+        labels=["Intersection","Union", "Difference"], 
+        active=0
+        )
+
 #OPACITY
 opacity = Slider(start=0.0, end=1.0, value=0.5, step=.1,
                      title="Opacite")
@@ -180,7 +186,8 @@ l_widget = [
         [
                 Tabs(tabs=[ tab_slide_colors, tab_viridis ])
         ],
-        [opacity_tile, Tabs(tabs=[ panel_intersection_color, panel_contour ])],
+        [opacity_tile],
+        [radio_button_intersection, Tabs(tabs=[ panel_intersection_color, panel_contour ])],
         [button,clear],
         [save_]
         ]
@@ -378,6 +385,13 @@ def run():
         
 #    source_intersection.data['color'] = [color_value,]
     
+    if radio_button_intersection.active == 0:
+        how="intersection"
+    elif radio_button_intersection.active == 1:
+        how="union"
+    else:
+        how="symmetric_difference"
+    
     if radio_button_shapes.active == 0:
         shape = "point"
     elif radio_button_shapes.active == 1:
@@ -394,7 +408,8 @@ def run():
         'nb_iter': 1,
         'shape': shape,
         'inProj': inProj,
-        'outProj': outProj
+        'outProj': outProj,
+        'how': how
             }
     
 #    try:
@@ -626,7 +641,7 @@ def save_handeler(attr, old, new):
     name = datetime.now().strftime("%d_%b_%Y_%HH_%MM_%SS")
     title = "export_" + name
     if new == 'png':
-        export_png(layout, filename="%s.png" % title)
+        export_png(layout.children[0].children[0], filename="%s.png" % title)
     elif  new == 'svg':
         p_shape.output_backend = "svg"
         export_svgs(layout, filename="%s.svg" % title) 

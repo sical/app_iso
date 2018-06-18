@@ -25,9 +25,7 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv):
             if intersection.empty is False:
                 gdf_overlay = intersection.copy().drop("time", axis=1)
                 stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
-            
-    #        for key,value in stats_intersection.items():
-    #            intersection[key] = value
+                
                 intersection["color"] = ["black" for i in range(0,intersection["area"].size)]
                 source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
             else:
@@ -56,6 +54,7 @@ def get_iso(params, gdf_poly_mask, id_):
             - nb_iter: string, number of isochrone's step=> "3"
             - inProj: string, epsg of input =>"epsg:4326" 
             - outProj: string, epsg for output => "epsg:3857"
+            - how: string, type of intersection => "union"
     
     Returns dict with isochronic polygons, isochronic points, colors,
     buildings and network
@@ -71,6 +70,7 @@ def get_iso(params, gdf_poly_mask, id_):
     shape = params['shape']
     inProj = params['inProj']
     outProj = params['outProj']
+    how = params['how']
     coeff_ampl = 0.8 # See Brinkhoff et al. paper
     coeff_conv = 0.2 # See Brinkhoff et al. paper
     
@@ -129,28 +129,35 @@ def get_iso(params, gdf_poly_mask, id_):
         gdf_poly.crs = {'init': inProj}
         gdf_poly = gdf_poly.to_crs({'init': outProj})
         gdf_poly = gdf_poly.sort_values(by='time', ascending=False)
+        print ("HOW", how)
+        source_intersections, gdf_poly_mask = overlay(
+                gdf_poly, 
+                gdf_poly_mask, 
+                how, 
+                coeff_ampl, 
+                coeff_conv
+                )
         
-        
-        if gdf_poly_mask is not None:
-            intersection = gpd.overlay(gdf_poly, gdf_poly_mask, how='intersection')
-            
-            intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
-            intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
-            if intersection.empty is False:
-                gdf_poly_mask = intersection.copy().drop("time", axis=1)
-                stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
-            
-    #        for key,value in stats_intersection.items():
-    #            intersection[key] = value
-                intersection["color"] = ["black" for i in range(0,intersection["area"].size)]
-                source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
-            else:
-                source_intersections = None
-                gdf_poly_mask = gdf_poly.copy()
-                
-        else:
-            source_intersections = None
-            gdf_poly_mask = gdf_poly.copy()
+#        if gdf_poly_mask is not None:
+#            intersection = gpd.overlay(gdf_poly, gdf_poly_mask, how='intersection')
+#            
+#            intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
+#            intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
+#            if intersection.empty is False:
+#                gdf_poly_mask = intersection.copy().drop("time", axis=1)
+#                stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
+#            
+#    #        for key,value in stats_intersection.items():
+#    #            intersection[key] = value
+#                intersection["color"] = ["black" for i in range(0,intersection["area"].size)]
+#                source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
+#            else:
+#                source_intersections = None
+#                gdf_poly_mask = gdf_poly.copy()
+#                
+#        else:
+#            source_intersections = None
+#            gdf_poly_mask = gdf_poly.copy()
         
         poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time'])
         
