@@ -18,6 +18,7 @@ from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_poly
 
 def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color):
     if gdf_overlay is not None:
+            print (gdf_overlay.columns, gdf_poly.columns)
             intersection = gpd.overlay(gdf_poly, gdf_overlay, how=how)
             if how == "union":
                 poly = intersection.geometry.unary_union
@@ -31,9 +32,9 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color):
             intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
             intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
             if intersection.empty is False:
+                intersection["color"] = [color_blended for i in range(0,intersection["geometry"].size)]
                 gdf_overlay = intersection.copy().drop("time", axis=1)
                 stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
-                intersection["color"] = [color_blended for i in range(0,intersection["area"].size)]
                 source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
             else:
                 source_intersections = None

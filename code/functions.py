@@ -60,6 +60,11 @@ geolocator = Nominatim()
 #    return json.dumps(geojson_)
 
 def colors_blend(c1, c2):
+    if "#" in str(c1):
+        c1 = hex2rgb(c1)
+    if "#" in str(c2):
+        c2 = hex2rgb(c2)
+    
     if c1 == c2:
         red = int(c1[0])
         green = int(c1[1])
@@ -73,6 +78,15 @@ def colors_blend(c1, c2):
 
     return color
 
+def hex2rgb(hexcode):
+    """
+    Source:https://stackoverflow.com/questions/29643352/converting-hex-to-rgb-value-in-python,
+    Answer of John1024
+    Adaptation: thom
+    """
+    hexcode = hexcode.lstrip('#')
+    rgb = tuple(int(hexcode[i:i+2], 16) for i in (0, 2 ,4))
+    return rgb
 
 def gdf_to_geojson(gdf, properties):
     """
