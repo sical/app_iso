@@ -28,6 +28,7 @@ from get_iso import get_iso
 from make_plot import make_plot
 from functions import geocode
 from bokeh_tools import colors_slider, colors_radio
+from copy import deepcopy
 
 #Parameters
 try:
@@ -65,7 +66,7 @@ names = []
 alert = """<span style="color: red"><b>{}</b></span>"""
 selected = False
 old_selections = []
-color_value = "#7f7f7f"
+color_value = (127,127,127)
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -367,6 +368,7 @@ def run():
 #    nb_iter_value = int(nb_iter_in.value)
     step_value = int(step_in.value) * 60
     adress = adress_in.value
+            
     
     if radio_button_loc.active == 1:
         from_place = geocode(adress)
@@ -399,6 +401,8 @@ def run():
     elif radio_button_shapes.active == 2:
         shape = "poly"
     
+    color = color_value
+    
     params_iso = {
         'token': TOKEN,
         'from_place': from_place,
@@ -409,7 +413,8 @@ def run():
         'shape': shape,
         'inProj': inProj,
         'outProj': outProj,
-        'how': how
+        'how': how,
+        'color':color
             }
     
 #    try:
@@ -623,10 +628,18 @@ def clear_plots():
             aspect_scale=1
             )
     
-    p_shape.grid.grid_line_color = None
+#    p_shape.grid.grid_line_color = None
     
     p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
-    layout.children[0] = p_shape
+    draw_tool = PointDrawTool(renderers=[renderer], empty_value='black')
+    p_shape.add_tools(draw_tool)
+    
+    layout.children[0].children[0] = p_shape
+    
+    source_goto.data = dict(
+        x=x,
+        y=y
+        )
     
     counter_polys = 0
     counter_lines = 0
@@ -641,10 +654,11 @@ def save_handeler(attr, old, new):
     name = datetime.now().strftime("%d_%b_%Y_%HH_%MM_%SS")
     title = "export_" + name
     if new == 'png':
-        export_png(layout.children[0].children[0], filename="%s.png" % title)
+        export_png(p_shape, filename="{}.png".format(title))
     elif  new == 'svg':
-        p_shape.output_backend = "svg"
-        export_svgs(layout, filename="%s.svg" % title) 
+        export = deepcopy(p_shape)
+        export.output_backend = "svg"
+        export_svgs(export, filename="{}.svg".format(title))
         
 def tile_opacity(attrname, old, new):
     p_shape.select(name="tile")[0].alpha=new

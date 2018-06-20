@@ -59,6 +59,21 @@ geolocator = Nominatim()
 #            feature.pop(properties, None)
 #    return json.dumps(geojson_)
 
+def colors_blend(c1, c2):
+    if c1 == c2:
+        red = int(c1[0])
+        green = int(c1[1])
+        blue = int(c1[2])
+    else:
+        red = min(int(c1[0]) + int(c2[0]), 255)
+        green = min(int(c1[1]) + int(c2[1]), 255)
+        blue = min(int(c1[2]) + int(c2[2]), 255)
+
+    color = "#{:02x}{:02x}{:02x}".format(red,green,blue)
+
+    return color
+
+
 def gdf_to_geojson(gdf, properties):
     """
     @param gdf (GeoPandas GeoDataframe): GeoDataframe (polygons) 
