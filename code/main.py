@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-
+@author: thomas
 """
 from datetime import date
 import os

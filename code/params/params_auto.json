@@ -1,0 +1,30 @@
+[{
+		"name": "Intersection_AlphaBlending_Uncalculated",
+		"how": "intersection",
+		"colors_iso": ["#ff0000", "#0000ff", "#00ff00"],
+		"colors_intersection": "#ffffff",
+		"opacity_isos": 0.5,
+		"opacity_intersection": 0.0,
+		"layers": "isos",
+		"shape": "poly",
+		"region_id": "fr-idf",
+		"date": "2018-06-21",
+		"adresses": ["79 Rue Mouffetard, 75005 Paris", "1 rue de vaugirard, 75005 Paris", "10 boulevard voltaire, 75005 Paris"],
+		"time": "08:00",
+		"duration": 20
+	}, {
+		"name": "Intersection_AlphaBlending_Calculated",
+		"how": "intersection",
+		"colors_iso": ["#ff0000", "#0000ff", "#00ff00"],
+		"colors_intersection": "#ffffff",
+		"opacity_isos": 0.5,
+		"opacity_intersection": 0.7,
+		"layers": "isos, intersection",
+		"shape": "poly",
+		"region_id": "fr-idf",
+		"date": "2018-06-21",
+		"adresses": ["79 Rue Mouffetard, 75005 Paris", "1 rue de vaugirard, 75005 Paris", "10 boulevard voltaire, 75005 Paris"],
+		"time": "08:00",
+		"duration": 20
+	}
+]
