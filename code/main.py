@@ -28,7 +28,6 @@ from get_iso import get_iso
 from make_plot import make_plot
 from functions import geocode
 from bokeh_tools import colors_slider, colors_radio
-from copy import deepcopy
 
 #Parameters
 try:

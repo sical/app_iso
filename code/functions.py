@@ -70,10 +70,10 @@ def colors_blend(c1, c2):
         green = int(c1[1])
         blue = int(c1[2])
     else:
-        red = min(int(c1[0]) + int(c2[0]), 255)
-        green = min(int(c1[1]) + int(c2[1]), 255)
-        blue = min(int(c1[2]) + int(c2[2]), 255)
-
+        red = min((int(c1[0]) + int(c2[0]))//2, 255)
+        green = min((int(c1[1]) + int(c2[1]))//2, 255)
+        blue = min((int(c1[2]) + int(c2[2]))//2, 255)
+    
     color = "#{:02x}{:02x}{:02x}".format(red,green,blue)
 
     return color

@@ -11,8 +11,7 @@ import geojson
 import json
 import geopandas as gpd
 from shapely.ops import unary_union, cascaded_union
-from bokeh.models import GeoJSONDataSource
-
+from bokeh.models import GeoJSONDataSource, ColumnDataSource
 
 from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats, colors_blend
 
@@ -37,11 +36,37 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color):
                 stats_intersection, intersection = get_stats(intersection, coeff_ampl, coeff_conv)
                 source_intersections = convert_GeoPandas_to_Bokeh_format(intersection)
             else:
-                source_intersections = None
+                source_intersections = ColumnDataSource(
+                        data=dict(
+                                xs=[], 
+                                ys=[], 
+                                time=[],
+                                color=[],
+                                area=[],
+                                perimeter=[],
+                                amplitude=[],
+                                convex=[],
+                                norm_notches=[],
+                                complexity=[]
+                                )
+                        )
                 gdf_overlay = gdf_poly.copy()
                 
     else:
-        source_intersections = None
+        source_intersections = ColumnDataSource(
+                        data=dict(
+                                xs=[], 
+                                ys=[], 
+                                time=[],
+                                color=[],
+                                area=[],
+                                perimeter=[],
+                                amplitude=[],
+                                convex=[],
+                                norm_notches=[],
+                                complexity=[]
+                                )
+                        )
         gdf_overlay = gdf_poly.copy()
         
     return source_intersections, gdf_overlay
