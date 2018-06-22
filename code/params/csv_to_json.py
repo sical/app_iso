@@ -17,7 +17,7 @@ def csv_to_json(csv_file, json_file, sep, columns_with_array):
     df.to_json(json_file, orient='records')
 
 if __name__ == "__main__":
-    csv_file = "params_auto.tsv"
+    csv_file = "params_auto - Feuille 1.tsv"
     json_file = "params_auto.json"
     sep = "\t"
     columns_with_array = ["colors_iso","adresses"]

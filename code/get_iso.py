@@ -15,17 +15,21 @@ from bokeh.models import GeoJSONDataSource, ColumnDataSource
 
 from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats, colors_blend
 
-def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color):
+def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
     if gdf_overlay is not None:
             intersection = gpd.overlay(gdf_poly, gdf_overlay, how=how)
             if how == "union":
                 poly = intersection.geometry.unary_union
                 intersection["geometry"] = [poly for i in range(0, intersection["geometry"].count())]
                 intersection = intersection.loc[[0], intersection.columns]
-                
+            
             c1 = gdf_poly["color"][0]
             c2 = gdf_overlay["color"][0]
-            color_blended = colors_blend(c1, c2)
+            
+            if color_switch is not None:
+                color_blended = color_switch
+            else:
+                color_blended = colors_blend(c1, c2)
             
             intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
             intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
@@ -104,7 +108,7 @@ def get_iso(params, gdf_poly_mask, id_):
     outProj = params['outProj']
     how = params['how']
     color = params['color']
-    color_intersection = params['color_intersection']
+    color_switch = params['color_switch']
     coeff_ampl = 0.8 # See Brinkhoff et al. paper
     coeff_conv = 0.2 # See Brinkhoff et al. paper
     
@@ -166,16 +170,13 @@ def get_iso(params, gdf_poly_mask, id_):
         
         gdf_poly['color'] = [color for i in range(0, gdf_poly["geometry"].count())]
         
-        if color_intersection is not None:
-            color = color_intersection
-
         source_intersections, gdf_poly_mask = overlay(
                 gdf_poly, 
                 gdf_poly_mask, 
                 how, 
                 coeff_ampl, 
                 coeff_conv,
-                color
+                color_switch
                 )
     
         

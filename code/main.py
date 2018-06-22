@@ -415,7 +415,7 @@ def run():
         'outProj': outProj,
         'how': how,
         'color':color_value,
-        'color_intersection': None
+        'color_switch': None
             }
     
 #    try:

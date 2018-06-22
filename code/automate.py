@@ -77,25 +77,25 @@ json_file = "./params/params_auto.json"
 params_auto = json.load(open(json_file))
 
 
-source_iso = ColumnDataSource(
-        data=dict(
-                xs=[], 
-                ys=[], 
-                adress=[],
-                time=[],
-                duration=[], 
-                color=[],
-                date=[],
-                shape=[],
-                area=[],
-                perimeter=[],
-                nb_componants=[],
-                amplitude=[],
-                convex=[],
-                norm_notches=[],
-                complexity=[]
-                )
-        )
+#source_iso = ColumnDataSource(
+#        data=dict(
+#                xs=[], 
+#                ys=[], 
+#                adress=[],
+#                time=[],
+#                duration=[], 
+#                color=[],
+#                date=[],
+#                shape=[],
+#                area=[],
+#                perimeter=[],
+#                nb_componants=[],
+#                amplitude=[],
+#                convex=[],
+#                norm_notches=[],
+#                complexity=[]
+#                )
+#        )
         
 TOOLS = "pan,wheel_zoom,reset"
 
@@ -111,20 +111,20 @@ params_plot = {
 p_shape = make_plot(params_plot)
 
 
-source_intersection = ColumnDataSource(
-        data=dict(
-                xs=[], 
-                ys=[], 
-                time=[],
-                color=[],
-                area=[],
-                perimeter=[],
-                amplitude=[],
-                convex=[],
-                norm_notches=[],
-                complexity=[]
-                )
-        )
+#source_intersection = ColumnDataSource(
+#        data=dict(
+#                xs=[], 
+#                ys=[], 
+#                time=[],
+#                color=[],
+#                area=[],
+#                perimeter=[],
+#                amplitude=[],
+#                convex=[],
+#                norm_notches=[],
+#                complexity=[]
+#                )
+#        )
 
 def run():
     global counter_polys
@@ -151,28 +151,6 @@ def run():
     if source is None:
         shape = ""
     
-    if data_intersection is not None:
-        name = "Intersection" + str(counter_intersection)
-        source_intersection = data_intersection
-        options_intersect = dict(
-#                fill_alpha= params["fig_params"]["alpha_surf"], 
-    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                source=source_intersection,
-                color='color',
-                alpha=opacity_intersection,
-#                fill_color="black", 
-#                fill_alpha = 0.70,
-#                line_color="black", 
-#                line_width=params["fig_params"]["line_width_surf"], 
-                legend=name
-                )
-        
-        intersections = p_shape.patches(
-                                        'xs', 
-                                        'ys', 
-                                        **options_intersect
-                                        )
-        counter_intersection += 1
 #        source_intersection.data.update(data_intersection.data)
 
     if shape == "poly":
@@ -235,6 +213,30 @@ def run():
         
         counter_points += 1
         
+        
+    if data_intersection is not None:
+        name = "Intersection" + str(counter_intersection)
+        source_intersection = data_intersection
+        options_intersect = dict(
+#                fill_alpha= params["fig_params"]["alpha_surf"], 
+    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                source=source_intersection,
+                color='color',
+                alpha=opacity_intersection,
+#                fill_color="black", 
+#                fill_alpha = 0.70,
+#                line_color="black", 
+#                line_width=params["fig_params"]["line_width_surf"], 
+                legend=name
+                )
+        
+        intersections = p_shape.patches(
+                                        'xs', 
+                                        'ys', 
+                                        **options_intersect
+                                        )
+        counter_intersection += 1
+        
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
     
@@ -243,9 +245,10 @@ def run():
 for param in params_auto:
     how = param["how"]
     colors_iso = param["colors_iso"]
-    color_intersection = param["colors_intersection"]
+    color_switch = param["colors_intersection"]
+    if color_switch == "None":
+        color_switch = None
     opacity_isos = param["opacity_isos"]
-    layers = param["layers"]
     region_id = param["region_id"]
     date_value = param["date"]
     date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
@@ -289,7 +292,7 @@ for param in params_auto:
             'outProj': outProj,
             'how': how,
             'color':color,
-            'color_intersection': color_intersection
+            'color_switch': color_switch
                 }     
         
         p_shape = run()
