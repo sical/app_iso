@@ -17,7 +17,6 @@ from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_poly
 
 def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color):
     if gdf_overlay is not None:
-            print (gdf_overlay.columns, gdf_poly.columns)
             intersection = gpd.overlay(gdf_poly, gdf_overlay, how=how)
             if how == "union":
                 poly = intersection.geometry.unary_union
@@ -105,6 +104,7 @@ def get_iso(params, gdf_poly_mask, id_):
     outProj = params['outProj']
     how = params['how']
     color = params['color']
+    color_intersection = params['color_intersection']
     coeff_ampl = 0.8 # See Brinkhoff et al. paper
     coeff_conv = 0.2 # See Brinkhoff et al. paper
     
@@ -165,6 +165,9 @@ def get_iso(params, gdf_poly_mask, id_):
         gdf_poly = gdf_poly.sort_values(by='time', ascending=False)
         
         gdf_poly['color'] = [color for i in range(0, gdf_poly["geometry"].count())]
+        
+        if color_intersection is not None:
+            color = color_intersection
 
         source_intersections, gdf_poly_mask = overlay(
                 gdf_poly, 
@@ -197,7 +200,7 @@ def get_iso(params, gdf_poly_mask, id_):
 #            source_intersections = None
 #            gdf_poly_mask = gdf_poly.copy()
         
-        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time'])
+        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #STATS
         gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])

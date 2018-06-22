@@ -120,7 +120,10 @@ def gdf_to_geojson(gdf, properties):
             
                 if (properties != []) or (properties is not None):
                     for prop in properties:
-                        feature["properties"][prop] = line[properties.index(prop)]
+                        value_prop = gdf.at[line.Index, prop]
+                        if type(value_prop) == np.int64:
+                            value_prop = int(value_prop)
+                        feature["properties"][prop] = value_prop
                 
                     geojson_["features"].append(feature)
                 else:
@@ -140,12 +143,15 @@ def gdf_to_geojson(gdf, properties):
         
             if (properties != []) or (properties is not None):
                 for prop in properties:
-                    feature["properties"][prop] = line[properties.index(prop)]
+                    value_prop = gdf.at[line.Index, prop]
+                    if type(value_prop) == np.int64:
+                        value_prop = int(value_prop)
+                    feature["properties"][prop] = value_prop
             
                 geojson_["features"].append(feature)
             else:
                 feature.pop(properties, None)
-                
+    
     return json.dumps(geojson_), geojson_
     
 def buildings_to_datasource(polygon):

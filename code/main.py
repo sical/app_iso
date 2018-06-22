@@ -59,7 +59,8 @@ month_max = default["month_max"]
 day_max = default["day_max"]
 counter_polys = 0 
 counter_lines = 0 
-counter_points = 0 
+counter_points = 0
+counter_intersection = 0 
 color_choice = 0
 names = []
 alert = """<span style="color: red"><b>{}</b></span>"""
@@ -286,24 +287,24 @@ p_shape.circle(
 
 
 
-options_intersect = dict(
-#                fill_alpha= params["fig_params"]["alpha_surf"], 
-    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                source=source_intersection,
-                color='color',
-                alpha=0.70,
-#                fill_color="black", 
-#                fill_alpha = 0.70,
-#                line_color="black", 
-#                line_width=params["fig_params"]["line_width_surf"], 
-                legend="Intersection"
-                )
-        
-intersections = p_shape.patches(
-                                'xs', 
-                                'ys', 
-                                **options_intersect
-                                )
+#options_intersect = dict(
+##                fill_alpha= params["fig_params"]["alpha_surf"], 
+#    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+#                source=source_intersection,
+#                color='color',
+#                alpha=0.70,
+##                fill_color="black", 
+##                fill_alpha = 0.70,
+##                line_color="black", 
+##                line_width=params["fig_params"]["line_width_surf"], 
+#                legend="Intersection"
+#                )
+#        
+#intersections = p_shape.patches(
+#                                'xs', 
+#                                'ys', 
+#                                **options_intersect
+#                                )
 
 #DRAW POINT (add origine)
 source_point = ColumnDataSource({
@@ -346,12 +347,14 @@ def run():
     global counter_polys
     global counter_lines
     global counter_points
+    global counter_intersection
     global names
     global p_shape
     global color_choice
     global gdf_poly_mask
     global alert
     global color_value
+    global intersections
     
     alert.format("")
     
@@ -400,8 +403,6 @@ def run():
     elif radio_button_shapes.active == 2:
         shape = "poly"
     
-    color = color_value
-    
     params_iso = {
         'token': TOKEN,
         'from_place': from_place,
@@ -413,7 +414,8 @@ def run():
         'inProj': inProj,
         'outProj': outProj,
         'how': how,
-        'color':color
+        'color':color_value,
+        'color_intersection': None
             }
     
 #    try:
@@ -429,7 +431,28 @@ def run():
         shape = ""
     
     if data_intersection is not None:
-        source_intersection.data.update(data_intersection.data)
+        name = "Intersection" + str(counter_intersection)
+        source_intersection = data_intersection
+        options_intersect = dict(
+#                fill_alpha= params["fig_params"]["alpha_surf"], 
+    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                source=source_intersection,
+                color='color',
+                alpha=0.50,
+#                fill_color="black", 
+#                fill_alpha = 0.70,
+#                line_color="black", 
+#                line_width=params["fig_params"]["line_width_surf"], 
+                legend=name
+                )
+        
+        intersections = p_shape.patches(
+                                        'xs', 
+                                        'ys', 
+                                        **options_intersect
+                                        )
+        counter_intersection += 1
+#        source_intersection.data.update(data_intersection.data)
 #        count = source_intersection.data['xs'].size
 #        source_intersection.data['color'] = ["red" for i in range(0,count)]
 #        for x,y in source_intersection.data.items():
@@ -532,7 +555,7 @@ def run():
                 size=3,
                 source=source,
                 legend="Isochrone_points" + str(counter_points),
-                name="intersection"
+                name=name
                 )
         
         p_shape.circle(
@@ -596,6 +619,8 @@ def run():
         
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
+    
+    
     
 #    names.append(name)
     div_alert.text = alert.format(status)
