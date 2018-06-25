@@ -49,7 +49,7 @@ bokeh serve code
 
 ## Usage / controls
 ![app_usage](./screenshots/app_usage.png)
-### ![map](./screenshots/usage/I_map.png =100x){:height="50%" width="50%"}
+### ![map](./screenshots/usage/I_map.png){:height="50%" width="50%"}
 1. Pan tool: pan on the map
 2. Zoom tool: use the mouse wheel to zoom on map
 3. Node tool: use this to add point, as departure (*instead of adress*), on map. Use it with the Point button (*see IV.1.*)
