@@ -14,6 +14,7 @@ import json
 import time
 from datetime import datetime
 from dateutil.relativedelta import relativedelta as rd
+from pyproj import transform, Proj
 
 from get_iso import get_iso
 from make_plot import make_plot
@@ -38,7 +39,7 @@ outProj = params["proj"]["outProj"]
 #Default
 default = "./params/default.json"
 default = json.load(open(default))
-output_png = "./output_png/"
+output_png = "./output_png/tests/"
 from_place = default["from_place"]
 adress = default["adress"]
 time_ = default["time_"]
@@ -110,23 +111,31 @@ params_plot = {
 
 p_shape = make_plot(params_plot)
 
+#Add origin points
+source_origins = ColumnDataSource(
+        data=dict(
+                x=[], 
+                y=[],
+                adress=[]
+                )
+        )
 
-#source_intersection = ColumnDataSource(
-#        data=dict(
-#                xs=[], 
-#                ys=[], 
-#                time=[],
-#                color=[],
-#                area=[],
-#                perimeter=[],
-#                amplitude=[],
-#                convex=[],
-#                norm_notches=[],
-#                complexity=[]
-#                )
-#        )
+source_intersection = ColumnDataSource(
+        data=dict(
+                xs=[], 
+                ys=[], 
+                time=[],
+                color=[],
+                area=[],
+                perimeter=[],
+                amplitude=[],
+                convex=[],
+                norm_notches=[],
+                complexity=[]
+                )
+        )
 
-def run():
+def run(x,y,adress):
     global counter_polys
     global counter_lines
     global counter_points
@@ -215,8 +224,10 @@ def run():
         
         
     if data_intersection is not None:
-        name = "Intersection" + str(counter_intersection)
-        source_intersection = data_intersection
+#        name = "Intersection" + str(counter_intersection)
+#        source_intersection = data_intersection
+        name = "Overlay"
+        source_intersection.data.update(data_intersection.data)
         options_intersect = dict(
 #                fill_alpha= params["fig_params"]["alpha_surf"], 
     #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
@@ -271,11 +282,24 @@ for param in params_auto:
     
     start_time = time.time()
     
+    x = []
+    y = []
+    l_adress = []
+    l_colors = colors_iso
+    
+    epsg_in = Proj(init=inProj)
+    epsg_out = Proj(init=outProj)
+    
     for adress in adresses:
         index_list = adresses.index(adress)
         color = colors_iso[index_list]
         
         from_place = geocode(adress)
+        
+        x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
+        x.append(x_)
+        y.append(y_)
+        l_adress.append(adress)
         from_place = str(from_place[0]) + ";" + str(from_place[1])
         
         opacity_iso = opacity_iso
@@ -295,11 +319,34 @@ for param in params_auto:
             'color_switch': color_switch
                 }     
         
-        p_shape = run()
+        p_shape = run(x,y,l_adress)
         
-        if index_list == len(adresses) -1:
-            export_png(p_shape, filename="{}.png".format(name))
+#        if index_list == len(adresses) -1:
+#            export_png(p_shape, filename="{}.png".format(name))
         
+    #Add origins points
+    data = dict(
+                x=x,
+                y=y,
+                adress=l_adress,
+                color=l_colors
+                )
+    source_origins.data.update(data)
+    
+    poly_circles = p_shape.circle(
+        'x', 
+        'y', 
+        source=source_origins,
+        fill_color='color', 
+        fill_alpha = 1.0,
+        size=10,
+        line_color='black',
+        line_alpha=1.0,
+        line_width=1.0, 
+        legend="Origins"
+            )
+    
+    export_png(p_shape, filename="{}.png".format(name))
     p_shape = make_plot(params_plot)
     
     exe_duration = time.time() - start_time

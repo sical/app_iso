@@ -106,9 +106,94 @@ bokeh serve code
 3. RESET button: reset the map (*NOT WORKING FOR NOW, use a refresh instead*)
 
 ### LEGEND
-* You can hide/show layer by clicking on it in the control panel:
+* You can hide/show a layer by clicking on it in the control panel:
 
 <img src="./screenshots/legend.png" width="30%">
+
+## PARAMS folder
+> ***WARNING:*** The parameters files need to be cleaned, possible useless parameter settings.
+
+In the ```./code/params/``` folder, there is a JSON file named ```params.json```. This file is used to set projections and some of default design parameters.
+
+```JSON
+{
+	"proj": {
+		"inProj": "epsg:4326",
+		"outProj": "epsg:3857"
+	},
+	"fig_params": {
+		"width": 800,
+		"height": 800,
+		"alpha_tile": 0.5,
+		"alpha_surf": 0.5,
+		"alpha_cont": 0.85,
+		"alpha_building": 0.0,
+		"alpha_network": 0.6,
+		"color_network": "black",
+		"line_width_surf": 0.5,
+		"line_width_cont": 4,
+		"line_width_building": 1,
+		"field": "time"
+	}
+}
+```
+
+There is also a default parameters file named ```default.json``` in the same folder. This file is used to set the default app's parameters.
+
+```JSON
+{
+	"from_place":"2.349900;48.842021",
+	"adress":"79 Rue Mouffetard, 75005 Paris",
+	"time_":"08:00",
+	"modes":"TRANSIT,WALK",
+	"max_dist":"800",
+	"step":1200,
+	"nb_iter":"3",
+	"year_min":2018,
+	"month_min":5,
+	"day_min":17,
+	"year_max":2019,
+	"month_max":5,
+	"day_max":31
+}
+```
+
+## Running the automate script
+It is also possible to use an script that generates PNG files from a JSON input parameters file.
+This json file must be in ```./code/params/``` folder and named ```params_auto.json```. This file must look like this:
+```JSON
+[{
+		"name": "Intersection_AlphaBlending_Uncalculated",
+		"how": "intersection",
+		"colors_iso": ["#ff0000", "#0000ff", "#00ff00"],
+		"colors_intersection": "#ffffff",
+		"opacity_isos": 0.3,
+		"opacity_intersection": 0.0,
+		"shape": "poly",
+		"region_id": "fr-idf",
+		"date": "2018-06-21",
+		"adresses": ["79 Rue Mouffetard, 75005 Paris", "1 rue de vaugirard, 75005 Paris", "10 boulevard voltaire, 75005 Paris"],
+		"time": "08:00",
+		"duration": 20
+	}, {
+		"name": "Intersection_AlphaBlending_Calculated",
+		"how": "intersection",
+		"colors_iso": ["#ff0000", "#0000ff", "#00ff00"],
+		"colors_intersection": "None",
+		"opacity_isos": 0.3,
+		"opacity_intersection": 0.3,
+		"shape": "poly",
+		"region_id": "fr-idf",
+		"date": "2018-06-21",
+		"adresses": ["79 Rue Mouffetard, 75005 Paris", "1 rue de vaugirard, 75005 Paris", "10 boulevard voltaire, 75005 Paris"],
+		"time": "08:00",
+		"duration": 20
+	}
+]
+```
+
+You can use the ```csv_to_jon.py``` to transform CSV files (or TSV) to JSON file if you prefer to use spreadsheets (*Google Sheet, Microsoft Excel, LibreOfficeCalc, ...*) and export sheets as CSV or CSV-like file.
+All the generated images will be exported as PNG files into ```./code/output_png/``` folder with a name corresponding to the name in the parameters' file.
 
 ## Known issues
 - Impossible geolocation with some adresses (*no error message for now, only empty map*)
