@@ -82,7 +82,7 @@ def colors_slider():
     # create first plot, as a rect() glyph and centered text label, with fill and text color taken from source
     p1 = figure(x_range=(-8, 8), y_range=(-4, 4),
                 plot_width=210, plot_height=170,
-                title='Choix de la couleur avec sliders', tools='')
+                title='Color generated with sliders', tools='')
     
     p1.rect(0, 0, width=18, height=10, fill_color='color',
             line_color = 'black', source=source)

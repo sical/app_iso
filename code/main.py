@@ -114,15 +114,15 @@ for region, data in dict_region.items():
 #############
 #  WIDGETS  #
 #############
-button = Button(label="C'est parti !", button_type="success")
+button = Button(label="RUN", button_type="success")
 clear = Button(label="Reset", button_type="warning")
 
 #API
-adress_in = TextInput(value=adress, title="Entrez une adresse:")
-time_in = TextInput(value=time_, title="Entrez un horaire (HH:MM):")
+adress_in = TextInput(value=adress, title="Adress:")
+time_in = TextInput(value=time_, title="Schedule (HH:MM):")
 date_ = DatePicker(max_date=max_date, min_date=min_date)
 #nb_iter_in = TextInput(value=nb_iter, title="Entrez un nombre d'etapes:")
-step_in = TextInput(value=str(int(step/60)), title="Entrez une duree en minutes:")
+step_in = TextInput(value=str(int(step/60)), title="Duration (minutes):")
 
 #SHAPES
 radio_button_shapes = RadioButtonGroup(
@@ -132,7 +132,7 @@ radio_button_shapes = RadioButtonGroup(
 
 #POINT/ADRESS
 radio_button_loc = RadioButtonGroup(
-        labels=["Point", "Adresse"], 
+        labels=["Point", "Adress"], 
         active=0
         )
 
@@ -144,11 +144,11 @@ radio_button_intersection = RadioButtonGroup(
 
 #OPACITY
 opacity = Slider(start=0.0, end=1.0, value=0.5, step=.1,
-                     title="Opacite")
+                     title="Opacity")
 opacity_tile = Slider(start=0.0, end=1.0, value=0.5, step=.1,
-                     title="Tuiles opacite")
+                     title="Tiles opactiy")
 viridis = Slider(start=0.1, end=1, value=0.5, step=.1,
-                     title="Viridis_opacite")
+                     title="Viridis_opacity")
 
 #COLORS
 color_vis, red_slider, green_slider, blue_slider = colors_slider()
@@ -156,25 +156,25 @@ panel_slide = row(
                 widgetbox(red_slider, green_slider, blue_slider, opacity),
                 column(color_vis)
                 )
-tab_slide_colors = Panel(child=panel_slide, title="Sliders colors")
+tab_slide_colors = Panel(child=panel_slide, title="Colors sliders")
 panel_viridis = colors_radio(Viridis[5])
 tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
 
 #INTERSECTION TYPE AND COLOR
 intersection_color = CheckboxButtonGroup(
-        labels=["Intersection_contour", "Intersection_fond"], 
+        labels=["Overlay_contour", "Overlay_background"], 
         active=[])
-panel_intersection_color = Panel(child=intersection_color, title="Intersection colors")
+panel_intersection_color = Panel(child=intersection_color, title="Overlay colors")
 slider_contour = Slider(start=0, end=30, value=1, step=1,
-                     title="Taille contour")
-panel_contour = Panel(child=slider_contour, title="Taille contour")
+                     title="Contour size")
+panel_contour = Panel(child=slider_contour, title="Contour size")
 
 #INPUT 
 div_alert = Div(text="")
 
 #EXPORT
 menu = [("PNG", "png"), ("SVG", "svg")]
-save_ = Dropdown(label="Exporter vers:", button_type="warning", menu=menu)
+save_ = Dropdown(label="Export to:", button_type="warning", menu=menu)
 
 #SELECT REGION
 select = Select(title="Region:", value=default_region, options=list(dict_region.keys()))
@@ -430,51 +430,6 @@ def run():
     if source is None:
         shape = ""
     
-    if data_intersection is not None:
-        name = "Intersection" + str(counter_intersection)
-        source_intersection = data_intersection
-        options_intersect = dict(
-#                fill_alpha= params["fig_params"]["alpha_surf"], 
-    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                source=source_intersection,
-                color='color',
-                alpha=0.50,
-#                fill_color="black", 
-#                fill_alpha = 0.70,
-#                line_color="black", 
-#                line_width=params["fig_params"]["line_width_surf"], 
-                legend=name
-                )
-        
-        intersections = p_shape.patches(
-                                        'xs', 
-                                        'ys', 
-                                        **options_intersect
-                                        )
-        counter_intersection += 1
-#        source_intersection.data.update(data_intersection.data)
-#        count = source_intersection.data['xs'].size
-#        source_intersection.data['color'] = ["red" for i in range(0,count)]
-#        for x,y in source_intersection.data.items():
-#            print (x,y)
-#        print (source_intersection.data['color'])
-        
-#        options_intersect = dict(
-##                fill_alpha= params["fig_params"]["alpha_surf"], 
-#    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-#                fill_color="blue", 
-#                fill_alpha = 0.70,
-#                line_color="black", 
-#                line_width=params["fig_params"]["line_width_surf"], 
-#                source=source_intersection,
-#                legend="Intersection"
-#                )
-#        
-#        p_shape.patches(
-#            'xs', 
-#            'ys', 
-#            **options_intersect
-#            )
 #    buildings = data['buildings']
 #    colors = data['colors']['viridis']
 #    network = data['network']
@@ -567,7 +522,51 @@ def run():
         
         counter_points += 1
     
+    if data_intersection is not None:
+        name = "Overlay" + str(counter_intersection)
+        source_intersection = data_intersection
+        options_intersect = dict(
+#                fill_alpha= params["fig_params"]["alpha_surf"], 
+    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                source=source_intersection,
+                color='color',
+                alpha=0.50,
+#                fill_color="black", 
+#                fill_alpha = 0.70,
+#                line_color="black", 
+#                line_width=params["fig_params"]["line_width_surf"], 
+                legend=name
+                )
         
+        intersections = p_shape.patches(
+                                        'xs', 
+                                        'ys', 
+                                        **options_intersect
+                                        )
+        counter_intersection += 1
+#        source_intersection.data.update(data_intersection.data)
+#        count = source_intersection.data['xs'].size
+#        source_intersection.data['color'] = ["red" for i in range(0,count)]
+#        for x,y in source_intersection.data.items():
+#            print (x,y)
+#        print (source_intersection.data['color'])
+        
+#        options_intersect = dict(
+##                fill_alpha= params["fig_params"]["alpha_surf"], 
+#    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+#                fill_color="blue", 
+#                fill_alpha = 0.70,
+#                line_color="black", 
+#                line_width=params["fig_params"]["line_width_surf"], 
+#                source=source_intersection,
+#                legend="Intersection"
+#                )
+#        
+#        p_shape.patches(
+#            'xs', 
+#            'ys', 
+#            **options_intersect
+#            )
     
 #        options_network = dict(
 #                line_alpha= params["fig_params"]["alpha_network"], 
