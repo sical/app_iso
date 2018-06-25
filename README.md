@@ -74,33 +74,33 @@ bokeh serve code
 2. Use Lines button if you want only contours MultiPolygons
 3. Use Polygons button if you want MultiPolygons
 
-### <img src="./screenshots/usage/IV_point.png" width="10%">
+### <img src="./screenshots/usage/IV_Point.png" width="10%">
 1. Use Point button with Node tools to add point on map (*see I.3.*)
 2. Use Adress button if you want to use adress methode (*see II.3.*)
 
-### <img src="./screenshots/usage/V_color.png" width="18%">
+### <img src="./screenshots/usage/V_Color.png" width="18%">
 1. Tab to choose between color sliders or Viridis colors. In Viridis tab, you can choose between 5 colorblindness accessible colors
 2. RGB Red slider to set red value
 3. RGB Green slider to set green value
 4. RGB Blue slider to set blue value
 5. Opacity slider to set the opacity value
 
-### <img src="./screenshots/usage/VI_tiles.png" width="18%">
+### <img src="./screenshots/usage/VI_Tiles.png" width="18%">
 1. This slider could be used to change tiles opacity
 
-### <img src="./screenshots/usage/VII_types.png" width="19%">
+### <img src="./screenshots/usage/VII_Types.png" width="19%">
 1. Intersection button: measure the intersection between 2 or more isochrone shapes
 2. Union button: join 2 or more isochrones to get one unique isochrone
 3. Difference button: make a symmetric difference between 2 or more isochrones
 
-### <img src="./screenshots/usage/VIII_aspect.png" width="20%">
+### <img src="./screenshots/usage/VIII_Aspect.png" width="20%">
 > ***This settings will only be applied to the last generetad overlay.***
 
 1. Tab to switch between colors settings and contour size setting
 2. Overlay_contour button: use to change contour color with COLOR CHOICE tools
 3. Overlay_background button: use to change background color with COLOR CHOICE tools
 
-### <img src="./screenshots/usage/IX_run.png" width="20%">
+### <img src="./screenshots/usage/IX_Run.png" width="20%">
 1. RUN button: run the app after set all the parameters (*MultiPoints*)
 2. EXPORT button: export the map to PNG or SVG (*no tiles*)
 3. RESET button: reset the map (*NOT WORKING FOR NOW, use a refresh instead*)
