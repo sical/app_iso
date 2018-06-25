@@ -1,5 +1,8 @@
 # app_iso
 # Development of an isochrones visualisation app
+This is an experimental application using [Python Bokeh](https://bokeh.pydata.org/en/latest/) to visualize transit Isochrones (*measured using [Navitia API](http://doc.navitia.io/#isochrones), based on [GTFS](https://en.wikipedia.org/wiki/General_Transit_Feed_Specification)*) and their intersections. It is used to test various designs (*shapes, colors, contours, backgrounds, ...*) in order to determine the most accessible designs for isochronic shapes's intersections.  
+
+> ***WARNING:*** this application is a work in progress.
 
 ## Installation steps
 ### Clone the repo
@@ -16,7 +19,9 @@ while read requirement; do conda install --yes $requirement; done < requirements
 - You have to use a token to use Navitia API
 - So you need to register [here](https://www.navitia.io/register/) to get a token
 - Create a file named "*.env*" in the "*code*" directory ... (*see figure*)
-![token](./screenshots/token.png)
+
+<img src="./screenshots/token.png" width="60%">
+
 - ... with only one line in it (*never push your .env file on Github !*):
 
 ```
@@ -37,7 +42,10 @@ bokeh serve code
 2018-05-24 14:13:56,539 Starting Bokeh server with process id: 50804
 ```
 - Then in your browser, go to http://localhost:5006/code
-- You should see this: ![app](./screenshots/app.png)
+- You should see this:
+
+<img src="./screenshots/app.png" width="60%">
+
 - You should see this in command prompt:
 ```
 2018-05-24 15:12:11,345 200 GET /code (::1) 1114.46ms
@@ -54,52 +62,53 @@ bokeh serve code
 2. Zoom tool: use the mouse wheel to zoom on map
 3. Node tool: use this to add point, as departure (*instead of adress*), on map. Use it with the Point button (*see IV.1.*)
 
-### ![map](./screenshots/usage/II_api.png =180x)
+### <img src="./screenshots/usage/II_api.png" width="18%">
 1. Selection of region (*Navitia coverage*)
 2. Enter a date for the request
 3. Enter an adress. Use it with the Adress button (*see IV.2.*)
 4. Enter a time constraint for the request
 5. Enter a duration for the request
 
-### ![map](./screenshots/usage/III_shape.png =100x)
+### <img src="./screenshots/usage/III_shape.png" width="10%">
 1. Use Points button if you want shape with points contours (*MultiPoints*)
 2. Use Lines button if you want only contours MultiPolygons
 3. Use Polygons button if you want MultiPolygons
 
-### ![map](./screenshots/usage/IV_point.png =100x)
+### <img src="./screenshots/usage/IV_point.png" width="10%">
 1. Use Point button with Node tools to add point on map (*see I.3.*)
 2. Use Adress button if you want to use adress methode (*see II.3.*)
 
-### ![map](./screenshots/usage/V_color.png =170x)
+### <img src="./screenshots/usage/V_color.png" width="18%">
 1. Tab to choose between color sliders or Viridis colors. In Viridis tab, you can choose between 5 colorblindness accessible colors
 2. RGB Red slider to set red value
 3. RGB Green slider to set green value
 4. RGB Blue slider to set blue value
 5. Opacity slider to set the opacity value
 
-### ![map](./screenshots/usage/VI_tiles.png =170x)
+### <img src="./screenshots/usage/VI_tiles.png" width="18%">
 1. This slider could be used to change tiles opacity
 
-### ![map](./screenshots/usage/VII_types.png =180x)
+### <img src="./screenshots/usage/VII_types.png" width="19%">
 1. Intersection button: measure the intersection between 2 or more isochrone shapes
 2. Union button: join 2 or more isochrones to get one unique isochrone
 3. Difference button: make a symmetric difference between 2 or more isochrones
 
-### ![map](./screenshots/usage/VIII_aspect.png =180x)
+### <img src="./screenshots/usage/VIII_aspect.png" width="20%">
 > ***This settings will only be applied to the last generetad overlay.***
 
 1. Tab to switch between colors settings and contour size setting
 2. Overlay_contour button: use to change contour color with COLOR CHOICE tools
 3. Overlay_background button: use to change background color with COLOR CHOICE tools
 
-### ![map](./screenshots/usage/IX_run.png =200x)
+### <img src="./screenshots/usage/IX_run.png" width="20%">
 1. RUN button: run the app after set all the parameters (*MultiPoints*)
 2. EXPORT button: export the map to PNG or SVG (*no tiles*)
 3. RESET button: reset the map (*NOT WORKING FOR NOW, use a refresh instead*)
 
 ### LEGEND
 * You can hide/show layer by clicking on it in the control panel:
-![legend](./screenshots/legend.png)
+
+<img src="./screenshots/legend.png" width="30%">
 
 ## Known issues
 - Impossible geolocation with some adresses (*no error message for now, only empty map*)

@@ -15,7 +15,10 @@
    version="1.1"
    id="svg1328"
    inkscape:version="0.92.3 (2405546, 2018-03-11)"
-   sodipodi:docname="usage_sections.svg">
+   sodipodi:docname="usage_sections.svg"
+   inkscape:export-filename="C:\Users\thomas\Documents\code\iso\app_iso\screenshots\usage\IX_Run.png"
+   inkscape:export-xdpi="600"
+   inkscape:export-ydpi="600">
   <defs
      id="defs1322" />
   <sodipodi:namedview
@@ -29,7 +32,7 @@
      inkscape:cx="355.60653"
      inkscape:cy="879.92315"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer8"
+     inkscape:current-layer="layer10"
      showgrid="false"
      inkscape:window-width="3200"
      inkscape:window-height="1721"
@@ -52,7 +55,7 @@
      inkscape:groupmode="layer"
      id="layer10"
      inkscape:label="run"
-     style="display:none">
+     style="display:inline">
     <g
        id="g2411"
        transform="translate(45.970359,-135.90655)">
@@ -299,7 +302,8 @@
   <g
      inkscape:groupmode="layer"
      id="layer2"
-     inkscape:label="map">
+     inkscape:label="map"
+     style="display:none">
     <g
        style="display:inline"
        id="g1068"
