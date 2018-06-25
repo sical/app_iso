@@ -1,3 +1,4 @@
 *.env
 /otp/*
 /code/__pycache__/*
+/code/output_png/tests/*

@@ -159,7 +159,7 @@ There is also a default parameters file named ```default.json``` in the same fol
 ```
 
 ## Running the automate script
-It is also possible to use an script that generates PNG files from a JSON input parameters file.
+It is also possible to use a script ```./code/automate.py``` that generates PNG files from a JSON input parameters file.
 This json file must be in ```./code/params/``` folder and named ```params_auto.json```. This file must look like this:
 ```JSON
 [{
