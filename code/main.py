@@ -230,7 +230,8 @@ params_plot = {
 #            'buildings':buildings,
 #            'network':network,
             'tile_provider':STAMEN_TERRAIN_RETINA,
-            'source_iso': source_iso
+            'source_iso': source_iso,
+            'title': ""
             }
 
 p_shape = make_plot(params_plot)

@@ -39,7 +39,7 @@ outProj = params["proj"]["outProj"]
 #Default
 default = "./params/default.json"
 default = json.load(open(default))
-output_png = "./output_png/tests/"
+#output_png = "./output_png/tests/"
 from_place = default["from_place"]
 adress = default["adress"]
 time_ = default["time_"]
@@ -98,15 +98,19 @@ params_auto = json.load(open(json_file))
 #                )
 #        )
         
-TOOLS = "pan,wheel_zoom,reset"
+TOOLS = ""
+
+export_no_tiles = "./output_png/tests/no_tiles/"
+export_with_tiles = "./output_png/tests/with_tiles/"
 
 params_plot = {
             'params':params, 
             'tools':TOOLS,
 #            'buildings':buildings,
 #            'network':network,
-            'tile_provider':STAMEN_TERRAIN_RETINA,
-            'source_iso': source_iso
+            'tile_provider':None,
+            'source_iso': source_iso,
+            'title': ""
             }
 
 p_shape = make_plot(params_plot)
@@ -168,6 +172,7 @@ def run(x,y,adress):
                 fill_color='color', 
                 fill_alpha = opacity_iso,
                 line_color='white', 
+                line_alpha=0.0,
                 line_width=params["fig_params"]["line_width_surf"], 
                 source=source,
                 legend="Isochrone_polys" + str(counter_polys)
@@ -232,8 +237,11 @@ def run(x,y,adress):
 #                fill_alpha= params["fig_params"]["alpha_surf"], 
     #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
                 source=source_intersection,
-                color='color',
-                alpha=opacity_intersection,
+                fill_color='color',
+                fill_alpha=opacity_intersection,
+                line_color='white', 
+                line_alpha=0.0,
+                line_width=params["fig_params"]["line_width_surf"], 
 #                fill_color="black", 
 #                fill_alpha = 0.70,
 #                line_color="black", 
@@ -250,6 +258,7 @@ def run(x,y,adress):
         
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
+    p_shape.legend.visible = False
     
     return p_shape
 
@@ -271,7 +280,6 @@ for param in params_auto:
     opacity_iso = param["opacity_isos"]
     opacity_intersection = param["opacity_intersection"]
     shape = param["shape"]
-    name = output_png + param["name"]
     
     gdf_poly_mask = None
     
@@ -323,7 +331,17 @@ for param in params_auto:
         
 #        if index_list == len(adresses) -1:
 #            export_png(p_shape, filename="{}.png".format(name))
+    
+    #EXPORT NO_TILES PNG
+    name = export_no_tiles + param["name"]
+    export_png(p_shape, filename="{}.png".format(name))
+    json_name = filename="{}.json".format(name)
+    
+    with open(json_name, 'w') as outfile:
+        json.dump(param, outfile)
         
+    
+    #EXPORT WITH_TILES PNG
     #Add origins points
     data = dict(
                 x=x,
@@ -332,6 +350,8 @@ for param in params_auto:
                 color=l_colors
                 )
     source_origins.data.update(data)
+    
+    export_name = export_no_tiles 
     
     poly_circles = p_shape.circle(
         'x', 
@@ -346,7 +366,15 @@ for param in params_auto:
         legend="Origins"
             )
     
+    p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+    
+    name = export_with_tiles + param["name"]
     export_png(p_shape, filename="{}.png".format(name))
+    json_name = filename="{}.json".format(name)
+    
+    with open(json_name, 'w') as outfile:
+        json.dump(param, outfile)
+    
     p_shape = make_plot(params_plot)
     
     exe_duration = time.time() - start_time

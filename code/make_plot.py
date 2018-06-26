@@ -46,6 +46,7 @@ def make_plot(params_plot):
 #    network = params_plot['network']
     tile_provider = params_plot['tile_provider']
     source = params_plot['source_iso']
+    title = params_plot['title']
 #    x_range = params_plot['x_range']
 #    y_range = params_plot['y_range']
     
@@ -104,7 +105,7 @@ def make_plot(params_plot):
 #                )
     
     p_shape = figure(
-            title= "Isochrone", 
+            title= title, 
             tools=TOOLS, 
             x_axis_location=None, 
             y_axis_location=None, 
@@ -162,7 +163,7 @@ def make_plot(params_plot):
 #                             'ys', 
 #                             **options_network)
     
-    
-    p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
+    if tile_provider is not None:
+        p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
     
     return p_shape

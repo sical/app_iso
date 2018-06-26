@@ -12,8 +12,8 @@
 		"alpha_building": 0.0,
 		"alpha_network": 0.6,
 		"color_network": "black",
-		"line_width_surf": 0.5,
-		"line_width_cont": 4,
+		"line_width_surf": 0,
+		"line_width_cont": 0,
 		"line_width_building": 1, 
 		"field": "time"
 	}
