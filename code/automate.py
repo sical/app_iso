@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta as rd
 from pyproj import transform, Proj
 
@@ -55,12 +55,12 @@ counter_polys = 0
 counter_lines = 0 
 counter_points = 0 
 counter_intersection = 0 
-color_choice = 0
-names = []
 alert = """<span style="color: red"><b>{}</b></span>"""
 selected = False
 old_selections = []
-color_value = (127,127,127)
+
+export_auto = False
+anim = True
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -75,33 +75,34 @@ gdf_poly_mask = None
 
 #JSON INPUT
 json_file = "./params/params_auto.json"
-params_auto = json.load(open(json_file))
+params_auto = json.load(open(json_file, encoding='utf-8'))
 
 
-#source_iso = ColumnDataSource(
-#        data=dict(
-#                xs=[], 
-#                ys=[], 
-#                adress=[],
-#                time=[],
-#                duration=[], 
-#                color=[],
-#                date=[],
-#                shape=[],
-#                area=[],
-#                perimeter=[],
-#                nb_componants=[],
-#                amplitude=[],
-#                convex=[],
-#                norm_notches=[],
-#                complexity=[]
-#                )
-#        )
+source_iso = ColumnDataSource(
+        data=dict(
+                xs=[], 
+                ys=[], 
+                adress=[],
+                time=[],
+                duration=[], 
+                color=[],
+                date=[],
+                shape=[],
+                area=[],
+                perimeter=[],
+                nb_componants=[],
+                amplitude=[],
+                convex=[],
+                norm_notches=[],
+                complexity=[]
+                )
+        )
         
 TOOLS = ""
 
-export_no_tiles = "./output_png/tests/no_tiles/"
-export_with_tiles = "./output_png/tests/with_tiles/"
+export_no_tiles = "./output_png/Lille/no_tiles/"
+export_with_tiles = "./output_png/Lille/with_tiles/"
+export_anim = "./output_png/Lille/animation/"
 
 params_plot = {
             'params':params, 
@@ -139,19 +140,14 @@ source_intersection = ColumnDataSource(
                 )
         )
 
-def run(x,y,adress):
+def run(params_iso,x,y,adress):
     global counter_polys
     global counter_lines
     global counter_points
     global counter_intersection
-    global names
     global p_shape
-    global color_choice
     global gdf_poly_mask
     global alert
-    global color_value
-    global opacity_intersection
-    global opacity_iso
     
     data = get_iso(params_iso, gdf_poly_mask, id_)
     gdf_poly_mask = data['gdf_poly_mask']
@@ -170,7 +166,7 @@ def run(x,y,adress):
         name = "polys" + str(counter_polys)
         options_iso_surf = dict(
                 fill_color='color', 
-                fill_alpha = opacity_iso,
+                fill_alpha = params_iso['opacity_iso'],
                 line_color='white', 
                 line_alpha=0.0,
                 line_width=params["fig_params"]["line_width_surf"], 
@@ -238,7 +234,7 @@ def run(x,y,adress):
     #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
                 source=source_intersection,
                 fill_color='color',
-                fill_alpha=opacity_intersection,
+                fill_alpha=params_iso['opacity_intersection'],
                 line_color='white', 
                 line_alpha=0.0,
                 line_width=params["fig_params"]["line_width_surf"], 
@@ -262,57 +258,180 @@ def run(x,y,adress):
     
     return p_shape
 
-for param in params_auto:
-    how = param["how"]
-    colors_iso = param["colors_iso"]
-    color_switch = param["colors_intersection"]
-    if color_switch == "None":
-        color_switch = None
-    opacity_isos = param["opacity_isos"]
-    region_id = param["region_id"]
+if export_auto is True:
+    for param in params_auto:
+        how = param["how"]
+        colors_iso = param["colors_iso"]
+        color_switch = param["colors_intersection"]
+        if color_switch == "None":
+            color_switch = None
+        region_id = param["region_id"]
+        date_value = param["date"]
+        date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
+        adresses = param["adresses"]
+        time_value = param["time"]
+        duration = param["duration"]
+        id_ = param["region_id"]
+        step_value = int(param["duration"]) * 60
+        opacity_iso = param["opacity_isos"]
+        opacity_intersection = param["opacity_intersection"]
+        shape = param["shape"]
+        identity = param["id"]
+        
+        gdf_poly_mask = None
+        
+        counter_polys = 0
+        counter_lines = 0
+        counter_points = 0
+        counter_intersection = 0
+        
+        start_time = time.time()
+        
+        x = []
+        y = []
+        l_adress = []
+        l_colors = colors_iso
+        
+        epsg_in = Proj(init=inProj)
+        epsg_out = Proj(init=outProj)
+        
+        for adress in adresses:
+            index_list = adresses.index(adress)
+            color = colors_iso[index_list]
+            
+            from_place = geocode(adress)
+            
+            x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
+            x.append(x_)
+            y.append(y_)
+            l_adress.append(adress)
+            from_place = str(from_place[0]) + ";" + str(from_place[1])
+        
+            params_iso = {
+                'token': TOKEN,
+                'from_place': from_place,
+                'time_in': time_value,
+                'min_date': date_value,
+                'step': step_value,
+                'nb_iter': 1,
+                'shape': shape,
+                'inProj': inProj,
+                'outProj': outProj,
+                'how': how,
+                'color':color,
+                'color_switch': color_switch,
+                'opacity_intersection':opacity_intersection,
+                'opacity_iso':opacity_iso
+                
+                    }     
+            
+            p_shape = run(params_iso, x,y,l_adress)
+            
+    #        if index_list == len(adresses) -1:
+    #            export_png(p_shape, filename="{}.png".format(name))
+        
+        #EXPORT NO_TILES PNG
+        name = export_no_tiles + identity
+        export_png(p_shape, filename="{}.png".format(name))
+        json_name = filename="{}.json".format(name)
+        
+        with open(json_name, 'w', encoding='utf-8') as outfile:
+            json.dump(param, outfile)
+            
+        
+        #EXPORT WITH_TILES PNG
+        #Add origins points
+        data = dict(
+                    x=x,
+                    y=y,
+                    adress=l_adress,
+                    color=l_colors
+                    )
+        source_origins.data.update(data)
+        
+        export_name = export_no_tiles 
+        
+        poly_circles = p_shape.circle(
+            'x', 
+            'y', 
+            source=source_origins,
+            fill_color='color', 
+            fill_alpha = 1.0,
+            size=10,
+            line_color='black',
+            line_alpha=1.0,
+            line_width=1.0, 
+            legend="Origins"
+                )
+        
+        p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+        
+        name = export_with_tiles + identity
+        export_png(p_shape, filename="{}.png".format(name))
+        json_name = filename="{}.json".format(name)
+        
+        with open(json_name, 'w', encoding='utf-8') as outfile:
+            json.dump(param, outfile)
+        
+        p_shape = make_plot(params_plot)
+        
+        exe_duration = time.time() - start_time
+        
+        time.sleep(5) #sleep 5 seconds to avoid a Geocoder problem
+        
+        print (fmt.format(rd(seconds=exe_duration)))
+
+if anim is True:
+    #    how = param["how"]
+    adress = "100 Avenue Willy Brandt, 59777 Lille"
+    color = "#5BC862"
+#    color_switch = param["colors_intersection"]
+#    if color_switch == "None":
+#        color_switch = None
+#    region_id = param["region_id"]
     date_value = param["date"]
     date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
-    adresses = param["adresses"]
     time_value = param["time"]
-    duration = param["duration"]
+#    duration = param["duration"]
     id_ = param["region_id"]
     step_value = int(param["duration"]) * 60
-    opacity_iso = param["opacity_isos"]
-    opacity_intersection = param["opacity_intersection"]
-    shape = param["shape"]
+    opacity_iso = 0.4
+#    opacity_intersection = param["opacity_intersection"]
+    shape = "poly"
+    identity = "fr-ne"
+    step_mn = 300
     
-    gdf_poly_mask = None
+    range_value = 1440//step_mn
+    time_value = "00:00"
     
-    counter_polys = 0
-    counter_lines = 0
-    counter_points = 0
-    counter_intersection = 0
+#    gdf_poly_mask = None
+    
+#    counter_polys = 0
+#    counter_lines = 0
+#    counter_points = 0
+#    counter_intersection = 0
     
     start_time = time.time()
     
-    x = []
-    y = []
-    l_adress = []
-    l_colors = colors_iso
+#    x = []
+#    y = []
+#    l_adress = []
+#    l_colors = colors_iso
     
     epsg_in = Proj(init=inProj)
     epsg_out = Proj(init=outProj)
+        
     
-    for adress in adresses:
-        index_list = adresses.index(adress)
-        color = colors_iso[index_list]
-        
-        from_place = geocode(adress)
-        
-        x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
-        x.append(x_)
-        y.append(y_)
-        l_adress.append(adress)
-        from_place = str(from_place[0]) + ";" + str(from_place[1])
-        
-        opacity_iso = opacity_iso
+    from_place = geocode(adress)
     
-        params_iso = {
+    x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
+    x.append(x_)
+    y.append(y_)
+    l_adress.append(adress)
+    from_place = str(from_place[0]) + ";" + str(from_place[1])
+    
+    
+    params_iso = {
             'token': TOKEN,
             'from_place': from_place,
             'time_in': time_value,
@@ -323,61 +442,27 @@ for param in params_auto:
             'inProj': inProj,
             'outProj': outProj,
             'how': how,
-            'color':color,
-            'color_switch': color_switch
-                }     
-        
-        p_shape = run(x,y,l_adress)
+            'color':colors_iso,
+            'color_switch': "white",
+            'opacity_intersection':0.0,
+            'opacity_iso':opacity_iso
+                } 
+    
+    for i in range(0,3):
+        mn = step_mn*i
+        time_value = timedelta(seconds=mn)
+        params_iso["time_in"] = time_value
+    
+        p_shape = run(params_iso, x,y,l_adress)
         
 #        if index_list == len(adresses) -1:
 #            export_png(p_shape, filename="{}.png".format(name))
     
-    #EXPORT NO_TILES PNG
-    name = export_no_tiles + param["name"]
-    export_png(p_shape, filename="{}.png".format(name))
-    json_name = filename="{}.json".format(name)
-    
-    with open(json_name, 'w') as outfile:
-        json.dump(param, outfile)
+        #EXPORT NO_TILES PNG
+        name = export_no_tiles + identity
+        export_png(p_shape, filename="{}.png".format(name))
         
-    
-    #EXPORT WITH_TILES PNG
-    #Add origins points
-    data = dict(
-                x=x,
-                y=y,
-                adress=l_adress,
-                color=l_colors
-                )
-    source_origins.data.update(data)
-    
-    export_name = export_no_tiles 
-    
-    poly_circles = p_shape.circle(
-        'x', 
-        'y', 
-        source=source_origins,
-        fill_color='color', 
-        fill_alpha = 1.0,
-        size=10,
-        line_color='black',
-        line_alpha=1.0,
-        line_width=1.0, 
-        legend="Origins"
-            )
-    
-    p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
-    
-    name = export_with_tiles + param["name"]
-    export_png(p_shape, filename="{}.png".format(name))
-    json_name = filename="{}.json".format(name)
-    
-    with open(json_name, 'w') as outfile:
-        json.dump(param, outfile)
-    
-    p_shape = make_plot(params_plot)
-    
-    exe_duration = time.time() - start_time
-    
-    print (fmt.format(rd(seconds=exe_duration)))
+        exe_duration = time.time() - start_time
         
+        print (fmt.format(rd(seconds=exe_duration)))
+    

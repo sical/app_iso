@@ -573,10 +573,10 @@ def getCoords(row, geom_col, coord_type):
     else:
         return list( multiGeomHandler(geom, coord_type, gtype) )
 
-#def getAngle(pt1, pt2):
-#    x_diff = pt2.x - pt1.x
-#    y_diff = pt2.y - pt1.y
-#    return math.atan2(y_diff, x_diff)
+def getAngle(pt1, pt2):
+    x_diff = pt2.x - pt1.x
+    y_diff = pt2.y - pt1.y
+    return math.atan2(y_diff, x_diff)
 
 def get_notches(poly):
     """

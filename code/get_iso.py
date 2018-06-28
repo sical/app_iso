@@ -13,7 +13,8 @@ import geopandas as gpd
 from shapely.ops import unary_union, cascaded_union
 from bokeh.models import GeoJSONDataSource, ColumnDataSource
 
-from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, get_stats, colors_blend
+from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats
+#from complexity import get_stats
 
 def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
     if gdf_overlay is not None:
@@ -30,6 +31,7 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
                 color_blended = color_switch
             else:
                 color_blended = colors_blend(c1, c2)
+                print ('YES', color_blended)
             
             intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
             intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
