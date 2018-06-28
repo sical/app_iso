@@ -9,12 +9,13 @@ import pandas as pd
 from ast import literal_eval
 
 def csv_to_json(csv_file, json_file, sep, columns_with_array):
-    df = pd.read_csv(csv_file, sep=sep)
+    df = pd.read_csv(csv_file, sep=sep, encoding='utf-8')
     
     for column in columns_with_array:
         df[column] = df[column].apply(literal_eval)
     
-    df.to_json(json_file, orient='records')
+    with open(json_file, 'w', encoding='utf-8') as file:
+        df.to_json(file, orient='records', force_ascii=False)
 
 if __name__ == "__main__":
     csv_file = "params_auto - Feuille 1.tsv"
