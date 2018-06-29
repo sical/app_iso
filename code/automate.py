@@ -15,6 +15,7 @@ import time
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta as rd
 from pyproj import transform, Proj
+import imageio
 
 from get_iso import get_iso
 from make_plot import make_plot
@@ -385,51 +386,42 @@ if anim is True:
     #    how = param["how"]
     adress = "100 Avenue Willy Brandt, 59777 Lille"
     color = "#5BC862"
-#    color_switch = param["colors_intersection"]
-#    if color_switch == "None":
-#        color_switch = None
-#    region_id = param["region_id"]
-    date_value = param["date"]
+    date_value = "2018-06-28"
     date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
-    time_value = param["time"]
-#    duration = param["duration"]
-    id_ = param["region_id"]
-    step_value = int(param["duration"]) * 60
+    id_ = "fr-ne"
+    step_value = 1200
     opacity_iso = 0.4
-#    opacity_intersection = param["opacity_intersection"]
     shape = "poly"
-    identity = "fr-ne"
+    identity = "iso"
     step_mn = 300
+    how = "intersection"
+    x_bounds = [325517,325517,360172,360172]
+    y_bounds = [6541683, 6573066,6541683,6573066]
+    duration = 0.5
+#    y_start, y_end = 50.656610,50.591124
+#    x_start, x_end = 2.917693,3.218281
     
-    range_value = 1440//step_mn
-    time_value = "00:00"
-    
-#    gdf_poly_mask = None
-    
-#    counter_polys = 0
-#    counter_lines = 0
-#    counter_points = 0
-#    counter_intersection = 0
+    range_value = 86400//step_mn
+    time_value = "08:00"
     
     start_time = time.time()
     
-#    x = []
-#    y = []
-#    l_adress = []
-#    l_colors = colors_iso
-    
     epsg_in = Proj(init=inProj)
     epsg_out = Proj(init=outProj)
-        
     
     from_place = geocode(adress)
     
-    x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
-    x.append(x_)
-    y.append(y_)
-    l_adress.append(adress)
-    from_place = str(from_place[0]) + ";" + str(from_place[1])
+#    x_start, y_start = transform(epsg_in,epsg_out,x_start,y_start)
+#    x_end, y_end = transform(epsg_in,epsg_out,x_end,y_end) 
     
+#    x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
+#    x.append(x_)
+#    y.append(y_)
+    l_adress = []
+    x=[]
+    y=[]
+    ori = transform(epsg_in,epsg_out,from_place[0],from_place[1])
+    from_place = str(from_place[0]) + ";" + str(from_place[1])
     
     params_iso = {
             'token': TOKEN,
@@ -442,27 +434,85 @@ if anim is True:
             'inProj': inProj,
             'outProj': outProj,
             'how': how,
-            'color':colors_iso,
+            'color':color,
             'color_switch': "white",
             'opacity_intersection':0.0,
             'opacity_iso':opacity_iso
                 } 
-    
-    for i in range(0,3):
+
+#    p_shape = run(params_iso, x,y,l_adress)
+#
+#    p_shape = make_plot(params_plot)
+#    50.656610, 2.976836
+#    50.591124, 3.119375
+ 
+    for i in range(0,range_value):
         mn = step_mn*i
         time_value = timedelta(seconds=mn)
-        params_iso["time_in"] = time_value
+        params_iso["time_in"] = str(time_value)
     
         p_shape = run(params_iso, x,y,l_adress)
-        
-#        if index_list == len(adresses) -1:
-#            export_png(p_shape, filename="{}.png".format(name))
     
         #EXPORT NO_TILES PNG
-        name = export_no_tiles + identity
-        export_png(p_shape, filename="{}.png".format(name))
+        p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+        
+        #ADD TITLE
+        title = "From: " + adress + ", Duration: " + str(step_value//60) + "mn at " + str(time_value)
+        p_shape.title.text = title
+        p_shape.title.align = "left"
+        p_shape.title.text_color = "white"
+        p_shape.title.text_font_size = "23px"
+        p_shape.title.background_fill_color = "black"
+
+        #Add circles as range
+        #Add origins points
+        source_bounds = ColumnDataSource(
+                data=dict(
+                        x=x_bounds,
+                        y=y_bounds
+                )
+        ) 
+        
+        poly_circles = p_shape.circle(
+            'x', 
+            'y', 
+            source=source_bounds,
+            color='blue', 
+            alpha = 0.0,
+            size=10,
+                )
+        
+        source_ori = ColumnDataSource(
+                data=dict(
+                        x=[ori[0]],
+                        y=[ori[1]],
+                )
+        ) 
+        
+        poly_circles = p_shape.circle(
+            'x', 
+            'y', 
+            source=source_ori,
+            color='blue', 
+            alpha = 1.0,
+            size=10,
+                )
+        
+        time_str = str(time_value).replace(":","_")
+        iso_name = identity + "_" + time_str
+        iso_name = export_anim + iso_name
+        export_png(p_shape, filename="{}.png".format(iso_name))
+        p_shape = make_plot(params_plot)
         
         exe_duration = time.time() - start_time
         
         print (fmt.format(rd(seconds=exe_duration)))
+    
+    images = []
+    for file_name in os.listdir(export_anim):
+        if file_name.endswith('.png'):
+            file_path = os.path.join(export_anim, file_name)
+            images.append(imageio.imread(file_path))
+    iso_gif = export_anim + "anim_iso.gif"
+    imageio.mimsave(iso_gif, images, duration=duration)
     
