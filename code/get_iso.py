@@ -31,7 +31,6 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
                 color_blended = color_switch
             else:
                 color_blended = colors_blend(c1, c2)
-                print ('YES', color_blended)
             
             intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
             intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
@@ -113,6 +112,8 @@ def get_iso(params, gdf_poly_mask, id_):
     color_switch = params['color_switch']
     coeff_ampl = 0.8 # See Brinkhoff et al. paper
     coeff_conv = 0.2 # See Brinkhoff et al. paper
+    
+    color = colors_blend(color, color)
     
     date_time = min_date.isoformat() + "T" + time_in
     
@@ -240,8 +241,12 @@ def get_iso(params, gdf_poly_mask, id_):
         status = ""
         
     else:
-        print ('ERROR:', code)
-        status = str(code) + ": " + "Mesure impossible"
+        if r.json()["error"]["message"]:
+            status = str(r.json()["error"]["message"]) + ": " + "Measure not possible"
+            print ('ERROR:', status)
+        else:
+            status = str(code) + ": " + "Measure not possible"
+            print ('ERROR:', status)
         source, shape, source_intersections, gdf_poly_mask = None, None, None, None
 
     return {

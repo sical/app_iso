@@ -7,6 +7,7 @@ import os
 
 import requests
 
+from datetime import datetime, timedelta
 from bokeh.palettes import Viridis, Spectral, Plasma, Set1
 from bokeh.io import show, curdoc, export_png, export_svgs
 from bokeh.plotting import figure
@@ -26,7 +27,7 @@ from pyproj import transform, Proj
 
 from get_iso import get_iso
 from make_plot import make_plot
-from functions import geocode
+from functions import geocode, seconds_to_time
 from bokeh_tools import colors_slider, colors_radio
 
 #Parameters
@@ -67,6 +68,7 @@ alert = """<span style="color: red"><b>{}</b></span>"""
 selected = False
 old_selections = []
 color_value = (127,127,127)
+dict_anim={}
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -160,6 +162,7 @@ tab_slide_colors = Panel(child=panel_slide, title="Colors sliders")
 panel_viridis = colors_radio(Viridis[5])
 tab_viridis = Panel(child=panel_viridis, title="Viridis colors")
 
+
 #INTERSECTION TYPE AND COLOR
 intersection_color = CheckboxButtonGroup(
         labels=["Overlay_contour", "Overlay_background"], 
@@ -171,6 +174,7 @@ panel_contour = Panel(child=slider_contour, title="Contour size")
 
 #INPUT 
 div_alert = Div(text="")
+div_anim = Div(text="")
 
 #EXPORT
 menu = [("PNG", "png"), ("SVG", "svg")]
@@ -179,16 +183,55 @@ save_ = Dropdown(label="Export to:", button_type="warning", menu=menu)
 #SELECT REGION
 select = Select(title="Region:", value=default_region, options=list(dict_region.keys()))
 
+panel_simple = Panel(child=
+                     row(
+                             radio_button_intersection, 
+                             Tabs(tabs=[
+                                     panel_intersection_color, 
+                                     panel_contour
+                                     ])
+                     ),
+                     title="Overlay"
+    )
+slider_anim = Slider(start=0, end=86400, value=0, step=600,
+                     title="Animation")
+run_anim = Button(label="Make animation", button_type="success")
+panel_anim = Panel(child=
+                   row(
+                           column(
+                                   slider_anim,
+                                   run_anim
+                                   ),
+                           div_anim,
+                           ),
+                   title="Animation"
+                   )
+
 l_widget = [
         [select, div_alert],
         [date_, time_in],
         [adress_in, step_in],
         [radio_button_shapes, radio_button_loc],
         [
-                Tabs(tabs=[ tab_slide_colors, tab_viridis ])
+                Tabs(tabs=[
+                        tab_slide_colors, 
+                        tab_viridis
+                        ])
         ],
         [opacity_tile],
-        [radio_button_intersection, Tabs(tabs=[ panel_intersection_color, panel_contour ])],
+#        [
+#                radio_button_intersection, 
+#                Tabs(tabs=[
+#                        panel_intersection_color, 
+#                        panel_contour 
+#                        ])
+#        ],
+        [
+                Tabs(tabs=[
+                        panel_simple, 
+                        panel_anim
+                        ])
+        ],
         [button,clear],
         [save_]
         ]
@@ -222,7 +265,6 @@ source_iso = ColumnDataSource(
                 complexity=[]
                 )
         )
-        
 
 params_plot = {
             'params':params, 
@@ -236,6 +278,41 @@ params_plot = {
 
 p_shape = make_plot(params_plot)
 
+source_anim = ColumnDataSource(
+        data=dict(
+                xs=[], 
+                ys=[], 
+                adress=[],
+                time=[],
+                duration=[], 
+                color=[],
+                date=[],
+                shape=[],
+                area=[],
+                perimeter=[],
+                nb_componants=[],
+                amplitude=[],
+                convex=[],
+                norm_notches=[],
+                complexity=[]
+                )
+        )
+        
+options_iso_anim = dict(
+                fill_color='color', 
+                fill_alpha = 0.5,
+                line_color='white', 
+                line_width=params["fig_params"]["line_width_surf"], 
+                line_alpha=0.0,
+                source=source_anim,
+                legend="Animation"
+                )
+        
+p_shape.patches(
+    'xs', 
+    'ys', 
+    **options_iso_anim
+    ) 
 
 source_intersection = ColumnDataSource(
         data=dict(
@@ -627,9 +704,81 @@ def run():
         
 #    except:
 #        div_alert.text =  """<span style="color: red"><b>ALERTE: Verifiez vos parametres</b></span>"""
-        
-    
 
+def animation():
+    global p_shape
+    global color_choice
+    global gdf_poly_mask
+    global alert
+    global color_value
+    global intersections
+    
+    div_alert.text = alert.format("PLEASE WAIT")
+    div_anim.text = alert.format("PLEASE WAIT")
+    
+    date_value = date_.value
+    time_value = "00:00"
+    id_ = dict_region[select.value]["id"]
+    opacity_iso = 0.4
+    shape = "poly"
+    step_mn = 600
+    how = "intersection"
+    
+    if date_value is None:
+        date_value = date.today()
+    if time_value is None:
+        time_value = datetime.datetime.now().time()
+#    nb_iter_value = int(nb_iter_in.value)
+    step_value = int(step_in.value) * 60
+    adress = adress_in.value
+            
+    if radio_button_loc.active == 1:
+        from_place = geocode(adress)
+        from_place = str(from_place[0]) + ";" + str(from_place[1])
+    else:
+        lat = source_point.data["x"][-1]
+        lon = source_point.data["y"][-1]
+        coords = transform(p_3857, p_4326, lat, lon)
+        from_place = str(coords[0]) + ";" + str(coords[1])
+
+
+    params_iso = {
+            'token': TOKEN,
+            'from_place': from_place,
+            'time_in': time_value,
+            'min_date': date_value,
+            'step': step_value,
+            'nb_iter': 1,
+            'shape': shape,
+            'inProj': inProj,
+            'outProj': outProj,
+            'how': how,
+            'color':color_value,
+            'color_switch': "white",
+            'opacity_intersection':0.0,
+            'opacity_iso':opacity_iso
+                }
+    
+    range_value = 86400//step_mn
+    
+    for i in range(0,range_value):
+        mn = step_mn*i
+        time_value = timedelta(seconds=mn)
+        params_iso["time_in"] = str(time_value)
+        data = get_iso(params_iso, gdf_poly_mask, id_)
+        source = data['source']
+        status = data['status']
+        dict_anim[mn]=source
+    
+    status = "DONE"
+    div_alert.text = alert.format(status)
+    div_anim.text = alert.format("Done, you can use the slider")
+    
+def anim_slider(attr, old, new):
+    if new in dict_anim:
+        source_anim.data = dict_anim[new].data
+        div_anim.text = seconds_to_time(new)
+    
 def clear_plots():
     global counter_polys
     global counter_lines
@@ -751,6 +900,8 @@ opacity.on_change('value', color_sliders)
 panel_viridis.children[0].children[0].on_change('active',color_hex)
 select.on_change('value',goto)
 slider_contour.on_change('value', contour_update)
+run_anim.on_click(animation)
+slider_anim.on_change('value',anim_slider)
 
 #intersections.data_source.on_change('selected',selection)
 

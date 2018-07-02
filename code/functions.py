@@ -59,6 +59,13 @@ geolocator = Nominatim()
 #            feature.pop(properties, None)
 #    return json.dumps(geojson_)
 
+def seconds_to_time(seconds): 
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    time_format = "%02d:%02d:%02d" % (h, m, s)
+    
+    return time_format
+
 def colors_blend(c1, c2):
     if "#" in str(c1):
         c1 = hex2rgb(c1)

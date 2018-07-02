@@ -327,9 +327,6 @@ if export_auto is True:
                     }     
             
             p_shape = run(params_iso, x,y,l_adress)
-            
-    #        if index_list == len(adresses) -1:
-    #            export_png(p_shape, filename="{}.png".format(name))
         
         #EXPORT NO_TILES PNG
         name = export_no_tiles + identity
@@ -337,7 +334,7 @@ if export_auto is True:
         json_name = filename="{}.json".format(name)
         
         with open(json_name, 'w', encoding='utf-8') as outfile:
-            json.dump(param, outfile)
+            json.dump(param, outfile, sort_keys=True, indent=2)
             
         
         #EXPORT WITH_TILES PNG
@@ -372,7 +369,7 @@ if export_auto is True:
         json_name = filename="{}.json".format(name)
         
         with open(json_name, 'w', encoding='utf-8') as outfile:
-            json.dump(param, outfile)
+            json.dump(param, outfile, sort_keys=True, indent=2)
         
         p_shape = make_plot(params_plot)
         
@@ -383,23 +380,20 @@ if export_auto is True:
         print (fmt.format(rd(seconds=exe_duration)))
 
 if anim is True:
-    #    how = param["how"]
-    adress = "100 Avenue Willy Brandt, 59777 Lille"
+    adress = "20 hameau de la commanderie, 59840 LOMPRET"
     color = "#5BC862"
     date_value = "2018-06-28"
     date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
     id_ = "fr-ne"
-    step_value = 1200
+    step_value = 3600
     opacity_iso = 0.4
     shape = "poly"
     identity = "iso"
-    step_mn = 300
+    step_mn = 1200
     how = "intersection"
-    x_bounds = [325517,325517,360172,360172]
-    y_bounds = [6541683, 6573066,6541683,6573066]
+    x_bounds = [305394,305394,382134,382134]
+    y_bounds = [6521786, 6585394,6521786,6585394]
     duration = 0.5
-#    y_start, y_end = 50.656610,50.591124
-#    x_start, x_end = 2.917693,3.218281
     
     range_value = 86400//step_mn
     time_value = "08:00"
@@ -410,13 +404,6 @@ if anim is True:
     epsg_out = Proj(init=outProj)
     
     from_place = geocode(adress)
-    
-#    x_start, y_start = transform(epsg_in,epsg_out,x_start,y_start)
-#    x_end, y_end = transform(epsg_in,epsg_out,x_end,y_end) 
-    
-#    x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
-#    x.append(x_)
-#    y.append(y_)
     l_adress = []
     x=[]
     y=[]
@@ -438,13 +425,7 @@ if anim is True:
             'color_switch': "white",
             'opacity_intersection':0.0,
             'opacity_iso':opacity_iso
-                } 
-
-#    p_shape = run(params_iso, x,y,l_adress)
-#
-#    p_shape = make_plot(params_plot)
-#    50.656610, 2.976836
-#    50.591124, 3.119375
+                }     
  
     for i in range(0,range_value):
         mn = step_mn*i
@@ -461,7 +442,7 @@ if anim is True:
         p_shape.title.text = title
         p_shape.title.align = "left"
         p_shape.title.text_color = "white"
-        p_shape.title.text_font_size = "23px"
+        p_shape.title.text_font_size = "18px"
         p_shape.title.background_fill_color = "black"
 
         #Add circles as range
@@ -499,7 +480,7 @@ if anim is True:
                 )
         
         time_str = str(time_value).replace(":","_")
-        iso_name = identity + "_" + time_str
+        iso_name = str(i) + identity + "_" + time_str
         iso_name = export_anim + iso_name
         export_png(p_shape, filename="{}.png".format(iso_name))
         p_shape = make_plot(params_plot)
