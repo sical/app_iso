@@ -219,13 +219,6 @@ l_widget = [
                         ])
         ],
         [opacity_tile],
-#        [
-#                radio_button_intersection, 
-#                Tabs(tabs=[
-#                        panel_intersection_color, 
-#                        panel_contour 
-#                        ])
-#        ],
         [
                 Tabs(tabs=[
                         panel_simple, 
@@ -238,13 +231,6 @@ l_widget = [
 
 #Run with defaults
 TOOLS = "pan,wheel_zoom,reset"
-#data = get_iso(params_iso)
-    
-#source_polys = data['poly']
-#source_pts = data['points']
-#colors = data['colors']
-#buildings = data['buildings']
-#network = data['network']
 
 source_iso = ColumnDataSource(
         data=dict(
@@ -269,8 +255,6 @@ source_iso = ColumnDataSource(
 params_plot = {
             'params':params, 
             'tools':TOOLS, 
-#            'buildings':buildings,
-#            'network':network,
             'tile_provider':STAMEN_TERRAIN_RETINA,
             'source_iso': source_iso,
             'title': ""
@@ -363,27 +347,6 @@ p_shape.circle(
     **options_goto
     )
 
-
-
-#options_intersect = dict(
-##                fill_alpha= params["fig_params"]["alpha_surf"], 
-#    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-#                source=source_intersection,
-#                color='color',
-#                alpha=0.70,
-##                fill_color="black", 
-##                fill_alpha = 0.70,
-##                line_color="black", 
-##                line_width=params["fig_params"]["line_width_surf"], 
-#                legend="Intersection"
-#                )
-#        
-#intersections = p_shape.patches(
-#                                'xs', 
-#                                'ys', 
-#                                **options_intersect
-#                                )
-
 #DRAW POINT (add origine)
 source_point = ColumnDataSource({
     'x': [], 
@@ -405,17 +368,6 @@ p_shape.add_tools(draw_tool)
 columns = [TableColumn(field="x", title="x"),
            TableColumn(field="y", title="y")]
 table = DataTable(source=source_point, columns=columns, editable=True, height=200)
-#l_widget.append(table)
-
-#x_range = p_shape.x_range
-#y_range = p_shape.y_range
-
-#DATASOURCE
-#source = ColumnDataSource(data=dict(
-#    x=[1, 2, 3, 4, 5],
-#    y=[2, 5, 8, 2, 7],
-#    color=["navy", "orange", "olive", "firebrick", "gold"]
-#    ))
 
 columns = ["date", "time", "adress", "duration", "shape", "colors"]
 array_log = pd.DataFrame(columns=columns)
@@ -459,14 +411,6 @@ def run():
         coords = transform(p_3857, p_4326, lat, lon)
         from_place = str(coords[0]) + ";" + str(coords[1])
     
-#    if color_choice == 0:
-#        color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
-#    else:
-#        color_value = Viridis[5][panel_viridis.children[0].children[0].active]
-        
-        
-#    source_intersection.data['color'] = [color_value,]
-    
     if radio_button_intersection.active == 0:
         how="intersection"
     elif radio_button_intersection.active == 1:
@@ -507,22 +451,6 @@ def run():
     
     if source is None:
         shape = ""
-    
-#    buildings = data['buildings']
-#    colors = data['colors']['viridis']
-#    network = data['network']
-            
-        
-#    color_mapper = LinearColorMapper(palette=colors)
-    
-#        options_buildings = dict(
-#            fill_alpha= params["fig_params"]["alpha_building"],
-#            fill_color= "black", 
-#            line_color='white', 
-#            line_width=params["fig_params"]["line_width_building"], 
-#            source=buildings,
-#            legend="batiments"
-#            )
 
     if shape == "poly":
         name = "polys" + str(counter_polys)
@@ -622,77 +550,6 @@ def run():
                                         **options_intersect
                                         )
         counter_intersection += 1
-#        source_intersection.data.update(data_intersection.data)
-#        count = source_intersection.data['xs'].size
-#        source_intersection.data['color'] = ["red" for i in range(0,count)]
-#        for x,y in source_intersection.data.items():
-#            print (x,y)
-#        print (source_intersection.data['color'])
-        
-#        options_intersect = dict(
-##                fill_alpha= params["fig_params"]["alpha_surf"], 
-#    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-#                fill_color="blue", 
-#                fill_alpha = 0.70,
-#                line_color="black", 
-#                line_width=params["fig_params"]["line_width_surf"], 
-#                source=source_intersection,
-#                legend="Intersection"
-#                )
-#        
-#        p_shape.patches(
-#            'xs', 
-#            'ys', 
-#            **options_intersect
-#            )
-    
-#        options_network = dict(
-#                line_alpha= params["fig_params"]["alpha_network"], 
-#                line_color=params["fig_params"]["color_network"],
-#                line_width=params["fig_params"]["line_width_surf"], 
-#                source=network,
-#                legend="network"
-#                )
-
-    
-    
-#        p_shape[1][0].patches(
-#                'xs', 
-#                'ys', 
-#                **options_buildings
-#              )
-#        
-#        p_shape[1][0].multi_line(
-#                'xs', 
-#                'ys', 
-#                **options_network
-#              )
-     
-    
-    
-#        p_shape[1][1].patches(
-#                'xs', 
-#                'ys', 
-#                **options_buildings
-#              )
-#        
-#        p_shape[1][1].multi_line(
-#                'xs', 
-#                'ys', 
-#                **options_network
-#              )
-    
-#        p_shape[1][2].patches(
-#                'xs', 
-#                'ys', 
-#                **options_buildings
-#              )
-#        
-#        p_shape[1][2].multi_line(
-#                'xs', 
-#                'ys', 
-#                **options_network
-#              )
         
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
@@ -740,7 +597,6 @@ def animation():
         lon = source_point.data["y"][-1]
         coords = transform(p_3857, p_4326, lat, lon)
         from_place = str(coords[0]) + ";" + str(coords[1])
-
 
     params_iso = {
             'token': TOKEN,
@@ -800,9 +656,7 @@ def clear_plots():
             match_aspect=True, 
             aspect_scale=1
             )
-    
-#    p_shape.grid.grid_line_color = None
-    
+
     p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
     draw_tool = PointDrawTool(renderers=[renderer], empty_value='black')
     p_shape.add_tools(draw_tool)
@@ -902,8 +756,6 @@ select.on_change('value',goto)
 slider_contour.on_change('value', contour_update)
 run_anim.on_click(animation)
 slider_anim.on_change('value',anim_slider)
-
-#intersections.data_source.on_change('selected',selection)
 
 layout = column(
         row(

@@ -16,10 +16,11 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta as rd
 from pyproj import transform, Proj
 import imageio
+import numpy as np
 
 from get_iso import get_iso
 from make_plot import make_plot
-from functions import geocode
+from functions import geocode, colors_blend, hex2rgb
 
 #Parameters
 try:
@@ -60,8 +61,8 @@ alert = """<span style="color: red"><b>{}</b></span>"""
 selected = False
 old_selections = []
 
-export_auto = False
-anim = True
+export_auto = True
+anim = False
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -101,9 +102,9 @@ source_iso = ColumnDataSource(
         
 TOOLS = ""
 
-export_no_tiles = "./output_png/Lille/no_tiles/"
-export_with_tiles = "./output_png/Lille/with_tiles/"
-export_anim = "./output_png/Lille/animation/"
+export_no_tiles = "./output_png/tests/no_tiles/"
+export_with_tiles = "./output_png/tests/with_tiles/"
+export_anim = "./output_png/tests/animation/"
 
 params_plot = {
             'params':params, 
@@ -140,6 +141,30 @@ source_intersection = ColumnDataSource(
                 complexity=[]
                 )
         )
+        
+def change_color(source):
+    #Give each polygon a unique color
+    l_colors = []
+    nb = len(source.data['color'])
+    
+    if nb != 0:
+        r,v,b = hex2rgb(source.data['color'][0])
+        
+        if r + nb >= 255:
+            for i in range(0, nb):
+                new_color = r - i, v, b
+                new_color = colors_blend(new_color, new_color)
+                l_colors.append(new_color)
+            
+        else:
+            for i in range(0, nb):
+                new_color = r + i, v, b
+                new_color = colors_blend(new_color, new_color)
+                l_colors.append(new_color)
+        
+        source.data['color'] = np.array(l_colors)
+    
+    return source
 
 def run(params_iso,x,y,adress):
     global counter_polys
@@ -157,6 +182,28 @@ def run(params_iso,x,y,adress):
     shape = data['shape']
     data_intersection = data['intersection']
     status = data['status']
+    
+    #Give each polygon a unique color
+    source = change_color(source)
+    data_intersection = change_color(data_intersection)
+    
+    #DataSource to dict
+    dict_source = {}
+    for key,value in source.data.items():
+        if type(value) is np.ndarray:
+            new_value = value.tolist()
+            dict_source[key] = new_value
+        else:
+            dict_source[key] = value
+            
+    dict_intersection = {}
+    for key,value in source_intersection.data.items():
+        if type(value) is np.ndarray:
+            new_value = value.tolist()
+            dict_intersection[key] = new_value
+        else:
+            dict_intersection[key] = value
+        
     
     if source is None:
         shape = ""
@@ -257,7 +304,7 @@ def run(params_iso,x,y,adress):
     p_shape.legend.click_policy="hide"
     p_shape.legend.visible = False
     
-    return p_shape
+    return p_shape, dict_source, dict_intersection
 
 if export_auto is True:
     for param in params_auto:
@@ -278,6 +325,7 @@ if export_auto is True:
         opacity_intersection = param["opacity_intersection"]
         shape = param["shape"]
         identity = param["id"]
+        l_dict_iso = []
         
         gdf_poly_mask = None
         
@@ -326,16 +374,34 @@ if export_auto is True:
                 
                     }     
             
-            p_shape = run(params_iso, x,y,l_adress)
+            p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress)
+            del dict_source['xs']
+            del dict_source['ys']
+            del dict_intersection['xs']
+            del dict_intersection['ys']
+            l_dict_iso.append(dict_source)
         
         #EXPORT NO_TILES PNG
         name = export_no_tiles + identity
         export_png(p_shape, filename="{}.png".format(name))
-        json_name = filename="{}.json".format(name)
         
+        #EXPORT PARAMS TO JSON
+        params_name = export_no_tiles + identity + "_params"
+        json_name = filename="{}.json".format(params_name)
         with open(json_name, 'w', encoding='utf-8') as outfile:
             json.dump(param, outfile, sort_keys=True, indent=2)
             
+        #EXPORT ISOS TO JSON
+        iso_name = export_no_tiles + identity + "_iso"
+        json_name = filename="{}.json".format(iso_name)
+        with open(json_name, 'w', encoding='utf-8') as outfile:
+            json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
+        
+        #EXPORT OVERLAY TO JSON
+        overlay_name = export_no_tiles + identity + "_overlay"
+        json_name = filename="{}.json".format(overlay_name)
+        with open(json_name, 'w', encoding='utf-8') as outfile:
+            json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
         
         #EXPORT WITH_TILES PNG
         #Add origins points
@@ -346,8 +412,6 @@ if export_auto is True:
                     color=l_colors
                     )
         source_origins.data.update(data)
-        
-        export_name = export_no_tiles 
         
         poly_circles = p_shape.circle(
             'x', 
@@ -364,18 +428,32 @@ if export_auto is True:
         
         p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
         
+        time.sleep(5) #sleep 5 seconds to avoid a Geocoder problem
+        
         name = export_with_tiles + identity
         export_png(p_shape, filename="{}.png".format(name))
-        json_name = filename="{}.json".format(name)
-        
+            
+        #EXPORT PARAMS TO JSON
+        params_name = export_with_tiles + identity + "_params"
+        json_name = filename="{}.json".format(params_name)
         with open(json_name, 'w', encoding='utf-8') as outfile:
             json.dump(param, outfile, sort_keys=True, indent=2)
+            
+        #EXPORT ISOS TO JSON
+        iso_name = export_with_tiles + identity + "_iso"
+        json_name = filename="{}.json".format(iso_name)
+        with open(json_name, 'w', encoding='utf-8') as outfile:
+            json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
+        
+        #EXPORT OVERLAY TO JSON
+        overlay_name = export_with_tiles + identity + "_overlay"
+        json_name = filename="{}.json".format(overlay_name)
+        with open(json_name, 'w', encoding='utf-8') as outfile:
+            json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
         
         p_shape = make_plot(params_plot)
         
         exe_duration = time.time() - start_time
-        
-        time.sleep(5) #sleep 5 seconds to avoid a Geocoder problem
         
         print (fmt.format(rd(seconds=exe_duration)))
 
@@ -484,6 +562,8 @@ if anim is True:
         iso_name = export_anim + iso_name
         export_png(p_shape, filename="{}.png".format(iso_name))
         p_shape = make_plot(params_plot)
+        
+        time.sleep(2) #sleep 5 seconds to avoid a Geocoder problem
         
         exe_duration = time.time() - start_time
         
