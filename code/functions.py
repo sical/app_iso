@@ -430,28 +430,6 @@ def convert_GeoPandas_to_Bokeh_format(gdf):
     return ColumnDataSource(gdf_new)
 
 
-#def getPolyCoords(line, geom, coord_type):
-#    """
-#    @param line (Shapely LineString): line
-#    @param geom (str): geometry column name
-#    @param coord_type (str): x or y 
-#    
-#    Returns the list of coordinates ('x' or 'y') of edges of a Polygon exterior
-#    Source: https://automating-gis-processes.github.io/2016/Lesson5-interactive-map-bokeh.html
-#    
-#    """
-#
-#    # Parse the exterior of the coordinate
-#    exterior = line[geom].exterior
-#
-#    if coord_type == 'x':
-#        # Get the x coordinates of the exterior
-#        return list( exterior.coords.xy[0] )
-#    elif coord_type == 'y':
-#        # Get the y coordinates of the exterior
-#        return list( exterior.coords.xy[1] )
-
-
 def _getGeometryCoords(line, geom, coord_type, shape_type):
     """
     Returns the coordinates ('x' or 'y') of edges of a Polygon exterior.
@@ -687,3 +665,35 @@ def get_stats(gdf, coeff_ampl, coeff_conv):
             'norm_notches': mean_norm_notches,
             'complexity': mean_complexity
             }, gdf
+            
+            
+def explode(gdf):
+    """    
+    Will explode the geodataframe's muti-part geometries into single 
+    geometries. Each row containing a multi-part geometry will be split into
+    multiple rows with single geometries, thereby increasing the vertical size
+    of the geodataframe. The index of the input geodataframe is no longer
+    unique and is replaced with a multi-index. 
+
+    The output geodataframe has an index based on two columns (multi-index) 
+    i.e. 'level_0' (index of input geodataframe) and 'level_1' which is a new
+    zero-based index for each single part geometry per multi-part geometry
+    
+    Args:
+        gdf (gpd.GeoDataFrame) : input geodataframe with multi-geometries
+        
+    Returns:
+        gdf (gpd.GeoDataFrame) : exploded geodataframe with each single 
+                                 geometry as a separate entry in the 
+                                 geodataframe. The GeoDataFrame has a multi-
+                                 index set to columns level_0 and level_1
+                                 
+    Source: rutgerhofste, https://github.com/geopandas/geopandas/pull/671#issuecomment-366243624
+        
+    """
+    gs = gdf.explode()
+    gdf2 = gs.reset_index().rename(columns={0: 'geometry'})
+    gdf_out = gdf2.merge(gdf.drop('geometry', axis=1), left_on='level_0', right_index=True)
+    gdf_out = gdf_out.set_index(['level_0', 'level_1']).set_geometry('geometry')
+    gdf_out.crs = gdf.crs
+    return gdf_out

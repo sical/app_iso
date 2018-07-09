@@ -4,6 +4,7 @@
 """
 from datetime import date
 import os
+import itertools
 
 from bokeh.io import export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
@@ -17,8 +18,9 @@ from dateutil.relativedelta import relativedelta as rd
 from pyproj import transform, Proj
 import imageio
 import numpy as np
+import pandas as pd
 
-from get_iso import get_iso
+from get_iso import get_iso, overlay
 from make_plot import make_plot
 from functions import geocode, colors_blend, hex2rgb
 
@@ -60,6 +62,9 @@ counter_intersection = 0
 alert = """<span style="color: red"><b>{}</b></span>"""
 selected = False
 old_selections = []
+list_gdf = []
+coeff_ampl = 0.8 # See Brinkhoff et al. paper
+coeff_conv = 0.2 # See Brinkhoff et al. paper
 
 export_auto = True
 anim = False
@@ -148,23 +153,33 @@ def change_color(source):
     nb = len(source.data['color'])
     
     if nb != 0:
-        r,v,b = hex2rgb(source.data['color'][0])
+        r,g,b = hex2rgb(source.data['color'][0])
         
         if r + nb >= 255:
             for i in range(0, nb):
-                new_color = r - i, v, b
+                new_color = r - i, g, b
                 new_color = colors_blend(new_color, new_color)
                 l_colors.append(new_color)
             
         else:
             for i in range(0, nb):
-                new_color = r + i, v, b
+                new_color = r + i, g, b
                 new_color = colors_blend(new_color, new_color)
                 l_colors.append(new_color)
         
         source.data['color'] = np.array(l_colors)
     
     return source
+
+
+def pairwise(iterable):
+    """
+    source: https://stackoverflow.com/questions/5434891/iterate-a-list-as-pair-current-next-in-python
+    """
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    
+    return zip(a, b)  
 
 def run(params_iso,x,y,adress):
     global counter_polys
@@ -182,6 +197,8 @@ def run(params_iso,x,y,adress):
     shape = data['shape']
     data_intersection = data['intersection']
     status = data['status']
+    gdf_poly = data['gdf_poly']
+    list_gdf.append(gdf_poly)
     
     #Give each polygon a unique color
     source = change_color(source)
@@ -362,6 +379,7 @@ if export_auto is True:
                 'time_in': time_value,
                 'min_date': date_value,
                 'step': step_value,
+                'step_mn': 0,
                 'nb_iter': 1,
                 'shape': shape,
                 'inProj': inProj,
@@ -453,7 +471,19 @@ if export_auto is True:
         
         p_shape = make_plot(params_plot)
         
+        #MEASURE ALL OVERLAYS AND COLORS
+        zip_gdf = pairwise(list_gdf)
+        for x in zip_gdf:
+            x[0]['time'] = None
+            x[1]['time'] = None
+            source_intersection, gdf_overlay = overlay(x[0], x[1], how, coeff_ampl, coeff_conv, color_switch)
+            list_gdf.append(gdf_overlay)
+            
+        gdfs = pd.concat(list_gdf)
+        
         exe_duration = time.time() - start_time
+        
+        gdfs.to_csv("test.csv")
         
         print (fmt.format(rd(seconds=exe_duration)))
 

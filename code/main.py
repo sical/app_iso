@@ -69,6 +69,7 @@ selected = False
 old_selections = []
 color_value = (127,127,127)
 dict_anim={}
+list_gdf = []
 
 #Set range date
 min_date = date(year_min, month_min, day_min)
@@ -125,6 +126,9 @@ time_in = TextInput(value=time_, title="Schedule (HH:MM):")
 date_ = DatePicker(max_date=max_date, min_date=min_date)
 #nb_iter_in = TextInput(value=nb_iter, title="Entrez un nombre d'etapes:")
 step_in = TextInput(value=str(int(step/60)), title="Duration (minutes):")
+step_range = TextInput(value="1", title="Step (minutes)")
+
+step_row = column(step_in, step_range)
 
 #SHAPES
 radio_button_shapes = RadioButtonGroup(
@@ -208,9 +212,10 @@ panel_anim = Panel(child=
                    )
 
 l_widget = [
-        [select, div_alert],
+        [div_alert],
+        [select, adress_in],
         [date_, time_in],
-        [adress_in, step_in],
+        [step_in, step_range],
         [radio_button_shapes, radio_button_loc],
         [
                 Tabs(tabs=[
@@ -399,6 +404,7 @@ def run():
         time_value = datetime.datetime.now().time()
 #    nb_iter_value = int(nb_iter_in.value)
     step_value = int(step_in.value) * 60
+    step_mn = int(step_range.value) * 60
     adress = adress_in.value
             
     
@@ -431,6 +437,7 @@ def run():
         'time_in': time_value,
         'min_date': date_value,
         'step': step_value,
+        'step_mn': step_mn,
         'nb_iter': 1,
         'shape': shape,
         'inProj': inProj,
@@ -448,6 +455,10 @@ def run():
     shape = data['shape']
     data_intersection = data['intersection']
     status = data['status']
+    gdf_poly = data['gdf_poly']
+    source_buffer = data['source_buffer']
+    
+    list_gdf.append(gdf_poly)
     
     if source is None:
         shape = ""
@@ -551,6 +562,23 @@ def run():
                                         )
         counter_intersection += 1
         
+        
+    #Draw buffer 
+#    buffer_name = "Differential_Buffer/" + name
+#    source_intersection = data_intersection
+#    options_buffer = dict(
+#            source=source_buffer,
+#            color='grey',
+#            alpha=0.50, 
+#            legend=buffer_name
+#            )
+#    
+#    buffer = p_shape.patches(
+#                            'xs', 
+#                            'ys', 
+#                            **options_buffer
+#                            )
+        
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
     
@@ -604,6 +632,7 @@ def animation():
             'time_in': time_value,
             'min_date': date_value,
             'step': step_value,
+            'step_mn': 0,
             'nb_iter': 1,
             'shape': shape,
             'inProj': inProj,
