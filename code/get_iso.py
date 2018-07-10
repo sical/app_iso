@@ -16,7 +16,7 @@ from bokeh.models import GeoJSONDataSource, ColumnDataSource
 from pyproj import transform, Proj
 import pandas as pd
 
-from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats, explode
+from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats, explode, measure_differential
 
 #SPEEDS (km/h)
 #Sources:
@@ -137,14 +137,15 @@ def get_iso(params, gdf_poly_mask, id_):
     
     if step_mn != 1:
         step = int(step)
-        nb_iter = step//step_mn
+        nb_iter = step//(step_mn*60)
+        cutoffs, list_time = _cutoffs(nb_iter, step_mn*60)
     else:
         nb_iter = 1
+        cutoffs, list_time = _cutoffs(nb_iter, step)
 #    if nb_iter > 11:
 #        print ("Please select a number of iterations inferior to 11")
 #        return
     
-    cutoffs, list_time = _cutoffs(nb_iter, step_mn)
     print ("CUT", cutoffs)
     gdf_polys = []
 
@@ -164,7 +165,7 @@ def get_iso(params, gdf_poly_mask, id_):
     
     print (url, code)
 
-    if code == 200 and step_mn == 1:
+    if (code == 200 and step_mn == 1):
         json_response = json.dumps(r.json())
         geojson_ = geojson.loads(json_response)
     
@@ -197,83 +198,9 @@ def get_iso(params, gdf_poly_mask, id_):
         
         poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
-        #DIFFERENCE BETWEEN THEORITICAL AND REAL ACCESSIBILITY
-        point_4326 = from_place.split(sep=";")
-        point_3857 = transform(p_4326, p_3857, point_4326[0], point_4326[1])
-        distance = step * (TRANSIT*1000) // 3600
-        buffer = Point(point_3857).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
-        
-        df = pd.DataFrame(
-                {
-                        "radius":[distance,],
-                        "color":["grey",],
-                        "geometry":[buffer,],
-                        "time":[step,]
-                }
-        )
-        
-        gdf_buffer = gpd.GeoDataFrame(df,crs={'init': 'epsg:3857'}, geometry="geometry")
-        how_buffer = "symmetric_difference"
-       
-#        source_buffer, gdf_mask_buffer = overlay(gdf_poly, gdf_buffer, how_buffer, coeff_ampl, coeff_conv, "grey")
-#        source_buffer, gdf_buffer_mask = overlay(
-#                gdf_buffer, 
-#                gdf_poly, 
-#                how_buffer, 
-#                coeff_ampl, 
-#                coeff_conv,
-#                "grey"
-#                )
-        
-#        for x in gdf_buffer.geometry:
-#            print (x)
-#        print (gdf_buffer)
-#        print (gdf_poly)
-#        gdf_poly["new_geom"] = gpd.GeoSeries(unary_union(gdf_poly.geometry.tolist()))
-#        gdf_poly = gdf_poly.drop("geometry", axis=1)
-#        gdf_poly.rename(columns={'new_geom':'geometry'}, inplace=True)
-#        gdf_poly = gdf_poly.set_geometry("geometry")
-#        
-#        for x in gdf_poly.geometry:
-#            print (x)
-#        print ("================")
-#        gdf_buffer = gpd.overlay(gdf_poly, gdf_buffer, how=how_buffer)
-#        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
-#        geoms_exploded = gdf_poly.explode().reset_index(level=1, drop=True)
-#        print ("BEFORE", gdf_poly.columns)
-#        gdf_new = gdf_poly.drop(columns='geometry')
-#        gdf_new["geometry"] = geoms_exploded
-#        gdf_new = gdf_new.set_geometry("geometry")
-#        gdf_new = gdf_poly.drop(columns='geometry').join(geoms_exploded.rename('geometry'))
-#        print ("AFTER", gdf_new.columns)
-#        gdf_new = gpd.GeoDataFrame(gdf_new)
-        
-#        print (gdf_new)
-#        print ("########################")
-#        geoms_exploded = gpd.GeoDataFrame(gdf_poly.explode().reset_index(level=1, drop=True))
-#        geoms_exploded.rename(columns={0:'geometry'}, inplace=True)
-#        print (geoms_exploded)
-#        print (type(gdf_poly))
-#        gdf_new = gdf_poly.drop('geometry', axis=1).join(geoms_exploded)
-#        gdf_new = gdf_new.set_geometry("geometry")
-#        gdf_new = gpd.GeoDataFrame(gdf_new)
-        
-#        for x in gdf_buffer.geometry:
-#            print (type(x))
-#        print ("=======================")
-#        for x in gdf_new.geometry:
-#            print (type(x))
-#        print ("TYPE BUFFER", gdf_buffer.geometry[0],gdf_new.geometry[0])
-        gdf_new = explode(gdf_poly)
-        print ("plot")
-#        print (type(gdf_new), type(gdf_buffer))
-        print (gdf_new["geometry"][0])
-        print (gdf_buffer["geometry"][0])
-        gdf_new = gpd.overlay(gdf_buffer, gdf_new, how=how_buffer)
-        print ("yes")
-        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_new)
-        
-        print ("yep2")
+        #MEASURE DIFFERENTIAL
+        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly)
+        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #STATS
         gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
@@ -281,7 +208,12 @@ def get_iso(params, gdf_poly_mask, id_):
         
         for key,value in stats.items():
             gdf_stats[key] = value
+            
+        #GEOJSON POLY
+        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color'])
+        source_polys_geojson = json.dumps(gdf_geojson)
         
+        #SOURCE POLYS BASIC
         source_polys = convert_GeoPandas_to_Bokeh_format(gdf_stats)
         
         
@@ -292,8 +224,7 @@ def get_iso(params, gdf_poly_mask, id_):
         
         status = ""
         
-    elif code == 200 and step_mn != 1:
-        print ("YYYYYYYYYYYYYYYY")
+    elif (code == 200 and step_mn != 1):
         json_response = json.dumps(r.json())
         geojson_ = geojson.loads(json_response)
     
@@ -315,10 +246,16 @@ def get_iso(params, gdf_poly_mask, id_):
         poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time'])
         gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
         source = convert_GeoPandas_to_Bokeh_format(gdf_stats)
+        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time'])
+        source_polys_geojson = json.dumps(gdf_geojson)
+        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly)
+        
+#        source_buffer = measure_differential(from_place, step)
         gdf_poly_mask = None
         source_buffer = None
         status = ""
         source_intersections = None
+        
         
     else:
         if r.json()["error"]["message"]:
@@ -332,10 +269,12 @@ def get_iso(params, gdf_poly_mask, id_):
     return {
             'status': status,
             'source':source,
+            'source_geojson':source_polys_geojson,
             'shape':shape,
             'intersection':source_intersections,
             'gdf_poly_mask': gdf_poly_mask,
             'gdf_poly': gdf_poly,
-            'source_buffer': source_buffer
+            'source_buffer': source_buffer,
+            'source_buffer_geojson': source_buffer_geojson
             }
      

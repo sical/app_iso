@@ -11,7 +11,8 @@ from geopy.geocoders import Nominatim
 import osmnx as ox
 import json
 import numpy as np
-from shapely.geometry import MultiPolygon
+from shapely.geometry import MultiPolygon, Point
+from pyproj import transform, Proj 
 
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 
@@ -697,3 +698,123 @@ def explode(gdf):
     gdf_out = gdf_out.set_index(['level_0', 'level_1']).set_geometry('geometry')
     gdf_out.crs = gdf.crs
     return gdf_out
+
+
+def measure_differential(from_place, step, gdf_poly=None):
+    TRANSIT = 20
+    p_4326 = Proj(init='epsg:4326')
+    p_3857 = Proj(init='epsg:3857')
+    #DIFFERENCE BETWEEN THEORITICAL AND REAL ACCESSIBILITY
+    point_4326 = from_place.split(sep=";")
+    point_3857 = transform(p_4326, p_3857, point_4326[0], point_4326[1])
+#    distance = step * (TRANSIT*1000) // 3600
+#    buffer = Point(point_3857).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
+    l_buffer = []
+    l_distance = []
+    l_color = []
+    l_time = []
+    
+    #TEST STEP
+    for i in range (1,(step//60)+1, 1):
+        distance = i*60 * (TRANSIT*1000) // 3600
+        print (i, distance)
+        buffer = Point(point_3857).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
+        l_buffer.append(buffer)
+        l_distance.append(distance)
+        l_color.append("grey")
+        l_time.append(i)
+
+    df = pd.DataFrame(
+            {
+                    "radius":l_distance,
+                    "color":l_color,
+                    "geometry":l_buffer,
+                    "time":l_time
+            }
+    )
+    
+    
+    #######################
+    
+#    df = pd.DataFrame(
+#            {
+#                    "radius":[distance,],
+#                    "color":["grey",],
+#                    "geometry":[buffer,],
+#                    "time":[step,]
+#            }
+#    )
+    
+    gdf_buffer = gpd.GeoDataFrame(df,crs={'init': 'epsg:3857'}, geometry="geometry")
+    
+    if gdf_poly is not None:
+    
+        how_buffer = "symmetric_difference"
+   
+    #        source_buffer, gdf_mask_buffer = overlay(gdf_poly, gdf_buffer, how_buffer, coeff_ampl, coeff_conv, "grey")
+    #        source_buffer, gdf_buffer_mask = overlay(
+    #                gdf_buffer, 
+    #                gdf_poly, 
+    #                how_buffer, 
+    #                coeff_ampl, 
+    #                coeff_conv,
+    #                "grey"
+    #                )
+        
+    #        for x in gdf_buffer.geometry:
+    #            print (x)
+    #        print (gdf_buffer)
+    #        print (gdf_poly)
+    #        gdf_poly["new_geom"] = gpd.GeoSeries(unary_union(gdf_poly.geometry.tolist()))
+    #        gdf_poly = gdf_poly.drop("geometry", axis=1)
+    #        gdf_poly.rename(columns={'new_geom':'geometry'}, inplace=True)
+    #        gdf_poly = gdf_poly.set_geometry("geometry")
+    #        
+    #        for x in gdf_poly.geometry:
+    #            print (x)
+    #        print ("================")
+    #        gdf_buffer = gpd.overlay(gdf_poly, gdf_buffer, how=how_buffer)
+    #        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
+    #        geoms_exploded = gdf_poly.explode().reset_index(level=1, drop=True)
+    #        print ("BEFORE", gdf_poly.columns)
+    #        gdf_new = gdf_poly.drop(columns='geometry')
+    #        gdf_new["geometry"] = geoms_exploded
+    #        gdf_new = gdf_new.set_geometry("geometry")
+    #        gdf_new = gdf_poly.drop(columns='geometry').join(geoms_exploded.rename('geometry'))
+    #        print ("AFTER", gdf_new.columns)
+    #        gdf_new = gpd.GeoDataFrame(gdf_new)
+        
+    #        print (gdf_new)
+    #        print ("########################")
+    #        geoms_exploded = gpd.GeoDataFrame(gdf_poly.explode().reset_index(level=1, drop=True))
+    #        geoms_exploded.rename(columns={0:'geometry'}, inplace=True)
+    #        print (geoms_exploded)
+    #        print (type(gdf_poly))
+    #        gdf_new = gdf_poly.drop('geometry', axis=1).join(geoms_exploded)
+    #        gdf_new = gdf_new.set_geometry("geometry")
+    #        gdf_new = gpd.GeoDataFrame(gdf_new)
+        
+    #        for x in gdf_buffer.geometry:
+    #            print (type(x))
+    #        print ("=======================")
+    #        for x in gdf_new.geometry:
+    #            print (type(x))
+    #        print ("TYPE BUFFER", gdf_buffer.geometry[0],gdf_new.geometry[0])
+        gdf_new = explode(gdf_poly)
+        gdf_new = gpd.overlay(gdf_buffer, gdf_new, how=how_buffer)
+        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_new)
+        
+    else:
+        gdf_new = explode(gdf_buffer)
+        print ("YOUPI")
+#        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
+        source_buffer = None
+    
+    buffer_json, buffer_geojson = gdf_to_geojson(gdf_buffer,[])
+    print ("##########################################")
+    print (buffer_geojson)
+    print ("##########################################")       
+    
+    source_buffer_geojson = json.dumps(buffer_geojson)
+    
+    return source_buffer, source_buffer_geojson

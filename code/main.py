@@ -12,7 +12,7 @@ from bokeh.palettes import Viridis, Spectral, Plasma, Set1
 from bokeh.io import show, curdoc, export_png, export_svgs
 from bokeh.plotting import figure
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
-from bokeh.models import LinearColorMapper, Slider, ColumnDataSource, PointDrawTool, DataTable
+from bokeh.models import LinearColorMapper, Slider, ColumnDataSource, PointDrawTool, DataTable, GeoJSONDataSource
 from bokeh.models.widgets import TextInput, Button, DatePicker, RadioButtonGroup,  Dropdown, Panel, Tabs, DataTable, DateFormatter, TableColumn, Div, Select, CheckboxButtonGroup
 from bokeh.models.glyphs import Patches
 from bokeh.layouts import row, column, gridplot, widgetbox
@@ -404,7 +404,7 @@ def run():
         time_value = datetime.datetime.now().time()
 #    nb_iter_value = int(nb_iter_in.value)
     step_value = int(step_in.value) * 60
-    step_mn = int(step_range.value) * 60
+    step_mn = int(step_range.value)
     adress = adress_in.value
             
     
@@ -452,11 +452,16 @@ def run():
     gdf_poly_mask = data['gdf_poly_mask']
 
     source = data['source']
+    source_geojson = data['source_geojson']
     shape = data['shape']
     data_intersection = data['intersection']
     status = data['status']
     gdf_poly = data['gdf_poly']
     source_buffer = data['source_buffer']
+    source_buffer_geojson = data['source_buffer_geojson']
+    
+    source = GeoJSONDataSource(geojson=source_geojson)
+    source_buffer = GeoJSONDataSource(geojson=source_buffer_geojson)
     
     list_gdf.append(gdf_poly)
     
@@ -471,6 +476,7 @@ def run():
                 fill_color=color_value, 
                 fill_alpha = opacity.value,
                 line_color='white', 
+                line_alpha = 0.0,
                 line_width=params["fig_params"]["line_width_surf"], 
                 source=source,
                 legend="Isochrone_polys" + str(counter_polys)
@@ -564,20 +570,24 @@ def run():
         
         
     #Draw buffer 
-#    buffer_name = "Differential_Buffer/" + name
+    buffer_name = "Buffer_" + name
 #    source_intersection = data_intersection
-#    options_buffer = dict(
-#            source=source_buffer,
-#            color='grey',
-#            alpha=0.50, 
-#            legend=buffer_name
-#            )
-#    
-#    buffer = p_shape.patches(
-#                            'xs', 
-#                            'ys', 
-#                            **options_buffer
-#                            )
+    
+    options_buffer = dict(
+            source=source_buffer,
+            fill_color=color_value,
+            fill_alpha=0.0,
+            line_color=color_value,
+            line_width=1,
+            line_alpha=1.0, 
+            legend=buffer_name
+            )
+    
+    buffer = p_shape.patches(
+                            'xs', 
+                            'ys', 
+                            **options_buffer
+                            )
         
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
@@ -585,7 +595,7 @@ def run():
     
     
 #    names.append(name)
-    div_alert.text = alert.format(status)
+#    div_alert.text = alert.format(status)
         
 #    except:
 #        div_alert.text =  """<span style="color: red"><b>ALERTE: Verifiez vos parametres</b></span>"""
