@@ -126,7 +126,7 @@ time_in = TextInput(value=time_, title="Schedule (HH:MM):")
 date_ = DatePicker(max_date=max_date, min_date=min_date)
 #nb_iter_in = TextInput(value=nb_iter, title="Entrez un nombre d'etapes:")
 step_in = TextInput(value=str(int(step/60)), title="Duration (minutes):")
-step_range = TextInput(value="1", title="Step (minutes)")
+step_range = TextInput(value="0", title="Step (minutes)")
 
 step_row = column(step_in, step_range)
 
@@ -444,7 +444,8 @@ def run():
         'outProj': outProj,
         'how': how,
         'color':color_value,
-        'color_switch': None
+        'color_switch': None,
+        'tolerance': 400
             }
     
 #    try:
@@ -452,6 +453,9 @@ def run():
     gdf_poly_mask = data['gdf_poly_mask']
 
     source = data['source']
+    source_convex = data['source_convex']
+    source_envelope = data['source_envelope']
+    source_simplified = data['source_simplified']
     source_geojson = data['source_geojson']
     shape = data['shape']
     data_intersection = data['intersection']
@@ -460,26 +464,27 @@ def run():
     source_buffer = data['source_buffer']
     source_buffer_geojson = data['source_buffer_geojson']
     
-    source = GeoJSONDataSource(geojson=source_geojson)
-    source_buffer = GeoJSONDataSource(geojson=source_buffer_geojson)
-    
+#    source = GeoJSONDataSource(geojson=source_geojson)
+#    source_buffer = GeoJSONDataSource(geojson=source_buffer_geojson)
+
     list_gdf.append(gdf_poly)
     
     if source is None:
         shape = ""
 
     if shape == "poly":
-        name = "polys" + str(counter_polys)
+#        if step_value >= 6000 and step_mn <=5:
+#            color = 
+        # Polygons
+        name = "Isochrone_polys" + str(counter_polys)
         options_iso_surf = dict(
-#                fill_alpha= params["fig_params"]["alpha_surf"], 
-    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
                 fill_color=color_value, 
                 fill_alpha = opacity.value,
                 line_color='white', 
                 line_alpha = 0.0,
                 line_width=params["fig_params"]["line_width_surf"], 
                 source=source,
-                legend="Isochrone_polys" + str(counter_polys)
+                legend=name
                 )
         
         poly_patches = p_shape.patches(
@@ -488,6 +493,64 @@ def run():
             **options_iso_surf,
             name=name
             )
+        
+        ###########################################################
+        # SIMPLIFIED VERSIONS
+        ###########################################################
+        # Convex_hull polygons
+        options_iso_convex = dict(
+                fill_color=color_value, 
+                fill_alpha = opacity.value,
+                line_color='white', 
+                line_alpha = 0.0,
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=source_convex,
+                legend=name + " (convex)"
+                )
+        
+        poly_convex = p_shape.patches(
+            'xs', 
+            'ys', 
+            **options_iso_convex,
+            name=name + " (convex)"
+            )
+        
+        # Envelope polygons
+        options_iso_envelope = dict(
+                fill_color=color_value, 
+                fill_alpha = opacity.value,
+                line_color='white', 
+                line_alpha = 0.0,
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=source_envelope,
+                legend=name + " (envelope)"
+                )
+        
+        poly_envelope = p_shape.patches(
+            'xs', 
+            'ys', 
+            **options_iso_envelope,
+            name=name + " (envelope)"
+            )
+        
+        # Simplified polygons
+        options_iso_simplified = dict(
+                fill_color=color_value, 
+                fill_alpha = opacity.value,
+                line_color='white', 
+                line_alpha = 0.0,
+                line_width=params["fig_params"]["line_width_surf"], 
+                source=source_simplified,
+                legend=name + " (simplified)"
+                )
+        
+        poly_simplified = p_shape.patches(
+            'xs', 
+            'ys', 
+            **options_iso_simplified,
+            name=name + " (simplified)"
+            )
+        ###########################################################
         
         counter_polys += 1 
         
@@ -519,6 +582,58 @@ def run():
             **options_iso_contours,
             name=name
             )
+        
+        ###########################################################
+        # SIMPLIFIED VERSIONS
+        ###########################################################
+        # Convex_hull polygons
+        options_iso_convex = dict(
+                line_color=color_value, 
+                line_alpha = opacity.value,
+                line_width=params["fig_params"]["line_width_cont"], 
+                source=source_convex,
+                legend="Iso_convex_" + str(counter_polys)
+                )
+        
+        poly_convex = p_shape.multi_line(
+            'xs', 
+            'ys', 
+            **options_iso_convex,
+            name=name + " (convex)"
+            )
+        
+        # Envelope polygons
+        options_iso_envelope = dict(
+                line_color=color_value, 
+                line_alpha = opacity.value,
+                line_width=params["fig_params"]["line_width_cont"],  
+                source=source_envelope,
+                legend=name + " (envelope)"
+                )
+        
+        poly_envelope = p_shape.multi_line(
+            'xs', 
+            'ys', 
+            **options_iso_envelope,
+            name=name + " (envelope)"
+            )
+        
+        # Simplified polygons
+        options_iso_simplified = dict(
+                line_color=color_value, 
+                line_alpha = opacity.value,
+                line_width=params["fig_params"]["line_width_cont"], 
+                source=source_simplified,
+                legend=name + " (simplified)"
+                )
+        
+        poly_simplified = p_shape.multi_line(
+            'xs', 
+            'ys', 
+            **options_iso_simplified,
+            name=name + " (simplified)"
+            )
+        ###########################################################
         
         counter_lines += 1
         
@@ -573,12 +688,14 @@ def run():
     buffer_name = "Buffer_" + name
 #    source_intersection = data_intersection
     
+    print (source_buffer.data)
+    
     options_buffer = dict(
             source=source_buffer,
             fill_color=color_value,
             fill_alpha=0.0,
             line_color=color_value,
-            line_width=1,
+            line_width='width',
             line_alpha=1.0, 
             legend=buffer_name
             )

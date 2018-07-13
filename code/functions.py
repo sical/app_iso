@@ -13,6 +13,7 @@ import json
 import numpy as np
 from shapely.geometry import MultiPolygon, Point
 from pyproj import transform, Proj 
+import copy
 
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 
@@ -594,7 +595,7 @@ def get_notches(poly):
         
     return notches_norm
     
-def get_stats(gdf, coeff_ampl, coeff_conv):
+def get_stats(gdf, coeff_ampl, coeff_conv): # TODO: FALSE RESULTS, NEED TO BE CHECKED !
     """
     Get polygon's amplitude of vibration:
     
@@ -713,23 +714,36 @@ def measure_differential(from_place, step, gdf_poly=None):
     l_distance = []
     l_color = []
     l_time = []
+    l_width = []
+    j = 1
     
     #TEST STEP
     for i in range (1,(step//60)+1, 1):
         distance = i*60 * (TRANSIT*1000) // 3600
-        print (i, distance)
         buffer = Point(point_3857).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
         l_buffer.append(buffer)
         l_distance.append(distance)
         l_color.append("grey")
         l_time.append(i)
+        
+        if j == 10:
+            l_width.append(4)
+            j = 1
+        elif j == 5:
+            l_width.append(2)
+            j+=1
+        else:
+            l_width.append(0.5)
+            j+=1
+        
 
     df = pd.DataFrame(
             {
                     "radius":l_distance,
                     "color":l_color,
                     "geometry":l_buffer,
-                    "time":l_time
+                    "time":l_time,
+                    "width":l_width
             }
     )
     
@@ -802,7 +816,8 @@ def measure_differential(from_place, step, gdf_poly=None):
     #        print ("TYPE BUFFER", gdf_buffer.geometry[0],gdf_new.geometry[0])
         gdf_new = explode(gdf_poly)
         gdf_new = gpd.overlay(gdf_buffer, gdf_new, how=how_buffer)
-        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_new)
+#        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_new)
+        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
         
     else:
         gdf_new = explode(gdf_buffer)
@@ -818,3 +833,27 @@ def measure_differential(from_place, step, gdf_poly=None):
     source_buffer_geojson = json.dumps(buffer_geojson)
     
     return source_buffer, source_buffer_geojson
+
+def simplify(gdf, tolerance):
+    ## Simplify
+    convex_hull = gdf.geometry.convex_hull
+    envelope = gdf.geometry.envelope
+    simplified = gdf.geometry.simplify(tolerance)
+    
+    convex_gdf = copy.deepcopy(gdf)
+    envelope_gdf = copy.deepcopy(gdf)
+    simplified_gdf = copy.deepcopy(gdf)
+    
+    convex_gdf.geometry = convex_hull
+    envelope_gdf.geometry = envelope
+    simplified_gdf.geometry = simplified
+    
+    source_convex = convert_GeoPandas_to_Bokeh_format(convex_gdf)
+    source_envelope = convert_GeoPandas_to_Bokeh_format(envelope_gdf)
+    source_simplified = convert_GeoPandas_to_Bokeh_format(simplified_gdf)
+    
+    return source_convex, source_envelope, source_simplified
+    
+    
+    
+    

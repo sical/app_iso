@@ -16,7 +16,7 @@ from bokeh.models import GeoJSONDataSource, ColumnDataSource
 from pyproj import transform, Proj
 import pandas as pd
 
-from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats, explode, measure_differential
+from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats, explode, measure_differential, simplify
 
 #SPEEDS (km/h)
 #Sources:
@@ -130,12 +130,13 @@ def get_iso(params, gdf_poly_mask, id_):
     color_switch = params['color_switch']
     coeff_ampl = 0.8 # See Brinkhoff et al. paper
     coeff_conv = 0.2 # See Brinkhoff et al. paper
+    tolerance = params["tolerance"]
     
     color = colors_blend(color, color)
     
     date_time = min_date.isoformat() + "T" + time_in
     
-    if step_mn != 1:
+    if step_mn != 0:
         step = int(step)
         nb_iter = step//(step_mn*60)
         cutoffs, list_time = _cutoffs(nb_iter, step_mn*60)
@@ -165,7 +166,7 @@ def get_iso(params, gdf_poly_mask, id_):
     
     print (url, code)
 
-    if (code == 200 and step_mn == 1):
+    if (code == 200 and step_mn == 0):
         json_response = json.dumps(r.json())
         geojson_ = geojson.loads(json_response)
     
@@ -208,13 +209,16 @@ def get_iso(params, gdf_poly_mask, id_):
         
         for key,value in stats.items():
             gdf_stats[key] = value
-            
+        
+        #SOURCE POLYS BASIC
+        ## Simplify
+        source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance)
+        
+        source_polys = convert_GeoPandas_to_Bokeh_format(gdf_stats)
+        
         #GEOJSON POLY
         gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color'])
         source_polys_geojson = json.dumps(gdf_geojson)
-        
-        #SOURCE POLYS BASIC
-        source_polys = convert_GeoPandas_to_Bokeh_format(gdf_stats)
         
         
         if shape == "poly" or shape == "line":
@@ -224,7 +228,7 @@ def get_iso(params, gdf_poly_mask, id_):
         
         status = ""
         
-    elif (code == 200 and step_mn != 1):
+    elif (code == 200 and step_mn != 0):
         json_response = json.dumps(r.json())
         geojson_ = geojson.loads(json_response)
     
@@ -275,6 +279,9 @@ def get_iso(params, gdf_poly_mask, id_):
             'gdf_poly_mask': gdf_poly_mask,
             'gdf_poly': gdf_poly,
             'source_buffer': source_buffer,
-            'source_buffer_geojson': source_buffer_geojson
+            'source_buffer_geojson': source_buffer_geojson,
+            'source_convex': source_convex,
+            'source_simplified': source_simplified,
+            'source_envelope': source_envelope
             }
      
