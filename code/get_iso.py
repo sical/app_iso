@@ -15,6 +15,7 @@ from shapely.geometry import Point, MultiPolygon as shap_multi
 from bokeh.models import GeoJSONDataSource, ColumnDataSource
 from pyproj import transform, Proj
 import pandas as pd
+import copy
 
 from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats, explode, measure_differential, simplify
 
@@ -34,7 +35,6 @@ p_3857 = Proj(init='epsg:3857')
 def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
     if gdf_overlay is not None:
             intersection = gpd.overlay(gdf_poly, gdf_overlay, how=how)
-            print ("1")
             if how == "union":
                 poly = intersection.geometry.unary_union
                 intersection["geometry"] = [poly for i in range(0, intersection["geometry"].count())]
@@ -50,7 +50,6 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
             
             intersection_json, intersection_geojson = gdf_to_geojson(intersection, ['time'])
             intersection = gpd.GeoDataFrame.from_features(intersection_geojson['features'])
-            print ("2")
             if intersection.empty is False:
                 intersection["color"] = [color_blended for i in range(0,intersection["geometry"].size)]
                 gdf_overlay = intersection.copy().drop("time", axis=1)
@@ -135,38 +134,50 @@ def get_iso(params, gdf_poly_mask, id_):
     color = colors_blend(color, color)
     
     date_time = min_date.isoformat() + "T" + time_in
+    l_cuts = []
     
     if step_mn != 0:
-        step = int(step)
-        nb_iter = step//(step_mn*60)
-        cutoffs, list_time = _cutoffs(nb_iter, step_mn*60)
+        if nb_iter < 10:
+            step = int(step)
+            nb_iter = step//(step_mn*60)
+            cutoffs, list_time, cuts = _cutoffs(nb_iter, step_mn*60)
+            l_cuts = [cuts[x:x+10] for x in range(0, len(cuts),10)]
+                
+        else:
+            cutoffs, list_time, cuts = _cutoffs(nb_iter, step_mn*60)
+            l_cuts = [cuts,]
     else:
         nb_iter = 1
-        cutoffs, list_time = _cutoffs(nb_iter, step)
+        cutoffs, list_time, cuts = _cutoffs(nb_iter, step)
 #    if nb_iter > 11:
 #        print ("Please select a number of iterations inferior to 11")
 #        return
     
-    print ("CUT", cutoffs)
+#    print ("CUT", cutoffs)
     gdf_polys = []
-
-    url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}'.format(
-            id_,
-            from_place,
-            date_time,
-            cutoffs
-            )
-    headers = {
-            'accept': 'application/json',
-            'Authorization': TOKEN
-            }
     
-    r = requests.get(url, headers=headers)
-    code = r.status_code
     
-    print (url, code)
+    if l_cuts == []:
+        url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}'.format(
+                id_,
+                from_place,
+                date_time,
+                cutoffs
+                )
+        headers = {
+                'accept': 'application/json',
+                'Authorization': TOKEN
+                }
+        
+        r = requests.get(url, headers=headers)
+        code = r.status_code
+        
+        print (url, code)
+    else:
+        code = None
 
     if (code == 200 and step_mn == 0):
+        print ("YES")
         json_response = json.dumps(r.json())
         geojson_ = geojson.loads(json_response)
     
@@ -200,8 +211,8 @@ def get_iso(params, gdf_poly_mask, id_):
         poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #MEASURE DIFFERENTIAL
-        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly)
-        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
+        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly=gdf_poly, color=color)
+#        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #STATS
         gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
@@ -212,7 +223,10 @@ def get_iso(params, gdf_poly_mask, id_):
         
         #SOURCE POLYS BASIC
         ## Simplify
-        source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance)
+        if tolerance is not None:
+            source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance)
+        else:
+            source_convex, source_envelope, source_simplified = None, None, None
         
         source_polys = convert_GeoPandas_to_Bokeh_format(gdf_stats)
         
@@ -228,37 +242,94 @@ def get_iso(params, gdf_poly_mask, id_):
         
         status = ""
         
-    elif (code == 200 and step_mn != 0):
-        json_response = json.dumps(r.json())
-        geojson_ = geojson.loads(json_response)
+    elif (l_cuts!=[] and step_mn != 0):
+        for cut in l_cuts:
+            cutoffs = ''.join(cut)
+            url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}'.format(
+            id_,
+            from_place,
+            date_time,
+            cutoffs
+            )
+            
+            print (url)
+            print ("#########################")
+            
+            headers = {
+                    'accept': 'application/json',
+                    'Authorization': TOKEN
+                    }
     
-        for iso,duration in zip(geojson_['isochrones'], list_time):
-            multi = Feature(
-                    geometry=MultiPolygon(
-                            iso["geojson"]["coordinates"]
-                            ), 
-                    properties={"time":duration}
-                    )
-            gdf_polys.append(multi)
+            r = requests.get(url, headers=headers)
+            code = r.status_code
+            
+            print ("CODE", code)
+            
+            json_response = json.dumps(r.json())
+            geojson_ = geojson.loads(json_response)
+        
+            for iso,duration in zip(geojson_['isochrones'], list_time):
+                multi = Feature(
+                        geometry=MultiPolygon(
+                                iso["geojson"]["coordinates"]
+                                ), 
+                        properties={"time":duration}
+                        )
+                gdf_polys.append(multi)
  
         collection = FeatureCollection(gdf_polys)
         gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])
         
         gdf_poly.crs = {'init': inProj}
         gdf_poly = gdf_poly.to_crs({'init': outProj})
-        gdf_poly = gdf_poly.sort_values(by='time', ascending=False)
-        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time'])
-        gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
-        source = convert_GeoPandas_to_Bokeh_format(gdf_stats)
-        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time'])
-        source_polys_geojson = json.dumps(gdf_geojson)
-        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly)
+        
+        #Difference
+#        gdf_poly["poly_shift"] = gdf_poly["geometry"].shift(-1)
+#        gdf_poly_shift = copy.deepcopy(gdf_poly)
+#        gdf_poly.drop("poly_shift", axis=1, inplace=True)
+#        gdf_poly_shift.drop("geometry", axis=1, inplace=True)
+#        gdf_poly_shift.drop(gdf_poly_shift.tail(1).index,inplace=True)
+#        gdf_poly_shift = gdf_poly_shift.rename(
+#                columns={"poly_shift": "geometry"}
+#                ).set_geometry("geometry")
+#        
+#        print (gdf_poly)
+#        print (gdf_poly_shift)
+#        
+#        difference = gpd.overlay(gdf_poly, gdf_poly_shift, how="difference")
+        
+        gdf_poly["poly_shift"] = gdf_poly["geometry"].shift(-1)
+        gdf_poly["difference"] = gdf_poly.apply(lambda x: x['poly_shift'].difference(x['geometry']))
+        gdf_poly = gdf_poly.rename(
+                columns={
+                        "geometry": "old_geometry",
+                        "difference": "geometry"
+                        }
+                ).set_geometry("geometry")
+        
+        
+        
+        ############
+        
+#        gdf_poly = difference.sort_values(by='time', ascending=False)
+        poly_json, _geojson = gdf_to_geojson(gdf_poly, [])
+#        gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
+#        source = convert_GeoPandas_to_Bokeh_format(gdf_stats)
+#        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time'])
+#        source_polys_geojson = json.dumps(gdf_geojson)
+#        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly)
         
 #        source_buffer = measure_differential(from_place, step)
+        source = GeoJSONDataSource(geojson=poly_json)
+        source_polys_geojson = None
         gdf_poly_mask = None
         source_buffer = None
         status = ""
         source_intersections = None
+        source_envelope = None
+        source_simplified = None
+        source_convex = None
+        source_buffer_geojson = None
         
         
     else:

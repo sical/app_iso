@@ -302,12 +302,15 @@ def _cutoffs(nb_iter, step):
     end = step*(nb_iter+1)
     list_time = []
     cutoffs = ""
+    cuts = []
 
     for i in range(step, end, step):
-        cutoffs += "&boundary_duration[]=" + str(i)
+        cut = "&boundary_duration[]=" + str(i)
+        cutoffs += cut
+        cuts.append(cut)
         list_time.append(i)
     
-    return cutoffs, list_time
+    return cutoffs, list_time, cuts
 
 
 def create_pts(gdf_poly):
@@ -701,7 +704,7 @@ def explode(gdf):
     return gdf_out
 
 
-def measure_differential(from_place, step, gdf_poly=None):
+def measure_differential(from_place, step, gdf_poly=None, color="grey"):
     TRANSIT = 20
     p_4326 = Proj(init='epsg:4326')
     p_3857 = Proj(init='epsg:3857')
@@ -723,7 +726,7 @@ def measure_differential(from_place, step, gdf_poly=None):
         buffer = Point(point_3857).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
         l_buffer.append(buffer)
         l_distance.append(distance)
-        l_color.append("grey")
+        l_color.append(color)
         l_time.append(i)
         
         if j == 10:
@@ -826,9 +829,9 @@ def measure_differential(from_place, step, gdf_poly=None):
         source_buffer = None
     
     buffer_json, buffer_geojson = gdf_to_geojson(gdf_buffer,[])
-    print ("##########################################")
-    print (buffer_geojson)
-    print ("##########################################")       
+#    print ("##########################################")
+#    print (buffer_geojson)
+#    print ("##########################################")       
     
     source_buffer_geojson = json.dumps(buffer_geojson)
     

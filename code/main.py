@@ -79,6 +79,7 @@ max_date = date(year_max, month_max, day_max)
 source_poly = {}
 
 #Set intersections
+intersections = None
 gdf_poly_mask = None
 
 #Get dict of coverage regions by Navitia
@@ -498,58 +499,61 @@ def run():
         # SIMPLIFIED VERSIONS
         ###########################################################
         # Convex_hull polygons
-        options_iso_convex = dict(
-                fill_color=color_value, 
-                fill_alpha = opacity.value,
-                line_color='white', 
-                line_alpha = 0.0,
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=source_convex,
-                legend=name + " (convex)"
+        if source_convex is not None:
+            options_iso_convex = dict(
+                    fill_color=color_value, 
+                    fill_alpha = opacity.value,
+                    line_color='white', 
+                    line_alpha = 0.0,
+                    line_width=params["fig_params"]["line_width_surf"], 
+                    source=source_convex,
+                    legend=name + " (convex)"
+                    )
+            
+            poly_convex = p_shape.patches(
+                'xs', 
+                'ys', 
+                **options_iso_convex,
+                name=name + " (convex)"
                 )
-        
-        poly_convex = p_shape.patches(
-            'xs', 
-            'ys', 
-            **options_iso_convex,
-            name=name + " (convex)"
-            )
         
         # Envelope polygons
-        options_iso_envelope = dict(
-                fill_color=color_value, 
-                fill_alpha = opacity.value,
-                line_color='white', 
-                line_alpha = 0.0,
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=source_envelope,
-                legend=name + " (envelope)"
+        if source_envelope is not None:
+            options_iso_envelope = dict(
+                    fill_color=color_value, 
+                    fill_alpha = opacity.value,
+                    line_color='white', 
+                    line_alpha = 0.0,
+                    line_width=params["fig_params"]["line_width_surf"], 
+                    source=source_envelope,
+                    legend=name + " (envelope)"
+                    )
+        
+            poly_envelope = p_shape.patches(
+                'xs', 
+                'ys', 
+                **options_iso_envelope,
+                name=name + " (envelope)"
                 )
-        
-        poly_envelope = p_shape.patches(
-            'xs', 
-            'ys', 
-            **options_iso_envelope,
-            name=name + " (envelope)"
-            )
-        
+            
         # Simplified polygons
-        options_iso_simplified = dict(
-                fill_color=color_value, 
-                fill_alpha = opacity.value,
-                line_color='white', 
-                line_alpha = 0.0,
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=source_simplified,
-                legend=name + " (simplified)"
+        if source_simplified is not None:
+            options_iso_simplified = dict(
+                    fill_color=color_value, 
+                    fill_alpha = opacity.value,
+                    line_color='white', 
+                    line_alpha = 0.0,
+                    line_width=params["fig_params"]["line_width_surf"], 
+                    source=source_simplified,
+                    legend=name + " (simplified)"
+                    )
+            
+            poly_simplified = p_shape.patches(
+                'xs', 
+                'ys', 
+                **options_iso_simplified,
+                name=name + " (simplified)"
                 )
-        
-        poly_simplified = p_shape.patches(
-            'xs', 
-            'ys', 
-            **options_iso_simplified,
-            name=name + " (simplified)"
-            )
         ###########################################################
         
         counter_polys += 1 
@@ -685,29 +689,29 @@ def run():
         
         
     #Draw buffer 
-    buffer_name = "Buffer_" + name
-#    source_intersection = data_intersection
-    
-    print (source_buffer.data)
-    
-    options_buffer = dict(
-            source=source_buffer,
-            fill_color=color_value,
-            fill_alpha=0.0,
-            line_color=color_value,
-            line_width='width',
-            line_alpha=1.0, 
-            legend=buffer_name
-            )
-    
-    buffer = p_shape.patches(
-                            'xs', 
-                            'ys', 
-                            **options_buffer
-                            )
+    if source_buffer is not None:
+        buffer_name = "Buffer_" + name
+    #    source_intersection = data_intersection
         
-    p_shape.legend.location = "top_right"
-    p_shape.legend.click_policy="hide"
+        
+        options_buffer = dict(
+                source=source_buffer,
+                fill_color=color_value,
+                fill_alpha=0.0,
+                line_color=color_value,
+                line_width='width',
+                line_alpha=1.0, 
+                legend=buffer_name
+                )
+        
+        buffer = p_shape.patches(
+                                'xs', 
+                                'ys', 
+                                **options_buffer
+                                )
+            
+        p_shape.legend.location = "top_right"
+        p_shape.legend.click_policy="hide"
     
     
     
@@ -851,14 +855,17 @@ def color_sliders(attrname, old, new):
     global color_value
 #    color_choice = 0
     color_value = (red_slider.value, green_slider.value, blue_slider.value, opacity.value)
-    color_select()
+    if intersections != None:
+        color_select()
     
 def color_hex(attrname, old, new):
     global color_choice
     global color_value
 #    color_choice = 1
     color_value = Viridis[5][panel_viridis.children[0].children[0].active]
-    color_select()
+    
+    if intersections != None:
+        color_select()
 
 def color_select():
     glyph = intersections.glyph

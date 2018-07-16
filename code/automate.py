@@ -107,8 +107,8 @@ source_iso = ColumnDataSource(
         
 TOOLS = ""
 
-export_no_tiles = "./output_png/tests/no_tiles/"
-export_with_tiles = "./output_png/tests/with_tiles/"
+export_no_tiles = "./output_png/Aurelien/no_tiles/"
+export_with_tiles = "./output_png/Aurelien/with_tiles/"
 export_anim = "./output_png/tests/animation/"
 
 params_plot = {
@@ -198,6 +198,7 @@ def run(params_iso,x,y,adress):
     data_intersection = data['intersection']
     status = data['status']
     gdf_poly = data['gdf_poly']
+    source_buffer = data['source_buffer']
     list_gdf.append(gdf_poly)
     
     #Give each polygon a unique color
@@ -317,6 +318,29 @@ def run(params_iso,x,y,adress):
                                         )
         counter_intersection += 1
         
+        
+    #Draw buffer 
+    if source_buffer is not None:
+        buffer_name = "Buffer_" + name
+    #    source_intersection = data_intersection
+        
+        
+        options_buffer = dict(
+                source=source_buffer,
+                fill_color="grey",
+                fill_alpha=0.0,
+                line_color='color',
+                line_width='width',
+                line_alpha=1.0, 
+                legend=buffer_name
+                )
+        
+        buffer = p_shape.patches(
+                                'xs', 
+                                'ys', 
+                                **options_buffer
+                                )
+        
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
     p_shape.legend.visible = False
@@ -388,7 +412,8 @@ if export_auto is True:
                 'color':color,
                 'color_switch': color_switch,
                 'opacity_intersection':opacity_intersection,
-                'opacity_iso':opacity_iso
+                'opacity_iso':opacity_iso,
+                'tolerance': None
                 
                     }     
             
@@ -472,18 +497,18 @@ if export_auto is True:
         p_shape = make_plot(params_plot)
         
         #MEASURE ALL OVERLAYS AND COLORS
-        zip_gdf = pairwise(list_gdf)
-        for x in zip_gdf:
-            x[0]['time'] = None
-            x[1]['time'] = None
-            source_intersection, gdf_overlay = overlay(x[0], x[1], how, coeff_ampl, coeff_conv, color_switch)
-            list_gdf.append(gdf_overlay)
+#        zip_gdf = pairwise(list_gdf)
+#        for x in zip_gdf:
+#            x[0]['time'] = None
+#            x[1]['time'] = None
+#            source_intersection, gdf_overlay = overlay(x[0], x[1], how, coeff_ampl, coeff_conv, color_switch)
+#            list_gdf.append(gdf_overlay)
             
-        gdfs = pd.concat(list_gdf)
+#        gdfs = pd.concat(list_gdf)
         
         exe_duration = time.time() - start_time
         
-        gdfs.to_csv("test.csv")
+#        gdfs.to_csv("test.csv")
         
         print (fmt.format(rd(seconds=exe_duration)))
 
