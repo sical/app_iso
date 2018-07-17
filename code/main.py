@@ -710,8 +710,8 @@ def run():
                                 **options_buffer
                                 )
             
-        p_shape.legend.location = "top_right"
-        p_shape.legend.click_policy="hide"
+    p_shape.legend.location = "top_right"
+    p_shape.legend.click_policy="hide"
     
     
     

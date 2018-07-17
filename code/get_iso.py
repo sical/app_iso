@@ -298,14 +298,14 @@ def get_iso(params, gdf_poly_mask, id_):
 #        
 #        difference = gpd.overlay(gdf_poly, gdf_poly_shift, how="difference")
         
-        gdf_poly["poly_shift"] = gdf_poly["geometry"].shift(-1)
-        gdf_poly["difference"] = gdf_poly.apply(lambda x: x['poly_shift'].difference(x['geometry']))
-        gdf_poly = gdf_poly.rename(
-                columns={
-                        "geometry": "old_geometry",
-                        "difference": "geometry"
-                        }
-                ).set_geometry("geometry")
+#        gdf_poly["poly_shift"] = gdf_poly["geometry"].shift(-1)
+#        gdf_poly["difference"] = gdf_poly.apply(lambda x: x['poly_shift'].difference(x['geometry']))
+#        gdf_poly = gdf_poly.rename(
+#                columns={
+#                        "geometry": "old_geometry",
+#                        "difference": "geometry"
+#                        }
+#                ).set_geometry("geometry")
         
         
         

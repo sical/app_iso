@@ -730,13 +730,13 @@ def measure_differential(from_place, step, gdf_poly=None, color="grey"):
         l_time.append(i)
         
         if j == 10:
-            l_width.append(4)
+            l_width.append(1)
             j = 1
         elif j == 5:
-            l_width.append(2)
+            l_width.append(0.5)
             j+=1
         else:
-            l_width.append(0.5)
+            l_width.append(0.1)
             j+=1
         
 
@@ -857,6 +857,17 @@ def simplify(gdf, tolerance):
     
     return source_convex, source_envelope, source_simplified
     
+def buffer_point(point, inProj, outProj, distance, precision):
+    '''
+    point: lat,lon tuple
+    inProj: input projection Proj object
+    outProj: output projection Proj object
+    '''
+    point = Point(transform(inProj, outProj, point[0], point[1]))
+    buffer = point.buffer(distance, precision)
+    coords = buffer.exterior.coords
+    coords= [transform(outProj, inProj, lat, lon) for lat,lon in coords]
     
+    return coords
     
     

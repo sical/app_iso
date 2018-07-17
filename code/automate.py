@@ -22,7 +22,7 @@ import pandas as pd
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
-from functions import geocode, colors_blend, hex2rgb
+from functions import geocode, colors_blend, hex2rgb, buffer_point
 
 #Parameters
 try:
@@ -34,7 +34,7 @@ except:
 params = "./params/params.json"
 params = json.load(open(params))
 
-fmt = '{0.days} days {0.hours} hours {0.minutes} minutes {0.seconds} seconds'
+fmt = 'Elapsed time: {0.minutes} minutes {0.seconds} seconds'
 
 #Projections
 inProj = params["proj"]["inProj"]
@@ -107,8 +107,8 @@ source_iso = ColumnDataSource(
         
 TOOLS = ""
 
-export_no_tiles = "./output_png/Aurelien/no_tiles/"
-export_with_tiles = "./output_png/Aurelien/with_tiles/"
+export_no_tiles = "./output_png/tests/no_tiles/"
+export_with_tiles = "./output_png/tests/with_tiles/"
 export_anim = "./output_png/tests/animation/"
 
 params_plot = {
@@ -199,28 +199,36 @@ def run(params_iso,x,y,adress):
     status = data['status']
     gdf_poly = data['gdf_poly']
     source_buffer = data['source_buffer']
+    source_convex = data['source_convex']
+    source_envelope = data['source_envelope']
+    source_simplified = data['source_simplified']
     list_gdf.append(gdf_poly)
     
     #Give each polygon a unique color
-    source = change_color(source)
-    data_intersection = change_color(data_intersection)
+    if step_mn == 0:
+        source = change_color(source)
+        data_intersection = change_color(data_intersection)
+        
+        #DataSource to dict
+        dict_source = {}
+        for key,value in source.data.items():
+            if type(value) is np.ndarray:
+                new_value = value.tolist()
+                dict_source[key] = new_value
+            else:
+                dict_source[key] = value
+                
+        dict_intersection = {}
+        for key,value in source_intersection.data.items():
+            if type(value) is np.ndarray:
+                new_value = value.tolist()
+                dict_intersection[key] = new_value
+            else:
+                dict_intersection[key] = value
     
-    #DataSource to dict
-    dict_source = {}
-    for key,value in source.data.items():
-        if type(value) is np.ndarray:
-            new_value = value.tolist()
-            dict_source[key] = new_value
-        else:
-            dict_source[key] = value
-            
-    dict_intersection = {}
-    for key,value in source_intersection.data.items():
-        if type(value) is np.ndarray:
-            new_value = value.tolist()
-            dict_intersection[key] = new_value
-        else:
-            dict_intersection[key] = value
+    else:
+        dict_source = {}
+        dict_intersection = {}
         
     
     if source is None:
@@ -249,6 +257,67 @@ def run(params_iso,x,y,adress):
         
         counter_polys += 1 
         
+        ###########################################################
+        # SIMPLIFIED VERSIONS
+        ###########################################################
+        # Convex_hull polygons
+        if simplify == "convex" and source_convex is not None:
+            options_iso_convex = dict(
+                    fill_color = options_iso_surf['fill_color'], 
+                    fill_alpha = options_iso_surf['fill_alpha'],
+                    line_color='white', 
+                    line_alpha = 0.0,
+                    line_width=params["fig_params"]["line_width_surf"], 
+                    source=source_convex,
+                    legend=name + " (convex)"
+                    )
+            
+            poly_convex = p_shape.patches(
+                'xs', 
+                'ys', 
+                **options_iso_convex,
+                name=name + " (convex)"
+                )
+        
+        # Envelope polygons
+        if simplify == "envelope" and source_envelope is not None:
+            options_iso_envelope = dict(
+                    fill_color = options_iso_surf['fill_color'], 
+                    fill_alpha = options_iso_surf['fill_alpha'],
+                    line_color='white', 
+                    line_alpha = 0.0,
+                    line_width=params["fig_params"]["line_width_surf"], 
+                    source=source_envelope,
+                    legend=name + " (envelope)"
+                    )
+        
+            poly_envelope = p_shape.patches(
+                'xs', 
+                'ys', 
+                **options_iso_envelope,
+                name=name + " (envelope)"
+                )
+            
+        # Simplified polygons
+        if simplify == "simplify" and source_simplified is not None:
+            options_iso_simplified = dict(
+                    fill_color = options_iso_surf['fill_color'], 
+                    fill_alpha = options_iso_surf['fill_alpha'],
+                    line_color='white', 
+                    line_alpha = 0.0,
+                    line_width=params["fig_params"]["line_width_surf"], 
+                    source=source_simplified,
+                    legend=name + " (simplified)"
+                    )
+            
+            poly_simplified = p_shape.patches(
+                'xs', 
+                'ys', 
+                **options_iso_simplified,
+                name=name + " (simplified)"
+                )
+        ###########################################################
+        
     elif shape == "line":
         name = "lines"  + str(counter_lines)
         options_iso_contours = dict(
@@ -267,6 +336,63 @@ def run(params_iso,x,y,adress):
             )
         
         counter_lines += 1
+        
+        ###########################################################
+        # SIMPLIFIED VERSIONS
+        ###########################################################
+        
+        # Convex_hull polygons
+        if simplify == "convex" and source_convex is not None:
+            options_iso_convex = dict(
+                    line_color = options_iso_surf['line_color'], 
+                    line_alpha = options_iso_surf['line_alpha'],
+                    line_width=params["fig_params"]["line_width_cont"], 
+                    source=source_convex,
+                    legend="Iso_convex_" + str(counter_polys)
+                    )
+            
+            poly_convex = p_shape.multi_line(
+                'xs', 
+                'ys', 
+                **options_iso_convex,
+                name=name + " (convex)"
+                )
+        
+        # Envelope polygons
+        if simplify == "envelope" and source_envelope is not None:
+            options_iso_envelope = dict(
+                    line_color = options_iso_surf['line_color'], 
+                    line_alpha = options_iso_surf['line_alpha'],
+                    line_width=params["fig_params"]["line_width_cont"],  
+                    source=source_envelope,
+                    legend=name + " (envelope)"
+                    )
+            
+            poly_envelope = p_shape.multi_line(
+                'xs', 
+                'ys', 
+                **options_iso_envelope,
+                name=name + " (envelope)"
+                )
+            
+        
+        # Simplified polygons
+        if simplify == "simplify" and source_simplified is not None:
+            options_iso_simplified = dict(
+                    line_color = options_iso_surf['line_color'], 
+                    line_alpha = options_iso_surf['line_alpha'],
+                    line_width=params["fig_params"]["line_width_cont"], 
+                    source=source_simplified,
+                    legend=name + " (simplified)"
+                    )
+            
+            poly_simplified = p_shape.multi_line(
+                'xs', 
+                'ys', 
+                **options_iso_simplified,
+                name=name + " (simplified)"
+                )
+        ###########################################################
         
     elif shape == "point":
         name="points"  + str(counter_polys)
@@ -318,28 +444,28 @@ def run(params_iso,x,y,adress):
                                         )
         counter_intersection += 1
         
-        
     #Draw buffer 
-    if source_buffer is not None:
-        buffer_name = "Buffer_" + name
-    #    source_intersection = data_intersection
-        
-        
-        options_buffer = dict(
-                source=source_buffer,
-                fill_color="grey",
-                fill_alpha=0.0,
-                line_color='color',
-                line_width='width',
-                line_alpha=1.0, 
-                legend=buffer_name
-                )
-        
-        buffer = p_shape.patches(
-                                'xs', 
-                                'ys', 
-                                **options_buffer
-                                )
+    if buffer_radar == 1:    
+        if source_buffer is not None:
+            buffer_name = "Buffer_" + name
+        #    source_intersection = data_intersection
+            
+            
+            options_buffer = dict(
+                    source=source_buffer,
+                    fill_color="grey",
+                    fill_alpha=0.0,
+                    line_color='color',
+                    line_width='width',
+                    line_alpha=1.0, 
+                    legend=buffer_name
+                    )
+            
+            buffer = p_shape.patches(
+                                    'xs', 
+                                    'ys', 
+                                    **options_buffer
+                                    )
         
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
@@ -348,6 +474,7 @@ def run(params_iso,x,y,adress):
     return p_shape, dict_source, dict_intersection
 
 if export_auto is True:
+    start_time = time.time()
     for param in params_auto:
         how = param["how"]
         colors_iso = param["colors_iso"]
@@ -366,6 +493,11 @@ if export_auto is True:
         opacity_intersection = param["opacity_intersection"]
         shape = param["shape"]
         identity = param["id"]
+        buffer_radar = param["buffer_radar"]
+        step_mn = param["step"]
+        simplify = param["simplify"]
+        around = param["around"]
+        
         l_dict_iso = []
         
         gdf_poly_mask = None
@@ -375,8 +507,6 @@ if export_auto is True:
         counter_points = 0
         counter_intersection = 0
         
-        start_time = time.time()
-        
         x = []
         y = []
         l_adress = []
@@ -385,45 +515,94 @@ if export_auto is True:
         epsg_in = Proj(init=inProj)
         epsg_out = Proj(init=outProj)
         
-        for adress in adresses:
-            index_list = adresses.index(adress)
-            color = colors_iso[index_list]
-            
-            from_place = geocode(adress)
-            
-            x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
-            x.append(x_)
-            y.append(y_)
-            l_adress.append(adress)
-            from_place = str(from_place[0]) + ";" + str(from_place[1])
-        
-            params_iso = {
-                'token': TOKEN,
-                'from_place': from_place,
-                'time_in': time_value,
-                'min_date': date_value,
-                'step': step_value,
-                'step_mn': 0,
-                'nb_iter': 1,
-                'shape': shape,
-                'inProj': inProj,
-                'outProj': outProj,
-                'how': how,
-                'color':color,
-                'color_switch': color_switch,
-                'opacity_intersection':opacity_intersection,
-                'opacity_iso':opacity_iso,
-                'tolerance': None
+        if around != []:
+            for adress in adresses:
+                index_list = adresses.index(adress)
+                color = colors_iso[index_list]
                 
-                    }     
+                from_place = geocode(adress)
+                
+                places = buffer_point(from_place, epsg_in, epsg_out, around[0], around[1])
+                
+                for place in places:
+                
+                    x_, y_ = transform(epsg_in,epsg_out,place[0],place[1]) 
+                    x.append(x_)
+                    y.append(y_)
+                    l_adress.append(adress)
+                    from_place = str(place[0]) + ";" + str(place[1])
+                
+                    params_iso = {
+                        'token': TOKEN,
+                        'from_place': from_place,
+                        'time_in': time_value,
+                        'min_date': date_value,
+                        'step': step_value,
+                        'step_mn': step_mn,
+                        'nb_iter': 1,
+                        'shape': shape,
+                        'inProj': inProj,
+                        'outProj': outProj,
+                        'how': how,
+                        'color':color,
+                        'color_switch': color_switch,
+                        'opacity_intersection':opacity_intersection,
+                        'opacity_iso':opacity_iso,
+                        'tolerance': None
+                        
+                            }     
+                    
+                    p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress)
+                    
+                    if step_mn == 0:
+                        del dict_source['xs']
+                        del dict_source['ys']
+                        del dict_intersection['xs']
+                        del dict_intersection['ys']
+                        l_dict_iso.append(dict_source)
+                    
+        else:
+            for adress in adresses:
+                index_list = adresses.index(adress)
+                color = colors_iso[index_list]
+                
+                from_place = geocode(adress)
+                
+                x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
+                x.append(x_)
+                y.append(y_)
+                l_adress.append(adress)
+                from_place = str(from_place[0]) + ";" + str(from_place[1])
             
-            p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress)
-            del dict_source['xs']
-            del dict_source['ys']
-            del dict_intersection['xs']
-            del dict_intersection['ys']
-            l_dict_iso.append(dict_source)
-        
+                params_iso = {
+                    'token': TOKEN,
+                    'from_place': from_place,
+                    'time_in': time_value,
+                    'min_date': date_value,
+                    'step': step_value,
+                    'step_mn': step_mn,
+                    'nb_iter': 1,
+                    'shape': shape,
+                    'inProj': inProj,
+                    'outProj': outProj,
+                    'how': how,
+                    'color':color,
+                    'color_switch': color_switch,
+                    'opacity_intersection':opacity_intersection,
+                    'opacity_iso':opacity_iso,
+                    'tolerance': None
+                    
+                        }     
+                
+                p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress)
+                
+                if step_mn == 0:
+                    del dict_source['xs']
+                    del dict_source['ys']
+                    del dict_intersection['xs']
+                    del dict_intersection['ys']
+                    l_dict_iso.append(dict_source)
+                
         #EXPORT NO_TILES PNG
         name = export_no_tiles + identity
         export_png(p_shape, filename="{}.png".format(name))
@@ -433,18 +612,19 @@ if export_auto is True:
         json_name = filename="{}.json".format(params_name)
         with open(json_name, 'w', encoding='utf-8') as outfile:
             json.dump(param, outfile, sort_keys=True, indent=2)
-            
+          
         #EXPORT ISOS TO JSON
-        iso_name = export_no_tiles + identity + "_iso"
-        json_name = filename="{}.json".format(iso_name)
-        with open(json_name, 'w', encoding='utf-8') as outfile:
-            json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
-        
-        #EXPORT OVERLAY TO JSON
-        overlay_name = export_no_tiles + identity + "_overlay"
-        json_name = filename="{}.json".format(overlay_name)
-        with open(json_name, 'w', encoding='utf-8') as outfile:
-            json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
+        if l_dict_iso != []:
+            iso_name = export_no_tiles + identity + "_iso"
+            json_name = filename="{}.json".format(iso_name)
+            with open(json_name, 'w', encoding='utf-8') as outfile:
+                json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
+            
+            #EXPORT OVERLAY TO JSON
+            overlay_name = export_no_tiles + identity + "_overlay"
+            json_name = filename="{}.json".format(overlay_name)
+            with open(json_name, 'w', encoding='utf-8') as outfile:
+                json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
         
         #EXPORT WITH_TILES PNG
         #Add origins points
@@ -483,18 +663,20 @@ if export_auto is True:
             json.dump(param, outfile, sort_keys=True, indent=2)
             
         #EXPORT ISOS TO JSON
-        iso_name = export_with_tiles + identity + "_iso"
-        json_name = filename="{}.json".format(iso_name)
-        with open(json_name, 'w', encoding='utf-8') as outfile:
-            json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
-        
-        #EXPORT OVERLAY TO JSON
-        overlay_name = export_with_tiles + identity + "_overlay"
-        json_name = filename="{}.json".format(overlay_name)
-        with open(json_name, 'w', encoding='utf-8') as outfile:
-            json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
+        if l_dict_iso != []:
+            iso_name = export_with_tiles + identity + "_iso"
+            json_name = filename="{}.json".format(iso_name)
+            with open(json_name, 'w', encoding='utf-8') as outfile:
+                json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
+            
+            #EXPORT OVERLAY TO JSON
+            overlay_name = export_with_tiles + identity + "_overlay"
+            json_name = filename="{}.json".format(overlay_name)
+            with open(json_name, 'w', encoding='utf-8') as outfile:
+                json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
         
         p_shape = make_plot(params_plot)
+        
         
         #MEASURE ALL OVERLAYS AND COLORS
 #        zip_gdf = pairwise(list_gdf)
