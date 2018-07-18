@@ -216,6 +216,9 @@ This json file must be in ```./code/params/``` folder and named ```params_auto.j
 | **symplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex*  
 | **buffer_radar**         	|	determine if a buffer radar is added to the figure (0 => No, 1 => Yes, default 0) | int | 0 |
 | **around**         	      |	determine if a buffer is used to get points around origin to search for differences if points is moved from *x* meters ([distance in meters, precision]) | list of int | *[100, 3]* |
+| **export_no_tiles**       |	Path (relative or absolute) to directory for no-tiles images | str | *./output_png/tests/no_tiles/* |
+| **export_with_tiles**       |	Path (relative or absolute) to directory for with-tiles images | str | *./output_png/tests/with_tiles/* |
+| **export_anim**       |	Path (relative or absolute) to directory for animation export | str | *./output_png/tests/anim/* |
 
 ### Transformation spreadsheets to json
 You can use the ```csv_to_jon.py``` to transform CSV files (or TSV) to JSON file if you prefer to use spreadsheets (*Google Sheet, Microsoft Excel, LibreOfficeCalc, ...*) and export sheets as CSV or CSV-like file.

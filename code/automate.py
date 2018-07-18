@@ -108,9 +108,9 @@ source_iso = ColumnDataSource(
         
 TOOLS = ""
 
-export_no_tiles = "./output_png/tests/no_tiles/"
-export_with_tiles = "./output_png/tests/with_tiles/"
-export_anim = "./output_png/tests/animation/"
+#export_no_tiles = "./output_png/tests/no_tiles/"
+#export_with_tiles = "./output_png/tests/with_tiles/"
+#export_anim = "./output_png/tests/animation/"
 
 params_plot = {
             'params':params, 
@@ -147,7 +147,9 @@ source_intersection = ColumnDataSource(
                 complexity=[]
                 )
         )
-        
+
+
+     
 def change_color(source):
     #Give each polygon a unique color
     l_colors = []
@@ -182,7 +184,7 @@ def pairwise(iterable):
     
     return zip(a, b)  
 
-def run(params_iso,x,y,adress):
+def run(params_iso,x,y,adress, color):
     global counter_polys
     global counter_lines
     global counter_points
@@ -203,6 +205,7 @@ def run(params_iso,x,y,adress):
     source_convex = data['source_convex']
     source_envelope = data['source_envelope']
     source_simplified = data['source_simplified']
+    
     list_gdf.append(gdf_poly)
     
     #Give each polygon a unique color
@@ -237,10 +240,9 @@ def run(params_iso,x,y,adress):
     
 #        source_intersection.data.update(data_intersection.data)
         
-    if step_mn != 0:
-        color = 'red'
-    else:
-        color = 'color'
+    if step_mn == 0:
+        color = 'color' 
+        
 
     if shape == "poly":
         name = "polys" + str(counter_polys)
@@ -503,6 +505,9 @@ if export_auto is True:
         step_mn = param["step"]
         simplify = param["simplify"]
         around = param["around"]
+        export_no_tiles = param["export_no_tiles"]
+        export_with_tiles = param["export_with_tiles"]
+        export_anim = param["export_anim"]
         
         l_dict_iso = []
         
@@ -558,7 +563,7 @@ if export_auto is True:
                         
                             }     
                     
-                    p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress)
+                    p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress,color)
                     
                     if step_mn == 0:
                         del dict_source['xs']
@@ -600,7 +605,7 @@ if export_auto is True:
                     
                         }     
                 
-                p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress)
+                p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                 
                 if step_mn == 0:
                     del dict_source['xs']

@@ -772,7 +772,8 @@ def animation():
             'color':color_value,
             'color_switch': "white",
             'opacity_intersection':0.0,
-            'opacity_iso':opacity_iso
+            'opacity_iso':opacity_iso,
+            'tolerance': 400
                 }
     
     range_value = 86400//step_mn
