@@ -841,7 +841,7 @@ def save_handeler(attr, old, new):
     name = datetime.now().strftime("%d_%b_%Y_%HH_%MM_%SS")
     title = "export_" + name
     if new == 'png':
-        export_png(p_shape, filename="{}.png".format(title))
+        export_png(layout.children[0], filename="{}.png".format(title))
     elif  new == 'svg':
         export = deepcopy(p_shape)
         export.output_backend = "svg"
@@ -905,6 +905,7 @@ def contour_update(attrname, old, new):
 #    
 #    if selections == old_selections:
 #        selected = False
+
 
 save_.on_change('value', save_handeler)            
 button.on_click(run)

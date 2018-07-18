@@ -15,9 +15,9 @@
 		"id_location": 1,
 		"time": "08:00",
 		"duration": 30,
-		"step": 0,
+		"step": 1,
 		"simplify": "None",
 		"buffer_radar": 0,
-		"around": [100, 3]
+		"around": []
 	}
 ]

@@ -19,6 +19,7 @@ from pyproj import transform, Proj
 import imageio
 import numpy as np
 import pandas as pd
+from selenium import webdriver
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
@@ -235,11 +236,16 @@ def run(params_iso,x,y,adress):
         shape = ""
     
 #        source_intersection.data.update(data_intersection.data)
+        
+    if step_mn != 0:
+        color = 'red'
+    else:
+        color = 'color'
 
     if shape == "poly":
         name = "polys" + str(counter_polys)
         options_iso_surf = dict(
-                fill_color='color', 
+                fill_color=color, 
                 fill_alpha = params_iso['opacity_iso'],
                 line_color='white', 
                 line_alpha=0.0,
@@ -321,7 +327,7 @@ def run(params_iso,x,y,adress):
     elif shape == "line":
         name = "lines"  + str(counter_lines)
         options_iso_contours = dict(
-                line_color='color', 
+                line_color=color, 
                 line_alpha = opacity_iso,
                 line_width=params["fig_params"]["line_width_cont"], 
                 source=source,
@@ -397,7 +403,7 @@ def run(params_iso,x,y,adress):
     elif shape == "point":
         name="points"  + str(counter_polys)
         options_iso_pts = dict(
-                color='color',
+                color=color,
                 alpha = opacity_iso,
                 line_width=params["fig_params"]["line_width_surf"], 
                 size=3,
@@ -602,10 +608,17 @@ if export_auto is True:
                     del dict_intersection['xs']
                     del dict_intersection['ys']
                     l_dict_iso.append(dict_source)
+                    
+#                time.sleep(5)
                 
         #EXPORT NO_TILES PNG
         name = export_no_tiles + identity
+        time.sleep(15)
+        print ("YOP")
         export_png(p_shape, filename="{}.png".format(name))
+        
+        
+#        time.sleep(30)
         
         #EXPORT PARAMS TO JSON
         params_name = export_no_tiles + identity + "_params"
@@ -651,7 +664,7 @@ if export_auto is True:
         
         p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
         
-        time.sleep(5) #sleep 5 seconds to avoid a Geocoder problem
+#        time.sleep(5) #sleep 5 seconds to avoid a Geocoder problem
         
         name = export_with_tiles + identity
         export_png(p_shape, filename="{}.png".format(name))
