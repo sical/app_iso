@@ -172,12 +172,12 @@ def get_iso(params, gdf_poly_mask, id_):
         r = requests.get(url, headers=headers)
         code = r.status_code
         
-        print (url, code)
+#        print (url, code)
     else:
         code = None
 
     if (code == 200 and step_mn == 0):
-        print ("YES")
+#        print ("YES")
         json_response = json.dumps(r.json())
         geojson_ = geojson.loads(json_response)
     
@@ -252,8 +252,8 @@ def get_iso(params, gdf_poly_mask, id_):
             cutoffs
             )
             
-            print (url)
-            print ("#########################")
+#            print (url)
+#            print ("#########################")
             
             headers = {
                     'accept': 'application/json',
@@ -263,7 +263,7 @@ def get_iso(params, gdf_poly_mask, id_):
             r = requests.get(url, headers=headers)
             code = r.status_code
             
-            print ("CODE", code)
+#            print ("CODE", code)
             
             json_response = json.dumps(r.json())
             geojson_ = geojson.loads(json_response)

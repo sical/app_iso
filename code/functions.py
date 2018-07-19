@@ -824,7 +824,7 @@ def measure_differential(from_place, step, gdf_poly=None, color="grey"):
         
     else:
         gdf_new = explode(gdf_buffer)
-        print ("YOUPI")
+#        print ("YOUPI")
 #        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
         source_buffer = None
     

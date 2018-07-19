@@ -1,4 +1,6 @@
-# app_iso
+# App_iso
+> USE WITH PYTHON 3.6
+
 # Development of an isochrones visualisation app
 This is an experimental application using [Python Bokeh](https://bokeh.pydata.org/en/latest/) to visualize transit Isochrones (*measured using [Navitia API](http://doc.navitia.io/#isochrones), based on [GTFS](https://en.wikipedia.org/wiki/General_Transit_Feed_Specification)*) and their intersections. It is used to test various designs (*shapes, colors, contours, backgrounds, ...*) in order to determine the most accessible designs for isochronic shapes's intersections.  
 
@@ -160,39 +162,19 @@ There is also a default parameters file named ```default.json``` in the same fol
 
 ## Running the automate script
 It is also possible to use a script ```./code/automate.py``` that generates PNG files from a JSON input parameters file.
-This json file must be in ```./code/params/``` folder and named ```params_auto.json```. This file must look like this:
-```JSON
-[{
-		"name": "Intersection_AlphaBlending_Uncalculated",
-		"how": "intersection",
-		"colors_iso": ["#ff0000", "#0000ff", "#00ff00"],
-		"colors_intersection": "#ffffff",
-		"opacity_isos": 0.3,
-		"opacity_intersection": 0.0,
-		"shape": "poly",
-		"region_id": "fr-idf",
-		"date": "2018-06-21",
-		"adresses": ["79 Rue Mouffetard, 75005 Paris", "1 rue de vaugirard, 75005 Paris", "10 boulevard voltaire, 75005 Paris"],
-		"time": "08:00",
-		"duration": 20
-	}, {
-		"name": "Intersection_AlphaBlending_Calculated",
-		"how": "intersection",
-		"colors_iso": ["#ff0000", "#0000ff", "#00ff00"],
-		"colors_intersection": "None",
-		"opacity_isos": 0.3,
-		"opacity_intersection": 0.3,
-		"shape": "poly",
-		"region_id": "fr-idf",
-		"date": "2018-06-21",
-		"adresses": ["79 Rue Mouffetard, 75005 Paris", "1 rue de vaugirard, 75005 Paris", "10 boulevard voltaire, 75005 Paris"],
-		"time": "08:00",
-		"duration": 20
-	}
-]
-```
 
-### Explanations of parameters for automation of isochrone's calculation
+### How to use it
+* Elaborate a sheet with all the parameters (*see [here](#explanations-of-parameters-for-automation-of-calculation)*)
+* Save it as .csv or .tsv (*see [here](#how-to-proceed-with-google-sheets) how to proceed with Google Sheet*)
+* Open a cmd prompt, go to the directory containing the automate.py script
+* Run the automate.py script: ```python automate.py infile_csv outfile_json separator``` where:
+ 	* *infile_csv* is the csv/tsv file path name with all the parameters
+	* *outfile_json* is the json file path name you want to create (*json file from infile_csv*)
+	* *separator* is the separator used in *infile_csv*
+==> *example*:  ```python automate.py "./params/params_auto - test_min.tsv" "./params/test.json" "\t"```
+* If everything is fine, you will notice a progress bar that will be updated
+
+### Explanations of parameters for automation of calculation
 
 | Name                      |  Details                                                            | Type                 |Example                 |
 |:--------------------------|:--------------------------------------------------------------------|:------------------------| :------------------------|
@@ -215,14 +197,15 @@ This json file must be in ```./code/params/``` folder and named ```params_auto.j
 | **step**                  | step value (1 for a duration of 20 mns will make 20 isochrones: 1mn, 2 mn, 3 mn, ...). 0 for no step | int | *1* |
 | **symplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex*  
 | **buffer_radar**         	|	determine if a buffer radar is added to the figure (0 => No, 1 => Yes, default 0) | int | 0 |
-| **around**         	      |	determine if a buffer is used to get points around origin to search for differences if points is moved from *x* meters ([distance in meters, precision]) | list of int | *[100, 3]* |
-| **export_no_tiles**       |	Path (relative or absolute) to directory for no-tiles images | str | *./output_png/tests/no_tiles/* |
-| **export_with_tiles**       |	Path (relative or absolute) to directory for with-tiles images | str | *./output_png/tests/with_tiles/* |
-| **export_anim**       |	Path (relative or absolute) to directory for animation export | str | *./output_png/tests/anim/* |
+| **around**         	      |	determine if a buffer is used to get points around origin to search for differences if points is moved from *x* meters ([distance in meters, precision]). Leave blank if you don't want to use it | list of int | *100,3* |
+| **export_no_tiles**       |	Path (relative or absolute) to directory for no-tiles images (*use // to separate*) | str | *.//output_png//tests//no_tiles//* |
+| **export_with_tiles**       |	Path (relative or absolute) to directory for with-tiles images (*use // to separate*) | str | *.//output_png//tests//with_tiles//* |
+| **export_anim**       |	Path (relative or absolute) to directory for animation export (*use // to separate*) | str | *.//output_png//tests//anim//* |
 
-### Transformation spreadsheets to json
-You can use the ```csv_to_jon.py``` to transform CSV files (or TSV) to JSON file if you prefer to use spreadsheets (*Google Sheet, Microsoft Excel, LibreOfficeCalc, ...*) and export sheets as CSV or CSV-like file.
-All the generated images will be exported as PNG files into ```./code/output_png/``` folder with a name corresponding to the name in the parameters' file.
+#### How to proceed with Google sheets
+* Set your parameters into a new sheet (based on examples and on the [readme](https://github.com/sical/app_iso/tree/iso_design#explanations-of-parameters-for-automation-of-isochrones-calculation))
+* Save your sheet to tsv and put the .tsv file to ```./code/params/```
+<img src="./export_tsv.png" width="50%">
 
 ## Known issues
 - Impossible geolocation with some adresses (*no error message for now, only empty map*)
