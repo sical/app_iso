@@ -720,6 +720,7 @@ def measure_differential(from_place, step, gdf_poly=None, color="grey"):
     l_width = []
     j = 1
     
+    
     #TEST STEP
     for i in range (1,(step//60)+1, 1):
         distance = i*60 * (TRANSIT*1000) // 3600
@@ -836,6 +837,68 @@ def measure_differential(from_place, step, gdf_poly=None, color="grey"):
     source_buffer_geojson = json.dumps(buffer_geojson)
     
     return source_buffer, source_buffer_geojson
+
+def create_buffers(params_buffer):
+    TRANSIT = 20 # Source: (http://www.urbalyon.org/AffichePDF/Observatoire_Deplacements_-_Publication_n-6_-_les_chiffres-cles_en_2010-3136): 19,9 (20) km/h 
+    p_in = params_buffer["inproj"]
+    p_out = params_buffer["outproj"]
+    
+    colors = params_buffer["colors"]
+    opacities = params_buffer["opacities"]
+    times = params_buffer["times"]
+    contours = params_buffer["contours"]
+    from_place = params_buffer["from_place"]
+    
+    buffers, distances = [], []
+    
+    point_out = transform(p_in, p_out, from_place[0], from_place[1])
+    
+    for time in times:
+        distance = time*60 * (TRANSIT*1000) // 3600
+        buffer = Point(point_out).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
+        buffers.append(buffer)
+        distances.append(distance)
+        
+    df = pd.DataFrame(
+            {
+                    "radius":distances,
+                    "colors":colors,
+                    "geometry":buffers,
+                    "times":times,
+                    "width":contours,
+                    "fill_alpha":opacities
+            }
+    )
+    
+    
+    gdf_buffer = gpd.GeoDataFrame(df,crs={'init': 'epsg:3857'}, geometry="geometry")
+    
+    buffer_json, buffer_geojson = gdf_to_geojson(
+            gdf_buffer,
+            [
+            "radius", "colors", "times", "width", "fill_alpha"
+            ]
+    )
+    
+    source = GeoJSONDataSource(geojson=buffer_json)
+    
+#    source = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
+    
+    return source
+
+def str_list_to_list(str_list):
+    l = []
+    for x in str_list:
+        temp = []
+        for y in x.split(","):
+            try:
+                temp.append(int(y))
+            except:
+                temp.append(float(y))
+        l.append(temp)  
+    
+    return l
+    
 
 def simplify(gdf, tolerance):
     ## Simplify

@@ -34,10 +34,10 @@ warnings.filterwarnings('ignore')
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
-from functions import geocode, colors_blend, hex2rgb, buffer_point
+from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list
 from csv_to_json import csv_to_json
 
-columns_with_array_of_str = ["colors_iso","adresses"]
+columns_with_array_of_str = ["colors_iso","adresses","buffer_times","buffer_opacity","buffer_color","buffer_contour_size"]
 
 
 def change_color(source):
@@ -342,7 +342,7 @@ def run(params_iso,x,y,adress, color):
                                         )
         counter_intersection += 1
         
-    #Draw buffer 
+    #Draw buffer radar
     if buffer_radar == 1:    
         if source_buffer is not None:
             buffer_name = "Buffer_" + name
@@ -364,7 +364,9 @@ def run(params_iso,x,y,adress, color):
                                     'ys', 
                                     **options_buffer
                                     )
-        
+    #Draw only buffers
+    
+    
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
     p_shape.legend.visible = False
@@ -445,8 +447,7 @@ if __name__ == "__main__":
     json_file = csv_to_json(infile, outfile, sep, columns_with_array_of_str)
 #    json_file = "./params/params_auto.json"
     params_auto = json.load(open(json_file, encoding='utf-8'))
-    
-    
+
     source_iso = ColumnDataSource(
             data=dict(
                     xs=[], 
@@ -508,6 +509,20 @@ if __name__ == "__main__":
                     complexity=[]
                     )
             )
+            
+    #Buffers solo
+#    source_buffers = ColumnDataSource(
+#            data=dict(
+#                    xs=[], 
+#                    ys=[], 
+#                    times=[],
+#                    colors=[],
+#                    width=[],
+#                    fill_alpha=[],
+#                    radius = []
+#                    )
+#            )
+
     
     #PROGRESS BAR##################
     widgets=[
@@ -547,9 +562,16 @@ if __name__ == "__main__":
                 around = [int(around[0]), int(around[1])]
             except:
                 around = []
+            origine_screen = param["origine_screen"]	
+            only_buffer = param["only_buffer"]	
+            buffer_times = param["buffer_times"]	
+            buffer_opacity = param["buffer_opacity"]	
+            buffer_color = param["buffer_color"]	
+            buffer_contour_size = param["buffer_contour_size"]
             export_no_tiles = param["export_no_tiles"]
             export_with_tiles = param["export_with_tiles"]
             export_anim = param["export_anim"]
+            
             
             l_dict_iso = []
             
@@ -568,22 +590,124 @@ if __name__ == "__main__":
             epsg_in = Proj(init=inProj)
             epsg_out = Proj(init=outProj)
             
-            if around != []:
-                for adress in adresses:
-                    index_list = adresses.index(adress)
-                    color = colors_iso[index_list]
+            if only_buffer == 1: #Do only buffers, no isochrones
+                epsg_in = Proj(init=inProj)
+                epsg_out = Proj(init=outProj)
+                places = [geocode(adress) for adress in adresses]
+                colors = buffer_color
+                opacities = buffer_opacity
+                times = str_list_to_list(buffer_times)
+                contours = str_list_to_list(buffer_contour_size)
+                
+                l_colors = colors
+                
+                for adress,place,opacity,time_,contour in zip(
+                        adresses,
+                        places,
+                        opacities,
+                        times,
+                        contours
+                        ):
+                    index_color = adresses.index(adress)
+                    color = colors[index_color]
+                    fill_colors = [color for x in time_]
                     
-                    from_place = geocode(adress)
+                    x_, y_ = transform(epsg_in,epsg_out,place[0],place[1]) 
+                    x.append(x_)
+                    y.append(y_)
+                    l_adress.append(adress)
+
+                    params_buffers = {
+                            "inproj":epsg_in,
+                            "outproj":epsg_out,
+                            "colors":fill_colors,
+                            "opacities":opacity,
+                            "times":time_,
+                            "contours":contour,
+                            "from_place":place
+                            }
+
+                    source_buffers = create_buffers(params_buffers)
                     
-                    places = buffer_point(from_place, epsg_in, epsg_out, around[0], around[1])
+                    options_buffers = dict(
+                            source=source_buffers,
+                            fill_color='colors',
+                            fill_alpha='fill_alpha',
+                            line_color='colors',
+                            line_width="width"
+#                            line_alpha=1.0,
+                            )
                     
-                    for place in places:
+                    p_shape.patches(
+                                    xs='xs', 
+                                    ys='ys', 
+                                    **options_buffers
+#                                    legend=adress
+                                    )
                     
-                        x_, y_ = transform(epsg_in,epsg_out,place[0],place[1]) 
+                p_shape.legend.location = "top_right"
+                p_shape.legend.click_policy="hide"
+                p_shape.legend.visible = False
+                        
+            else:
+                if around != []:
+                    for adress in adresses:
+                        index_list = adresses.index(adress)
+                        color = colors_iso[index_list]
+                        
+                        from_place = geocode(adress)
+                        
+                        places = buffer_point(from_place, epsg_in, epsg_out, around[0], around[1])
+                        
+                        for place in places:
+                        
+                            x_, y_ = transform(epsg_in,epsg_out,place[0],place[1]) 
+                            x.append(x_)
+                            y.append(y_)
+                            l_adress.append(adress)
+                            from_place = str(place[0]) + ";" + str(place[1])
+                        
+                            params_iso = {
+                                'token': TOKEN,
+                                'from_place': from_place,
+                                'time_in': time_value,
+                                'min_date': date_value,
+                                'step': step_value,
+                                'step_mn': step_mn,
+                                'nb_iter': 1,
+                                'shape': shape,
+                                'inProj': inProj,
+                                'outProj': outProj,
+                                'how': how,
+                                'color':color,
+                                'color_switch': color_switch,
+                                'opacity_intersection':opacity_intersection,
+                                'opacity_iso':opacity_iso,
+                                'tolerance': None
+                                
+                                    }     
+                            
+                            p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress,color)
+                            
+                            if step_mn == 0:
+                                del dict_source['xs']
+                                del dict_source['ys']
+                                del dict_intersection['xs']
+                                del dict_intersection['ys']
+                                l_dict_iso.append(dict_source)
+                            
+                else:
+                    for adress in adresses:
+                        index_list = adresses.index(adress)
+                        color = colors_iso[index_list]
+                        
+                        from_place = geocode(adress)
+                        
+                        x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
                         x.append(x_)
                         y.append(y_)
                         l_adress.append(adress)
-                        from_place = str(place[0]) + ";" + str(place[1])
+                        from_place = str(from_place[0]) + ";" + str(from_place[1])
                     
                         params_iso = {
                             'token': TOKEN,
@@ -605,7 +729,7 @@ if __name__ == "__main__":
                             
                                 }     
                         
-                        p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress,color)
+                        p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
                         if step_mn == 0:
                             del dict_source['xs']
@@ -613,49 +737,7 @@ if __name__ == "__main__":
                             del dict_intersection['xs']
                             del dict_intersection['ys']
                             l_dict_iso.append(dict_source)
-                        
-            else:
-                for adress in adresses:
-                    index_list = adresses.index(adress)
-                    color = colors_iso[index_list]
-                    
-                    from_place = geocode(adress)
-                    
-                    x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
-                    x.append(x_)
-                    y.append(y_)
-                    l_adress.append(adress)
-                    from_place = str(from_place[0]) + ";" + str(from_place[1])
-                
-                    params_iso = {
-                        'token': TOKEN,
-                        'from_place': from_place,
-                        'time_in': time_value,
-                        'min_date': date_value,
-                        'step': step_value,
-                        'step_mn': step_mn,
-                        'nb_iter': 1,
-                        'shape': shape,
-                        'inProj': inProj,
-                        'outProj': outProj,
-                        'how': how,
-                        'color':color,
-                        'color_switch': color_switch,
-                        'opacity_intersection':opacity_intersection,
-                        'opacity_iso':opacity_iso,
-                        'tolerance': None
-                        
-                            }     
-                    
-                    p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
-                    
-                    if step_mn == 0:
-                        del dict_source['xs']
-                        del dict_source['ys']
-                        del dict_intersection['xs']
-                        del dict_intersection['ys']
-                        l_dict_iso.append(dict_source)
-    
+        
             #EXPORT NO_TILES PNG
             name = export_no_tiles + identity
             export_png(p_shape, filename="{}.png".format(name))
@@ -681,26 +763,27 @@ if __name__ == "__main__":
             
             #EXPORT WITH_TILES PNG
             #Add origins points
-            data = dict(
-                        x=x,
-                        y=y,
-                        adress=l_adress,
-                        color=l_colors
+            if origine_screen == 1:
+                data = dict(
+                            x=x,
+                            y=y,
+                            adress=l_adress,
+                            color=l_colors
+                            )
+                source_origins.data.update(data)
+                
+                poly_circles = p_shape.circle(
+                    'x', 
+                    'y', 
+                    source=source_origins,
+                    fill_color='color', 
+                    fill_alpha = 1.0,
+                    size=10,
+                    line_color='black',
+                    line_alpha=1.0,
+                    line_width=1.0, 
+                    legend="Origins"
                         )
-            source_origins.data.update(data)
-            
-            poly_circles = p_shape.circle(
-                'x', 
-                'y', 
-                source=source_origins,
-                fill_color='color', 
-                fill_alpha = 1.0,
-                size=10,
-                line_color='black',
-                line_alpha=1.0,
-                line_width=1.0, 
-                legend="Origins"
-                    )
             
             p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
             
