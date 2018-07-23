@@ -674,7 +674,7 @@ if __name__ == "__main__":
                             
                                 }     
                         
-                        if nb == jump_nb:
+                        if nb == jump_nb-1:
                             end_loop = True
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
