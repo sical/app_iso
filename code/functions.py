@@ -898,7 +898,14 @@ def str_list_to_list(str_list):
         l.append(temp)  
     
     return l
+
+def list_excluded(modes):
+    forbidden = "&forbidden_uris[]=physical_mode:"
+    str_modes = ""
+    for mode in modes:
+        str_modes += forbidden + mode
     
+    return str_modes
 
 def simplify(gdf, tolerance):
     ## Simplify

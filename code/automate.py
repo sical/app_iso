@@ -10,9 +10,10 @@ Arguments:
     
 @author: thomas
 """
-from datetime import date
+from datetime import datetime, timedelta, date
 import os
 import itertools
+import time
 
 from bokeh.io import export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
@@ -20,8 +21,6 @@ from bokeh.models import ColumnDataSource
 from dotenv import load_dotenv
 from pathlib import Path
 import json
-import time
-from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta as rd
 from pyproj import transform, Proj
 import imageio
@@ -34,10 +33,17 @@ warnings.filterwarnings('ignore')
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
-from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list
+from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded
 from csv_to_json import csv_to_json
 
-columns_with_array_of_str = ["colors_iso","adresses","buffer_times","buffer_opacity","buffer_color","buffer_contour_size"]
+columns_with_array_of_str = [
+        "colors_iso","adresses",
+        "buffer_times",
+        "buffer_opacity",
+        "buffer_color",
+        "buffer_contour_size",
+        "excluded_modes"
+        ]
 
 
 def change_color(source):
@@ -133,214 +139,244 @@ def run(params_iso,x,y,adress, color):
     if step_mn == 0:
         color = 'color' 
         
-
-    if shape == "poly":
-        name = "polys" + str(counter_polys)
-        options_iso_surf = dict(
-                fill_color=color, 
-                fill_alpha = params_iso['opacity_iso'],
-                line_color='white', 
-                line_alpha=0.0,
-                line_width=params["fig_params"]["line_width_surf"], 
-                source=source,
-                legend="Isochrone_polys" + str(counter_polys)
-                )
-        
-        poly_patches = p_shape.patches(
-            'xs', 
-            'ys', 
-            **options_iso_surf,
-            name=name
-            )
-        
-        counter_polys += 1 
-        
-        ###########################################################
-        # SIMPLIFIED VERSIONS
-        ###########################################################
-        # Convex_hull polygons
-        if simplify == "convex" and source_convex is not None:
-            options_iso_convex = dict(
-                    fill_color = options_iso_surf['fill_color'], 
-                    fill_alpha = options_iso_surf['fill_alpha'],
+    if only_overlay == 0:
+        if shape == "poly":
+            name = "polys" + str(counter_polys)
+            options_iso_surf = dict(
+                    fill_color=color, 
+                    fill_alpha = params_iso['opacity_iso'],
                     line_color='white', 
-                    line_alpha = 0.0,
+                    line_alpha=0.0,
                     line_width=params["fig_params"]["line_width_surf"], 
-                    source=source_convex,
-                    legend=name + " (convex)"
+                    source=source,
+                    legend="Isochrone_polys" + str(counter_polys)
                     )
             
-            poly_convex = p_shape.patches(
+            poly_patches = p_shape.patches(
                 'xs', 
                 'ys', 
-                **options_iso_convex,
-                name=name + " (convex)"
-                )
-        
-        # Envelope polygons
-        if simplify == "envelope" and source_envelope is not None:
-            options_iso_envelope = dict(
-                    fill_color = options_iso_surf['fill_color'], 
-                    fill_alpha = options_iso_surf['fill_alpha'],
-                    line_color='white', 
-                    line_alpha = 0.0,
-                    line_width=params["fig_params"]["line_width_surf"], 
-                    source=source_envelope,
-                    legend=name + " (envelope)"
-                    )
-        
-            poly_envelope = p_shape.patches(
-                'xs', 
-                'ys', 
-                **options_iso_envelope,
-                name=name + " (envelope)"
+                **options_iso_surf,
+                name=name
                 )
             
-        # Simplified polygons
-        if simplify == "simplify" and source_simplified is not None:
-            options_iso_simplified = dict(
-                    fill_color = options_iso_surf['fill_color'], 
-                    fill_alpha = options_iso_surf['fill_alpha'],
-                    line_color='white', 
-                    line_alpha = 0.0,
-                    line_width=params["fig_params"]["line_width_surf"], 
-                    source=source_simplified,
-                    legend=name + " (simplified)"
+            counter_polys += 1 
+            
+            ###########################################################
+            # SIMPLIFIED VERSIONS
+            ###########################################################
+            # Convex_hull polygons
+            if simplify == "convex" and source_convex is not None:
+                options_iso_convex = dict(
+                        fill_color = options_iso_surf['fill_color'], 
+                        fill_alpha = options_iso_surf['fill_alpha'],
+                        line_color='white', 
+                        line_alpha = 0.0,
+                        line_width=params["fig_params"]["line_width_surf"], 
+                        source=source_convex,
+                        legend=name + " (convex)"
+                        )
+                
+                poly_convex = p_shape.patches(
+                    'xs', 
+                    'ys', 
+                    **options_iso_convex,
+                    name=name + " (convex)"
                     )
             
-            poly_simplified = p_shape.patches(
-                'xs', 
-                'ys', 
-                **options_iso_simplified,
-                name=name + " (simplified)"
-                )
-        ###########################################################
-        
-    elif shape == "line":
-        name = "lines"  + str(counter_lines)
-        options_iso_contours = dict(
-                line_color=color, 
-                line_alpha = opacity_iso,
-                line_width=params["fig_params"]["line_width_cont"], 
-                source=source,
-                legend="Isochrone_lines" + str(counter_lines)
-                )
-        
-        p_shape.multi_line(
-            'xs', 
-            'ys', 
-            **options_iso_contours,
-            name=name
-            )
-        
-        counter_lines += 1
-        
-        ###########################################################
-        # SIMPLIFIED VERSIONS
-        ###########################################################
-        
-        # Convex_hull polygons
-        if simplify == "convex" and source_convex is not None:
-            options_iso_convex = dict(
-                    line_color = options_iso_surf['line_color'], 
-                    line_alpha = options_iso_surf['line_alpha'],
+            # Envelope polygons
+            if simplify == "envelope" and source_envelope is not None:
+                options_iso_envelope = dict(
+                        fill_color = options_iso_surf['fill_color'], 
+                        fill_alpha = options_iso_surf['fill_alpha'],
+                        line_color='white', 
+                        line_alpha = 0.0,
+                        line_width=params["fig_params"]["line_width_surf"], 
+                        source=source_envelope,
+                        legend=name + " (envelope)"
+                        )
+            
+                poly_envelope = p_shape.patches(
+                    'xs', 
+                    'ys', 
+                    **options_iso_envelope,
+                    name=name + " (envelope)"
+                    )
+                
+            # Simplified polygons
+            if simplify == "simplify" and source_simplified is not None:
+                options_iso_simplified = dict(
+                        fill_color = options_iso_surf['fill_color'], 
+                        fill_alpha = options_iso_surf['fill_alpha'],
+                        line_color='white', 
+                        line_alpha = 0.0,
+                        line_width=params["fig_params"]["line_width_surf"], 
+                        source=source_simplified,
+                        legend=name + " (simplified)"
+                        )
+                
+                poly_simplified = p_shape.patches(
+                    'xs', 
+                    'ys', 
+                    **options_iso_simplified,
+                    name=name + " (simplified)"
+                    )
+            ###########################################################
+            
+        elif shape == "line":
+            name = "lines"  + str(counter_lines)
+            options_iso_contours = dict(
+                    line_color=color, 
+                    line_alpha = opacity_iso,
                     line_width=params["fig_params"]["line_width_cont"], 
-                    source=source_convex,
-                    legend="Iso_convex_" + str(counter_polys)
+                    source=source,
+                    legend="Isochrone_lines" + str(counter_lines)
                     )
             
-            poly_convex = p_shape.multi_line(
+            p_shape.multi_line(
                 'xs', 
                 'ys', 
-                **options_iso_convex,
-                name=name + " (convex)"
+                **options_iso_contours,
+                name=name
                 )
-        
-        # Envelope polygons
-        if simplify == "envelope" and source_envelope is not None:
-            options_iso_envelope = dict(
-                    line_color = options_iso_surf['line_color'], 
-                    line_alpha = options_iso_surf['line_alpha'],
-                    line_width=params["fig_params"]["line_width_cont"],  
-                    source=source_envelope,
-                    legend=name + " (envelope)"
+            
+            counter_lines += 1
+            
+            ###########################################################
+            # SIMPLIFIED VERSIONS
+            ###########################################################
+            
+            # Convex_hull polygons
+            if simplify == "convex" and source_convex is not None:
+                options_iso_convex = dict(
+                        line_color = options_iso_surf['line_color'], 
+                        line_alpha = options_iso_surf['line_alpha'],
+                        line_width=params["fig_params"]["line_width_cont"], 
+                        source=source_convex,
+                        legend="Iso_convex_" + str(counter_polys)
+                        )
+                
+                poly_convex = p_shape.multi_line(
+                    'xs', 
+                    'ys', 
+                    **options_iso_convex,
+                    name=name + " (convex)"
                     )
             
-            poly_envelope = p_shape.multi_line(
-                'xs', 
-                'ys', 
-                **options_iso_envelope,
-                name=name + " (envelope)"
-                )
-            
-        
-        # Simplified polygons
-        if simplify == "simplify" and source_simplified is not None:
-            options_iso_simplified = dict(
-                    line_color = options_iso_surf['line_color'], 
-                    line_alpha = options_iso_surf['line_alpha'],
-                    line_width=params["fig_params"]["line_width_cont"], 
-                    source=source_simplified,
-                    legend=name + " (simplified)"
+            # Envelope polygons
+            if simplify == "envelope" and source_envelope is not None:
+                options_iso_envelope = dict(
+                        line_color = options_iso_surf['line_color'], 
+                        line_alpha = options_iso_surf['line_alpha'],
+                        line_width=params["fig_params"]["line_width_cont"],  
+                        source=source_envelope,
+                        legend=name + " (envelope)"
+                        )
+                
+                poly_envelope = p_shape.multi_line(
+                    'xs', 
+                    'ys', 
+                    **options_iso_envelope,
+                    name=name + " (envelope)"
                     )
+                
             
-            poly_simplified = p_shape.multi_line(
-                'xs', 
-                'ys', 
-                **options_iso_simplified,
-                name=name + " (simplified)"
-                )
-        ###########################################################
-        
-    elif shape == "point":
-        name="points"  + str(counter_polys)
-        options_iso_pts = dict(
-                color=color,
-                alpha = opacity_iso,
-                line_width=params["fig_params"]["line_width_surf"], 
-                size=3,
-                source=source,
-                legend="Isochrone_points" + str(counter_points),
-                name="intersection"
-                )
-        
-        p_shape.circle(
-            'x', 
-            'y', 
-            **options_iso_pts,
+            # Simplified polygons
+            if simplify == "simplify" and source_simplified is not None:
+                options_iso_simplified = dict(
+                        line_color = options_iso_surf['line_color'], 
+                        line_alpha = options_iso_surf['line_alpha'],
+                        line_width=params["fig_params"]["line_width_cont"], 
+                        source=source_simplified,
+                        legend=name + " (simplified)"
+                        )
+                
+                poly_simplified = p_shape.multi_line(
+                    'xs', 
+                    'ys', 
+                    **options_iso_simplified,
+                    name=name + " (simplified)"
+                    )
+            ###########################################################
+            
+        elif shape == "point":
             name="points"  + str(counter_polys)
-            )
-        
-        counter_points += 1
-        
-        
-    if data_intersection is not None:
-#        name = "Intersection" + str(counter_intersection)
-#        source_intersection = data_intersection
-        name = "Overlay"
-        source_intersection.data.update(data_intersection.data)
-        options_intersect = dict(
-#                fill_alpha= params["fig_params"]["alpha_surf"], 
-    #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                source=source_intersection,
-                fill_color='color',
-                fill_alpha=params_iso['opacity_intersection'],
-                line_color='white', 
-                line_alpha=0.0,
-                line_width=params["fig_params"]["line_width_surf"], 
-#                fill_color="black", 
-#                fill_alpha = 0.70,
-#                line_color="black", 
-#                line_width=params["fig_params"]["line_width_surf"], 
-                legend=name
+            options_iso_pts = dict(
+                    color=color,
+                    alpha = opacity_iso,
+                    line_width=params["fig_params"]["line_width_surf"], 
+                    size=3,
+                    source=source,
+                    legend="Isochrone_points" + str(counter_points),
+                    name="intersection"
+                    )
+            
+            p_shape.circle(
+                'x', 
+                'y', 
+                **options_iso_pts,
+                name="points"  + str(counter_polys)
                 )
+            
+            counter_points += 1
         
-        intersections = p_shape.patches(
-                                        'xs', 
-                                        'ys', 
-                                        **options_intersect
-                                        )
-        counter_intersection += 1
+        
+        if data_intersection is not None:
+    #        name = "Intersection" + str(counter_intersection)
+    #        source_intersection = data_intersection
+            name = "Overlay"
+            source_intersection.data.update(data_intersection.data)
+            options_intersect = dict(
+    #                fill_alpha= params["fig_params"]["alpha_surf"], 
+        #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                    source=source_intersection,
+                    fill_color='color',
+                    fill_alpha=params_iso['opacity_intersection'],
+                    line_color='white', 
+                    line_alpha=0.0,
+                    line_width=params["fig_params"]["line_width_surf"], 
+    #                fill_color="black", 
+    #                fill_alpha = 0.70,
+    #                line_color="black", 
+    #                line_width=params["fig_params"]["line_width_surf"], 
+                    legend=name
+                    )
+            
+            intersections = p_shape.patches(
+                                            'xs', 
+                                            'ys', 
+                                            **options_intersect
+                                            )
+            counter_intersection += 1
+            
+    else:
+        if data_intersection is not None:
+    #        name = "Intersection" + str(counter_intersection)
+    #        source_intersection = data_intersection
+            name = "Overlay"
+            source_intersection.data.update(data_intersection.data)
+            
+            if end_loop is True:
+                options_intersect = dict(
+        #                fill_alpha= params["fig_params"]["alpha_surf"], 
+            #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+                        source=source_intersection,
+                        fill_color='color',
+                        fill_alpha=params_iso['opacity_intersection'],
+                        line_color='white', 
+                        line_alpha=0.0,
+                        line_width=params["fig_params"]["line_width_surf"], 
+        #                fill_color="black", 
+        #                fill_alpha = 0.70,
+        #                line_color="black", 
+        #                line_width=params["fig_params"]["line_width_surf"], 
+                        legend=name
+                        )
+                
+                intersections = p_shape.patches(
+                                                'xs', 
+                                                'ys', 
+                                                **options_intersect
+                                                )
         
     #Draw buffer radar
     if buffer_radar == 1:    
@@ -547,6 +583,8 @@ if __name__ == "__main__":
             date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
             adresses = param["adresses"]
             time_value = param["time"]
+            jump = param["jump"].split(",")
+            jump_mn, jump_nb = int(jump[0]), int(jump[1])
             duration = param["duration"]
             id_ = param["region_id"]
             step_value = int(param["duration"]) * 60
@@ -563,15 +601,21 @@ if __name__ == "__main__":
             except:
                 around = []
             origine_screen = param["origine_screen"]	
+            only_overlay = param["only_overlay"]
             only_buffer = param["only_buffer"]	
             buffer_times = param["buffer_times"]	
             buffer_opacity = param["buffer_opacity"]	
             buffer_color = param["buffer_color"]	
             buffer_contour_size = param["buffer_contour_size"]
+            excluded_modes = param["excluded_modes"]
             export_no_tiles = param["export_no_tiles"]
             export_with_tiles = param["export_with_tiles"]
             export_anim = param["export_anim"]
             
+            if excluded_modes != []:
+                str_modes = list_excluded(excluded_modes)
+            else:
+                str_modes = ""
             
             l_dict_iso = []
             
@@ -590,7 +634,58 @@ if __name__ == "__main__":
             epsg_in = Proj(init=inProj)
             epsg_out = Proj(init=outProj)
             
-            if only_buffer == 1: #Do only buffers, no isochrones
+            if jump_mn != 0:
+                for adress in adresses:
+                    end_loop = False
+                    index_list = adresses.index(adress)
+                    color = colors_iso[index_list]
+                    
+                    from_place = geocode(adress)
+                    
+                    x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
+                    x.append(x_)
+                    y.append(y_)
+                    l_adress.append(adress)
+                    from_place = str(from_place[0]) + ";" + str(from_place[1])
+                    
+                    for nb in range(0, jump_nb):
+                        add_mn = timedelta(seconds=nb*jump_mn*60)
+                        datetime_object = datetime.strptime(time_value, '%H:%M')
+                        new_time = (datetime_object + add_mn).strftime("%H:%M")
+                        
+                        params_iso = {
+                            'token': TOKEN,
+                            'from_place': from_place,
+                            'time_in': new_time,
+                            'min_date': date_value,
+                            'step': step_value,
+                            'step_mn': 0,
+                            'nb_iter': 1,
+                            'shape': shape,
+                            'inProj': inProj,
+                            'outProj': outProj,
+                            'how': how,
+                            'color':color,
+                            'color_switch': color_switch,
+                            'opacity_intersection':opacity_intersection,
+                            'opacity_iso':opacity_iso,
+                            'str_modes': str_modes,
+                            'tolerance': None
+                            
+                                }     
+                        
+                        if nb == jump_nb:
+                            end_loop = True
+                        p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
+                        
+                        if step_mn == 0:
+                            del dict_source['xs']
+                            del dict_source['ys']
+                            del dict_intersection['xs']
+                            del dict_intersection['ys']
+                            l_dict_iso.append(dict_source)
+            
+            elif only_buffer == 1: #Do only buffers, no isochrones
                 epsg_in = Proj(init=inProj)
                 epsg_out = Proj(init=outProj)
                 places = [geocode(adress) for adress in adresses]
@@ -683,6 +778,7 @@ if __name__ == "__main__":
                                 'color_switch': color_switch,
                                 'opacity_intersection':opacity_intersection,
                                 'opacity_iso':opacity_iso,
+                                'str_modes': str_modes,
                                 'tolerance': None
                                 
                                     }     
@@ -725,6 +821,7 @@ if __name__ == "__main__":
                             'color_switch': color_switch,
                             'opacity_intersection':opacity_intersection,
                             'opacity_iso':opacity_iso,
+                            'str_modes': str_modes,
                             'tolerance': None
                             
                                 }     

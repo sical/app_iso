@@ -1,5 +1,5 @@
 # App_iso
-> USE WITH PYTHON 3.6
+> **USE WITH PYTHON 3.6**
 
 # Development of an isochrones visualisation app
 This is an experimental application using [Python Bokeh](https://bokeh.pydata.org/en/latest/) to visualize transit Isochrones (*measured using [Navitia API](http://doc.navitia.io/#isochrones), based on [GTFS](https://en.wikipedia.org/wiki/General_Transit_Feed_Specification)*) and their intersections. It is used to test various designs (*shapes, colors, contours, backgrounds, ...*) in order to determine the most accessible designs for isochronic shapes's intersections.  
@@ -12,7 +12,8 @@ This is an experimental application using [Python Bokeh](https://bokeh.pydata.or
 
 ### Python packages
 - Install required Python packages using requirements.txt file
-- This command should work (*if not conda or pip install the 11 packages*)
+- If you want to use conda, you need to add channel ```conda-forge```. In anaconda prompt: ```conda config --append channels conda-forge```
+- Then this command should work (*if not conda or pip install the 11 packages*)
 ```
 while read requirement; do conda install --yes $requirement; done < requirements.txt
 ```
@@ -195,18 +196,54 @@ It is also possible to use a script ```./code/automate.py``` that generates PNG 
 | **time**                  | time for the request (format HH:MM:SS) | str | *08:00:00* |
 | **duration**              | duration for isochrone request (minutes) | int | *20* |
 | **step**                  | step value (1 for a duration of 20 mns will make 20 isochrones: 1mn, 2 mn, 3 mn, ...). 0 for no step | int | *1* |
-| **symplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex*  
+| **symplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex* |
+ | **excluded_modes**				|	list of modes you want to exclude, default [] (*empty list*), (*see [here](#Modes)*) for possibilities | list of str | *["Metro","RapidTransit"]* |
 | **buffer_radar**         	|	determine if a buffer radar is added to the figure (0 => No, 1 => Yes, default 0) | int | 0 |
 | **around**         	      |	determine if a buffer is used to get points around origin to search for differences if points is moved from *x* meters ([distance in meters, precision]). Leave blank if you don't want to use it | list of int | *100,3* |
 | **origine_screen**        | 1 if origine on map, 0 if not | int | *1* |
 | **only_buffer**           | 1 if only buffers and no isochrone, 0 if not | int | *1* |
 | **buffer_times**          | list of string lists to give time for each buffer | list of str | *["10,20,30", "10,20,30"]* |
-| **buffer_opacity**        | list of floats to manage opacity | list of floats | *[0.5, 0.5]* |
+| **buffer_opacity**        | list of floats to manage opacity. **For now, must set same opacity for each buffer** | list of floats | *[0.5, 0.5]* |
 | **buffer_color**          | list of hex colors for buffers, number must be equal to number of addresses | list of str | *["#ff0000","#0000ff"]* |
 | **buffer_contour_size**   | list of string lists with contour width for each buffer | list of str | *["0.5,1.0,2.0", "0.5,1.0,2.0"]* |
 | **export_no_tiles**       |	Path (relative or absolute) to directory for no-tiles images (*use // to separate*) | str | *.//output_png//tests//no_tiles//* |
 | **export_with_tiles**       |	Path (relative or absolute) to directory for with-tiles images (*use // to separate*) | str | *.//output_png//tests//with_tiles//* |
 | **export_anim**       |	Path (relative or absolute) to directory for animation export (*use // to separate*) | str | *.//output_png//tests//anim//* |
+
+##### Modes
+> ***API is case sensitive so respect lowercase and uppercase.***
+> ***Available modes may vary regarding the region, to check the avalaible physical modes for a specific region, you can use this request:***
+```https://[YOUR NAVITIA TOKEN]@api.navitia.io/v1/coverage/[REGION ID]/physical_modes```
+
+Here is the modes you can choose to exclude:
+ * Bike
+ * BikeSharingService
+ * Bus
+ * Car
+ * Funicular
+ * Metro
+ * RapidTransit
+ * Tramway
+ * VAL
+ * CheckIn
+ * CheckOut
+ * Ferry
+ * Train
+ * Air
+ * Coach
+ * LocalTrain
+ * Shuttle
+ * Tram
+ * Rail
+ * LongDistanceTrain
+ * PrivateVehicle
+ * Trolleybus
+
+ Some explanations for some modes:
+ * RapidTransit refers to heavy transit like Paris RER
+ * VAL refers to automatic subway
+ * LocalTrain refers to french TER for example
+ * LongDistanceTrain refers to high speed train
 
 #### How to proceed with Google sheets
 * Set your parameters into a new sheet (based on examples and on the [readme](https://github.com/sical/app_iso/tree/iso_design#explanations-of-parameters-for-automation-of-isochrones-calculation))

@@ -129,11 +129,13 @@ def get_iso(params, gdf_poly_mask, id_):
     color_switch = params['color_switch']
     coeff_ampl = 0.8 # See Brinkhoff et al. paper
     coeff_conv = 0.2 # See Brinkhoff et al. paper
-    tolerance = params["tolerance"]
+    str_modes = params['str_modes']
+    tolerance = params['tolerance']
     
     color = colors_blend(color, color)
     
     date_time = min_date.isoformat() + "T" + time_in
+    
     l_cuts = []
     
     if step_mn != 0:
@@ -158,21 +160,20 @@ def get_iso(params, gdf_poly_mask, id_):
     
     
     if l_cuts == []:
-        url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}'.format(
+        url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}{}'.format(
                 id_,
                 from_place,
                 date_time,
-                cutoffs
+                cutoffs,
+                str_modes
                 )
         headers = {
                 'accept': 'application/json',
                 'Authorization': TOKEN
                 }
-        
         r = requests.get(url, headers=headers)
         code = r.status_code
-        
-#        print (url, code)
+
     else:
         code = None
 
@@ -211,7 +212,8 @@ def get_iso(params, gdf_poly_mask, id_):
         poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #MEASURE DIFFERENTIAL
-        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly=gdf_poly, color=color)
+#        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly=gdf_poly, color=color) #TODO: make this work
+        source_buffer, source_buffer_geojson = None, None
 #        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #STATS
@@ -249,7 +251,8 @@ def get_iso(params, gdf_poly_mask, id_):
             id_,
             from_place,
             date_time,
-            cutoffs
+            cutoffs,
+            str_modes
             )
             
 #            print (url)
