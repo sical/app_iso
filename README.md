@@ -202,7 +202,7 @@ It is also possible to use a script ```./code/automate.py``` that generates PNG 
 | **only_buffer**           | 1 if only buffers and no isochrone, 0 if not | int | *1* |
 | **buffer_times**          | list of string lists to give time for each buffer | list of str | *["10,20,30", "10,20,30"]* |
 | **buffer_opacity**        | list of floats to manage opacity | list of floats | *[0.5, 0.5]* |
-| **buffer_color**          | list of hex colors for buffers, number must be equal to number of buffers | list of str | *["#ff0000","#0000ff"]* |
+| **buffer_color**          | list of hex colors for buffers, number must be equal to number of addresses | list of str | *["#ff0000","#0000ff"]* |
 | **buffer_contour_size**   | list of string lists with contour width for each buffer | list of str | *["0.5,1.0,2.0", "0.5,1.0,2.0"]* |
 | **export_no_tiles**       |	Path (relative or absolute) to directory for no-tiles images (*use // to separate*) | str | *.//output_png//tests//no_tiles//* |
 | **export_with_tiles**       |	Path (relative or absolute) to directory for with-tiles images (*use // to separate*) | str | *.//output_png//tests//with_tiles//* |
