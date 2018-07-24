@@ -17,7 +17,7 @@ import copy
 
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 
-geolocator = Nominatim()
+geolocator = Nominatim(user_agent="iso")
 
 
 #def gdf_to_geojson(gdf, properties):
@@ -229,7 +229,7 @@ def network_to_datasource(polygon):
     return edges
     
 
-def geocode(adress,places_cache):
+def geocode(adress):
     """
     Use geopy.geolocator (Nominatim) to get latitude and longitude (EPSG 4326) 
     of an adress
