@@ -36,6 +36,9 @@ from make_plot import make_plot
 from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded
 from csv_to_json import csv_to_json
 
+
+places_cache = {} # dict to keep lat/lon if adress already been geocoded 
+
 columns_with_array_of_str = [
         "colors_iso","adresses",
         "buffer_times",
@@ -583,8 +586,11 @@ if __name__ == "__main__":
             date_value = datetime.strptime(date_value, '%Y-%m-%d').date()
             adresses = param["adresses"]
             time_value = param["time"]
-            jump = param["jump"].split(",")
-            jump_mn, jump_nb = int(jump[0]), int(jump[1])
+            try:
+                jump = param["jump"].split(",")
+                jump_mn, jump_nb = int(jump[0]), int(jump[1])
+            except:
+                jump_mn, jump_nb = 0,0
             duration = param["duration"]
             id_ = param["region_id"]
             step_value = int(param["duration"]) * 60

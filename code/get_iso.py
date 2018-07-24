@@ -223,7 +223,7 @@ def get_iso(params, gdf_poly_mask, id_):
         for key,value in stats.items():
             gdf_stats[key] = value
         
-        #SOURCE POLYS BASIC
+        #SOURCE POLYS BASIC #GO UP IF INTERSECTION WITH SIMPLIFIED
         ## Simplify
         if tolerance is not None:
             source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance)

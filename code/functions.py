@@ -229,7 +229,7 @@ def network_to_datasource(polygon):
     return edges
     
 
-def geocode(adress):
+def geocode(adress,places_cache):
     """
     Use geopy.geolocator (Nominatim) to get latitude and longitude (EPSG 4326) 
     of an adress
@@ -239,6 +239,7 @@ def geocode(adress):
     Returns latitude and longitude
     
     """
+    
     location = geolocator.geocode(adress)
     
     return location.longitude, location.latitude 
