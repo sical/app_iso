@@ -212,8 +212,8 @@ def get_iso(params, gdf_poly_mask, id_):
         poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #MEASURE DIFFERENTIAL
-#        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly=gdf_poly, color=color) #TODO: make this work
-        source_buffer, source_buffer_geojson = None, None
+        source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly=gdf_poly, color=color) #TODO: make this work
+#        source_buffer, source_buffer_geojson = None, None
 #        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
         
         #STATS
@@ -223,14 +223,14 @@ def get_iso(params, gdf_poly_mask, id_):
         for key,value in stats.items():
             gdf_stats[key] = value
         
-        #SOURCE POLYS BASIC #GO UP IF INTERSECTION WITH SIMPLIFIED
+        source_polys = convert_GeoPandas_to_Bokeh_format(gdf_stats)
+        
+        #SOURCE POLYS BASIC #GO UP IF INTERSECTION OF SIMPLIFICATED NEEDED
         ## Simplify
         if tolerance is not None:
             source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance)
         else:
             source_convex, source_envelope, source_simplified = None, None, None
-        
-        source_polys = convert_GeoPandas_to_Bokeh_format(gdf_stats)
         
         #GEOJSON POLY
         gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color'])

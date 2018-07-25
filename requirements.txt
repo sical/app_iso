@@ -6,7 +6,8 @@ requests==2.18.4
 geojson==2.3.0
 pandas==0.22.0
 geopandas==0.3.0
-shapely==1.6.4.post1
+shapely==1.6.4
 osmnx==0.7.3
 numpy==1.14.0
-dotenv==0.8.2
+progressbar2==3.38.0
+docopt==0.6.2

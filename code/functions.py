@@ -7,17 +7,21 @@ Created on Thu Apr 12 13:31:04 2018
 import math
 import pandas as pd
 import geopandas as gpd
-from geopy.geocoders import Nominatim
+from geopy.geocoders import Nominatim, Photon
 import osmnx as ox
 import json
 import numpy as np
 from shapely.geometry import MultiPolygon, Point
 from pyproj import transform, Proj 
 import copy
+import time
 
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 
-geolocator = Nominatim(user_agent="iso")
+#geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
+#https://geopy.readthedocs.io/en/stable/#nominatim
+
+geolocator = Photon()
 
 
 #def gdf_to_geojson(gdf, properties):
@@ -229,7 +233,7 @@ def network_to_datasource(polygon):
     return edges
     
 
-def geocode(adress):
+def geocode(adress, places_cache):
     """
     Use geopy.geolocator (Nominatim) to get latitude and longitude (EPSG 4326) 
     of an adress
@@ -239,8 +243,14 @@ def geocode(adress):
     Returns latitude and longitude
     
     """
-    
-    location = geolocator.geocode(adress)
+    if adress not in places_cache:
+        location = geolocator.geocode(adress)
+        if location is None:
+            print ('Error on : ' + adress)
+        places_cache[adress] = location
+        time.sleep(5)
+    else:
+        location = places_cache[adress]
     
     return location.longitude, location.latitude 
 
@@ -766,9 +776,9 @@ def measure_differential(from_place, step, gdf_poly=None, color="grey"):
     
     gdf_buffer = gpd.GeoDataFrame(df,crs={'init': 'epsg:3857'}, geometry="geometry")
     
-    if gdf_poly is not None:
+#    if gdf_poly is not None:
     
-        how_buffer = "symmetric_difference"
+#        how_buffer = "symmetric_difference"
    
     #        source_buffer, gdf_mask_buffer = overlay(gdf_poly, gdf_buffer, how_buffer, coeff_ampl, coeff_conv, "grey")
     #        source_buffer, gdf_buffer_mask = overlay(
@@ -819,17 +829,18 @@ def measure_differential(from_place, step, gdf_poly=None, color="grey"):
     #        for x in gdf_new.geometry:
     #            print (type(x))
     #        print ("TYPE BUFFER", gdf_buffer.geometry[0],gdf_new.geometry[0])
-        gdf_new = explode(gdf_poly)
-        gdf_new = gpd.overlay(gdf_buffer, gdf_new, how=how_buffer)
+#        gdf_new = explode(gdf_poly)
+#        gdf_new = gpd.overlay(gdf_buffer, gdf_new, how=how_buffer)
 #        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_new)
-        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
+#        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
         
-    else:
-        gdf_new = explode(gdf_buffer)
+#    else:
+#        gdf_new = explode(gdf_buffer)
 #        print ("YOUPI")
 #        source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
-        source_buffer = None
-    
+#        source_buffer = None
+#    gdf_new = explode(gdf_buffer)
+    source_buffer = convert_GeoPandas_to_Bokeh_format(gdf_buffer)
     buffer_json, buffer_geojson = gdf_to_geojson(gdf_buffer,[])
 #    print ("##########################################")
 #    print (buffer_geojson)

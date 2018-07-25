@@ -8,7 +8,7 @@ This is an experimental application using [Python Bokeh](https://bokeh.pydata.or
 
 ## Installation steps
 ### Clone the repo
-- Clone the Github repository and use the iso_design branch
+- Clone or download the iso_design branch repository
 
 ### Python packages
 - Install required Python packages using requirements.txt file
@@ -194,13 +194,15 @@ It is also possible to use a script ```./code/automate.py``` that generates PNG 
 | **nb_adresses**           | number of adresses in list (used for id) | int | *2* |
 | **id_location**           | id for location (group of addresses, used for id) | int | *1* |
 | **time**                  | time for the request (format HH:MM:SS) | str | *08:00:00* |
+| **jump**                  | 2 values for "jumping" through time (*first number for number of "jumps", second number for interval between 2 jumps in minutes*), 0 for no jump | str | *60,2* |
 | **duration**              | duration for isochrone request (minutes) | int | *20* |
 | **step**                  | step value (1 for a duration of 20 mns will make 20 isochrones: 1mn, 2 mn, 3 mn, ...). 0 for no step | int | *1* |
 | **symplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex* |
  | **excluded_modes**				|	list of modes you want to exclude, default [] (*empty list*), (*see [here](#Modes)*) for possibilities | list of str | *["Metro","RapidTransit"]* |
 | **buffer_radar**         	|	determine if a buffer radar is added to the figure (0 => No, 1 => Yes, default 0) | int | 0 |
 | **around**         	      |	determine if a buffer is used to get points around origin to search for differences if points is moved from *x* meters ([distance in meters, precision]). Leave blank if you don't want to use it | list of int | *100,3* |
-| **origine_screen**        | 1 if origine on map, 0 if not | int | *1* |
+| **origine_screen**        | 1 if origine on map, 0 if not (*only works on maps with tiles*) | int | *1* |
+| **only_overlay**          | 1 if only overlay on map, 0 if not | int | *1* |
 | **only_buffer**           | 1 if only buffers and no isochrone, 0 if not | int | *1* |
 | **buffer_times**          | list of string lists to give time for each buffer | list of str | *["10,20,30", "10,20,30"]* |
 | **buffer_opacity**        | list of floats to manage opacity. **For now, must set same opacity for each buffer** | list of floats | *[0.5, 0.5]* |

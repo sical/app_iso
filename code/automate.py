@@ -38,9 +38,12 @@ from csv_to_json import csv_to_json
 
 
 places_cache = {} # dict to keep lat/lon if adress already been geocoded 
+end_loop = False
+tolerance = 400
 
 columns_with_array_of_str = [
-        "colors_iso","adresses",
+        "colors_iso",
+        "adresses",
         "buffer_times",
         "buffer_opacity",
         "buffer_color",
@@ -154,15 +157,15 @@ def run(params_iso,x,y,adress, color):
                     source=source,
                     legend="Isochrone_polys" + str(counter_polys)
                     )
-            
-            poly_patches = p_shape.patches(
-                'xs', 
-                'ys', 
-                **options_iso_surf,
-                name=name
-                )
-            
-            counter_polys += 1 
+            if simplify == "None":
+                poly_patches = p_shape.patches(
+                    'xs', 
+                    'ys', 
+                    **options_iso_surf,
+                    name=name
+                    )
+                
+                counter_polys += 1 
             
             ###########################################################
             # SIMPLIFIED VERSIONS
@@ -382,7 +385,8 @@ def run(params_iso,x,y,adress, color):
                                                 )
         
     #Draw buffer radar
-    if buffer_radar == 1:    
+    if buffer_radar == 1:
+        print ("YES")
         if source_buffer is not None:
             buffer_name = "Buffer_" + name
         #    source_intersection = data_intersection
@@ -646,7 +650,7 @@ if __name__ == "__main__":
                     index_list = adresses.index(adress)
                     color = colors_iso[index_list]
                     
-                    from_place = geocode(adress)
+                    from_place = geocode(adress, places_cache)
                     
                     x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
                     x.append(x_)
@@ -694,7 +698,7 @@ if __name__ == "__main__":
             elif only_buffer == 1: #Do only buffers, no isochrones
                 epsg_in = Proj(init=inProj)
                 epsg_out = Proj(init=outProj)
-                places = [geocode(adress) for adress in adresses]
+                places = [geocode(adress, places_cache) for adress in adresses]
                 colors = buffer_color
                 opacities = buffer_opacity
                 times = str_list_to_list(buffer_times)
@@ -756,7 +760,7 @@ if __name__ == "__main__":
                         index_list = adresses.index(adress)
                         color = colors_iso[index_list]
                         
-                        from_place = geocode(adress)
+                        from_place = geocode(adress, places_cache)
                         
                         places = buffer_point(from_place, epsg_in, epsg_out, around[0], around[1])
                         
@@ -785,7 +789,7 @@ if __name__ == "__main__":
                                 'opacity_intersection':opacity_intersection,
                                 'opacity_iso':opacity_iso,
                                 'str_modes': str_modes,
-                                'tolerance': None
+                                'tolerance': tolerance
                                 
                                     }     
                             
@@ -803,7 +807,7 @@ if __name__ == "__main__":
                         index_list = adresses.index(adress)
                         color = colors_iso[index_list]
                         
-                        from_place = geocode(adress)
+                        from_place = geocode(adress, places_cache)
                         
                         x_, y_ = transform(epsg_in,epsg_out,from_place[0],from_place[1]) 
                         x.append(x_)
@@ -828,7 +832,7 @@ if __name__ == "__main__":
                             'opacity_intersection':opacity_intersection,
                             'opacity_iso':opacity_iso,
                             'str_modes': str_modes,
-                            'tolerance': None
+                            'tolerance': tolerance
                             
                                 }     
                         
@@ -957,7 +961,7 @@ if __name__ == "__main__":
         epsg_in = Proj(init=inProj)
         epsg_out = Proj(init=outProj)
         
-        from_place = geocode(adress)
+        from_place = geocode(adress, places_cache)
         l_adress = []
         x=[]
         y=[]
