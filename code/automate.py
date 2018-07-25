@@ -386,7 +386,6 @@ def run(params_iso,x,y,adress, color):
         
     #Draw buffer radar
     if buffer_radar == 1:
-        print ("YES")
         if source_buffer is not None:
             buffer_name = "Buffer_" + name
         #    source_intersection = data_intersection
