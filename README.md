@@ -194,7 +194,7 @@ It is also possible to use a script ```./code/automate.py``` that generates PNG 
 | **nb_adresses**           | number of adresses in list (used for id) | int | *2* |
 | **id_location**           | id for location (group of addresses, used for id) | int | *1* |
 | **time**                  | time for the request (format HH:MM:SS) | str | *08:00:00* |
-| **jump**                  | 2 values for "jumping" through time (*first number for number of "jumps", second number for interval between 2 jumps in minutes*), 0 for no jump | str | *60,2* |
+| **jump**                  | 2 values for "jumping" through time (*first number for interval between 2 jumps in minutes , second number for number of "jumps"*), 0 for no jump | str | *60,2* |
 | **duration**              | duration for isochrone request (minutes) | int | *20* |
 | **step**                  | step value (1 for a duration of 20 mns will make 20 isochrones: 1mn, 2 mn, 3 mn, ...). 0 for no step | int | *1* |
 | **symplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex* |

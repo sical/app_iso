@@ -27,6 +27,7 @@ import imageio
 import numpy as np
 import progressbar
 from docopt import docopt
+from selenium import webdriver
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -36,6 +37,8 @@ from make_plot import make_plot
 from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded
 from csv_to_json import csv_to_json
 
+#Set the webdriver 
+my_webdriver = None
 
 places_cache = {} # dict to keep lat/lon if adress already been geocoded 
 end_loop = False
@@ -151,8 +154,8 @@ def run(params_iso,x,y,adress, color):
             options_iso_surf = dict(
                     fill_color=color, 
                     fill_alpha = params_iso['opacity_iso'],
-                    line_color='white', 
-                    line_alpha=0.0,
+                    line_color=color, 
+                    line_alpha=params["fig_params"]["alpha_cont"],
                     line_width=params["fig_params"]["line_width_surf"], 
                     source=source,
                     legend="Isochrone_polys" + str(counter_polys)
@@ -175,8 +178,8 @@ def run(params_iso,x,y,adress, color):
                 options_iso_convex = dict(
                         fill_color = options_iso_surf['fill_color'], 
                         fill_alpha = options_iso_surf['fill_alpha'],
-                        line_color='white', 
-                        line_alpha = 0.0,
+                        line_color=color, 
+                        line_alpha=params["fig_params"]["alpha_cont"],
                         line_width=params["fig_params"]["line_width_surf"], 
                         source=source_convex,
                         legend=name + " (convex)"
@@ -194,8 +197,8 @@ def run(params_iso,x,y,adress, color):
                 options_iso_envelope = dict(
                         fill_color = options_iso_surf['fill_color'], 
                         fill_alpha = options_iso_surf['fill_alpha'],
-                        line_color='white', 
-                        line_alpha = 0.0,
+                        line_color=color, 
+                        line_alpha=params["fig_params"]["alpha_cont"],
                         line_width=params["fig_params"]["line_width_surf"], 
                         source=source_envelope,
                         legend=name + " (envelope)"
@@ -213,8 +216,8 @@ def run(params_iso,x,y,adress, color):
                 options_iso_simplified = dict(
                         fill_color = options_iso_surf['fill_color'], 
                         fill_alpha = options_iso_surf['fill_alpha'],
-                        line_color='white', 
-                        line_alpha = 0.0,
+                        line_color=color, 
+                        line_alpha=params["fig_params"]["alpha_cont"],
                         line_width=params["fig_params"]["line_width_surf"], 
                         source=source_simplified,
                         legend=name + " (simplified)"
@@ -337,8 +340,8 @@ def run(params_iso,x,y,adress, color):
                     source=source_intersection,
                     fill_color='color',
                     fill_alpha=params_iso['opacity_intersection'],
-                    line_color='white', 
-                    line_alpha=0.0,
+                    line_color=color, 
+                    line_alpha=params["fig_params"]["alpha_cont"],
                     line_width=params["fig_params"]["line_width_surf"], 
     #                fill_color="black", 
     #                fill_alpha = 0.70,
@@ -368,8 +371,8 @@ def run(params_iso,x,y,adress, color):
                         source=source_intersection,
                         fill_color='color',
                         fill_alpha=params_iso['opacity_intersection'],
-                        line_color='white', 
-                        line_alpha=0.0,
+                        line_color=color, 
+                        line_alpha=params["fig_params"]["alpha_cont"],
                         line_width=params["fig_params"]["line_width_surf"], 
         #                fill_color="black", 
         #                fill_alpha = 0.70,
@@ -432,14 +435,10 @@ if __name__ == "__main__":
     except:
         TOKEN = os.getenv("NAVITIA_TOKEN")
         
-    params = "./params/params.json"
-    params = json.load(open(params))
+#    params = "./params/params.json"
+#    params = json.load(open(params))
 
     fmt = 'Elapsed time: {0.minutes} minutes {0.seconds} seconds'
-    
-    #Projections
-    inProj = params["proj"]["inProj"]
-    outProj = params["proj"]["outProj"]
     
     #Default
     default = "./params/default.json"
@@ -473,13 +472,15 @@ if __name__ == "__main__":
     #Set range date
     min_date = date(year_min, month_min, day_min)
     max_date = date(year_max, month_max, day_max)
+    ####################
     
     #Set ColumnDataSource
     source_poly = {}
+    ####################
     
     #Set intersections
     gdf_poly_mask = None
-    
+    ####################
     
     #JSON INPUT
     arguments = docopt(__doc__)
@@ -487,8 +488,9 @@ if __name__ == "__main__":
     outfile = arguments["<outfile_json>"]
     sep = arguments["<separator>"]
     json_file = csv_to_json(infile, outfile, sep, columns_with_array_of_str)
-#    json_file = "./params/params_auto.json"
+#    json_file = "./paracsv_to_jsonms/params_auto.json"
     params_auto = json.load(open(json_file, encoding='utf-8'))
+    ####################
 
     source_iso = ColumnDataSource(
             data=dict(
@@ -516,6 +518,16 @@ if __name__ == "__main__":
     #export_with_tiles = "./output_png/tests/with_tiles/"
     #export_anim = "./output_png/tests/animation/"
     
+    #Default params to start
+    fig_params = {
+            "width":800,
+            "height":800,
+            "alpha_tile":0.5
+    }
+    params = {
+            "fig_params":fig_params
+            }
+    
     params_plot = {
                 'params':params, 
                 'tools':TOOLS,
@@ -527,6 +539,10 @@ if __name__ == "__main__":
                 }
     
     p_shape = make_plot(params_plot)
+    
+    #Delete logo and toolbar
+    p_shape.toolbar.logo = None
+    p_shape.toolbar_location = None
     
     #Add origin points
     source_origins = ColumnDataSource(
@@ -579,6 +595,38 @@ if __name__ == "__main__":
     if export_auto is True:
         start_time = time.time()
         for i,param in enumerate(params_auto):
+            
+            #Recreate dict params
+            proj = {
+                		"inProj": param["inProj"],
+                		"outProj": param["outProj"]
+            }
+            
+            fig_params = {
+                    		"width": param["width"],
+                    		"height": param["height"],
+                    		"alpha_tile": param["alpha_tile"],
+                    		"alpha_surf": param["alpha_surf"],
+                    		"alpha_cont": param["alpha_cont"],
+                    		"alpha_building": param["alpha_building"],
+                    		"alpha_network": param["alpha_network"],
+                    		"color_network": param["color_network"],
+                    		"line_width_surf": param["line_width_surf"],
+                    		"line_width_cont": param["line_width_cont"],
+                    		"line_width_building": param["line_width_building"], 
+                    		"field": param["field"]
+            }
+            
+            params = {}
+            params["proj"] = proj
+            params["fig_params"] = fig_params
+            ####################
+            
+            #Projections
+            inProj = params["proj"]["inProj"]
+            outProj = params["proj"]["outProj"]
+            ####################
+            
             how = param["how"]
             colors_iso = param["colors_iso"]
             color_switch = param["colors_intersection"]
@@ -846,7 +894,7 @@ if __name__ == "__main__":
         
             #EXPORT NO_TILES PNG
             name = export_no_tiles + identity
-            export_png(p_shape, filename="{}.png".format(name))
+            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
             
             #EXPORT PARAMS TO JSON
             params_name = export_no_tiles + identity + "_params"
@@ -894,7 +942,7 @@ if __name__ == "__main__":
             p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
             
             name = export_with_tiles + identity
-            export_png(p_shape, filename="{}.png".format(name))
+            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
                 
             #EXPORT PARAMS TO JSON
             params_name = export_with_tiles + identity + "_params"
@@ -916,6 +964,9 @@ if __name__ == "__main__":
                     json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
             
             p_shape = make_plot(params_plot)
+            #Delete logo and toolbar
+            p_shape.toolbar.logo = None
+            p_shape.toolbar_location = None
             
             #MEASURE ALL OVERLAYS AND COLORS
     #        zip_gdf = pairwise(list_gdf)
@@ -1039,8 +1090,12 @@ if __name__ == "__main__":
             time_str = str(time_value).replace(":","_")
             iso_name = str(i) + identity + "_" + time_str
             iso_name = export_anim + iso_name
-            export_png(p_shape, filename="{}.png".format(iso_name))
+            export_png(p_shape, filename="{}.png".format(iso_name), webdriver=my_webdriver)
             p_shape = make_plot(params_plot)
+            
+            #Delete logo and toolbar
+            p_shape.toolbar.logo = None
+            p_shape.toolbar_location = None
             
             time.sleep(2) #sleep 5 seconds to avoid a Geocoder problem
             
