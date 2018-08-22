@@ -18,6 +18,7 @@ import time
 from bokeh.io import export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import ColumnDataSource
+from bokeh.models import Range1d
 from dotenv import load_dotenv
 from pathlib import Path
 import json
@@ -627,6 +628,10 @@ if __name__ == "__main__":
             outProj = params["proj"]["outProj"]
             ####################
             
+            #Range for figure
+            start_x, end_x = param['start_x'], param['end_x']
+            start_y, end_y = param['start_y'], param['end_y']
+            
             how = param["how"]
             colors_iso = param["colors_iso"]
             color_switch = param["colors_intersection"]
@@ -893,6 +898,11 @@ if __name__ == "__main__":
                             l_dict_iso.append(dict_source)
         
             #EXPORT NO_TILES PNG
+            #Set range of figure
+            if (start_x != end_x) and (start_y != end_y):
+                p_shape.x_range = Range1d(start_x, end_x)
+                p_shape.y_range = Range1d(start_y, end_y)
+            
             name = export_no_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
             
@@ -940,6 +950,11 @@ if __name__ == "__main__":
                         )
             
             p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+            
+            #Set range of figure
+            if (start_x != end_x) and (start_y != end_y):
+                p_shape.x_range = Range1d(start_x, end_x)
+                p_shape.y_range = Range1d(start_y, end_y)
             
             name = export_with_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
@@ -1090,6 +1105,12 @@ if __name__ == "__main__":
             time_str = str(time_value).replace(":","_")
             iso_name = str(i) + identity + "_" + time_str
             iso_name = export_anim + iso_name
+            
+            #Set range of figure
+            if (start_x != end_x) and (start_y != end_y):
+                p_shape.x_range = Range1d(start_x, end_x)
+                p_shape.y_range = Range1d(start_y, end_y)
+            
             export_png(p_shape, filename="{}.png".format(iso_name), webdriver=my_webdriver)
             p_shape = make_plot(params_plot)
             
