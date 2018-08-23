@@ -672,6 +672,7 @@ if __name__ == "__main__":
             excluded_modes = param["excluded_modes"]
             export_no_tiles = param["export_no_tiles"]
             export_with_tiles = param["export_with_tiles"]
+            export_only_tiles = param["export_only_tiles"]
             export_anim = param["export_anim"]
             
             if excluded_modes != []:
@@ -903,8 +904,15 @@ if __name__ == "__main__":
                 p_shape.x_range = Range1d(start_x, end_x)
                 p_shape.y_range = Range1d(start_y, end_y)
             
+            p_shape.output_backend="svg"
+            p_shape.background_fill_color = None
+            p_shape.border_fill_color = None
+            
             name = export_no_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
+            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
+            export_svgs(p_shape, filename="{}.svg".format(name), webdriver=my_webdriver)
             
             #EXPORT PARAMS TO JSON
             params_name = export_no_tiles + identity + "_params"
@@ -955,9 +963,14 @@ if __name__ == "__main__":
             if (start_x != end_x) and (start_y != end_y):
                 p_shape.x_range = Range1d(start_x, end_x)
                 p_shape.y_range = Range1d(start_y, end_y)
+                
+            p_shape.background_fill_color = None
+            p_shape.border_fill_color = None
             
             name = export_with_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
+            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
                 
             #EXPORT PARAMS TO JSON
             params_name = export_with_tiles + identity + "_params"
@@ -978,6 +991,23 @@ if __name__ == "__main__":
                 with open(json_name, 'w', encoding='utf-8') as outfile:
                     json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
             
+            #EXPORT ONLY TILES
+            x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
+            y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
+            
+            p_shape = make_plot(params_plot)
+            #Delete logo and toolbar
+            p_shape.toolbar.logo = None
+            p_shape.toolbar_location = None
+            p_shape.x_range = Range1d(x_range_start, x_range_end)
+            p_shape.y_range = Range1d(y_range_start, y_range_end)
+            
+            p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+            
+            name = export_only_tiles + identity
+            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+            
+            #RESET
             p_shape = make_plot(params_plot)
             #Delete logo and toolbar
             p_shape.toolbar.logo = None
@@ -1110,6 +1140,9 @@ if __name__ == "__main__":
             if (start_x != end_x) and (start_y != end_y):
                 p_shape.x_range = Range1d(start_x, end_x)
                 p_shape.y_range = Range1d(start_y, end_y)
+            
+            p_shape.background_fill_color = None
+            p_shape.border_fill_color = None
             
             export_png(p_shape, filename="{}.png".format(iso_name), webdriver=my_webdriver)
             p_shape = make_plot(params_plot)

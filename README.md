@@ -8,7 +8,11 @@ This is an experimental application using [Python Bokeh](https://bokeh.pydata.or
 
 ## Installation steps
 ### Clone the repo
-- Clone or download the iso_design branch repository
+- Clone:
+```
+git clone -b iso_design https://github.com/sical/app_iso.git
+```
+- or download the iso_design branch repository
 
 ### Python packages
 - Install required Python packages using requirements.txt file
