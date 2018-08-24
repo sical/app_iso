@@ -905,14 +905,22 @@ if __name__ == "__main__":
                 p_shape.x_range = Range1d(start_x, end_x)
                 p_shape.y_range = Range1d(start_y, end_y)
             
-            p_shape.output_backend="svg"
+            p_shape.output_backend="webgl"
             p_shape.background_fill_color = None
             p_shape.border_fill_color = None
+            
+#            p_shape.add_tile(
+#                    STAMEN_TERRAIN_RETINA, 
+#                    alpha=0.5, 
+#                    name="no_tile",
+#                    visible=False
+#                    )
             
             name = export_no_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
 #            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
 #            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
+            p_shape.output_backend="svg"
             export_svgs(p_shape, filename="{}.svg".format(name), webdriver=my_webdriver)
             
             #EXPORT PARAMS TO JSON
@@ -965,9 +973,15 @@ if __name__ == "__main__":
                 p_shape.x_range = Range1d(start_x, end_x)
                 p_shape.y_range = Range1d(start_y, end_y)
                 
+            else:
+                x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
+                y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
+                p_shape.x_range = Range1d(x_range_start, x_range_end)
+                p_shape.y_range = Range1d(y_range_start, y_range_end)
+                
             p_shape.background_fill_color = None
             p_shape.border_fill_color = None
-            
+            p_shape.output_backend="webgl"
             name = export_with_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
 #            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
