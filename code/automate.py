@@ -116,8 +116,9 @@ def run(params_iso,x,y,adress, color):
     
     #Give each polygon a unique color
     if step_mn == 0:
-        source = change_color(source)
-        data_intersection = change_color(data_intersection)
+        #UNCOMMENT 2 LINES IF UNIQUE COLOR FOR EACH POLYGON IS NEEDED
+#        source = change_color(source)
+#        data_intersection = change_color(data_intersection)
         
         #DataSource to dict
         dict_source = {}
@@ -910,8 +911,8 @@ if __name__ == "__main__":
             
             name = export_no_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
-            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
-            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
+#            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
+#            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
             export_svgs(p_shape, filename="{}.svg".format(name), webdriver=my_webdriver)
             
             #EXPORT PARAMS TO JSON
@@ -969,8 +970,8 @@ if __name__ == "__main__":
             
             name = export_with_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
-            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
-            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
+#            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
+#            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
                 
             #EXPORT PARAMS TO JSON
             params_name = export_with_tiles + identity + "_params"
