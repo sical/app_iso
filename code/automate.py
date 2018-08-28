@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, date
 import os
 import itertools
 import time
+import random
 
 from bokeh.io import export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
@@ -54,27 +55,57 @@ columns_with_array_of_str = [
         "buffer_contour_size",
         "excluded_modes"
         ]
-
+    
 
 def change_color(source):
+        global used_colors
         #Give each polygon a unique color
         l_colors = []
         nb = len(source.data['color'])
         
         if nb != 0:
             r,g,b = hex2rgb(source.data['color'][0])
+            j = 1
             
             if r + nb >= 255:
                 for i in range(0, nb):
-                    new_color = r - i, g, b
+                    new_color = r - j, g, b
                     new_color = colors_blend(new_color, new_color)
-                    l_colors.append(new_color)
+                    
+                    if new_color not in used_colors:
+                        used_colors.append(new_color)
+                        l_colors.append(new_color)
+                    else:
+                        while True:
+                            new_color = r - j, g, b
+                            new_color = colors_blend(new_color, new_color)
+                            if new_color not in used_colors:
+                                used_colors.append(new_color)
+                                l_colors.append(new_color)
+                                break
+                            else:
+                                j += 1
+                                
                 
             else:
                 for i in range(0, nb):
-                    new_color = r + i, g, b
+                    new_color = r + j, g, b
                     new_color = colors_blend(new_color, new_color)
-                    l_colors.append(new_color)
+                    
+                    if new_color not in used_colors:
+                        used_colors.append(new_color)
+                        l_colors.append(new_color)
+                    else:
+                        while True:
+                            new_color = r + j, g, b
+                            new_color = colors_blend(new_color, new_color)
+                            if new_color not in used_colors:
+                                used_colors.append(new_color)
+                                l_colors.append(new_color)
+                                break
+                            else:
+                                j += 1
+                                
             
             source.data['color'] = np.array(l_colors)
         
@@ -117,8 +148,8 @@ def run(params_iso,x,y,adress, color):
     #Give each polygon a unique color
     if step_mn == 0:
         #UNCOMMENT 2 LINES IF UNIQUE COLOR FOR EACH POLYGON IS NEEDED
-#        source = change_color(source)
-#        data_intersection = change_color(data_intersection)
+        source = change_color(source)
+        data_intersection = change_color(data_intersection)
         
         #DataSource to dict
         dict_source = {}
@@ -442,6 +473,9 @@ if __name__ == "__main__":
 
     fmt = 'Elapsed time: {0.minutes} minutes {0.seconds} seconds'
     
+    #List of colors used
+    used_colors = []
+    
     #Default
     default = "./params/default.json"
     default = json.load(open(default))
@@ -654,7 +688,7 @@ if __name__ == "__main__":
             opacity_iso = param["opacity_isos"]
             opacity_intersection = param["opacity_intersection"]
             shape = param["shape"]
-            identity = param["id"]
+            identity = str(param["id"])
             buffer_radar = param["buffer_radar"]
             step_mn = param["step"]
             simplify = param["simplify"]
@@ -720,6 +754,7 @@ if __name__ == "__main__":
                         params_iso = {
                             'token': TOKEN,
                             'from_place': from_place,
+                            'address': adress,
                             'time_in': new_time,
                             'min_date': date_value,
                             'step': step_value,
@@ -783,7 +818,8 @@ if __name__ == "__main__":
                             "opacities":opacity,
                             "times":time_,
                             "contours":contour,
-                            "from_place":place
+                            "from_place":place,
+                            "address":adress
                             }
 
                     source_buffers = create_buffers(params_buffers)
@@ -803,7 +839,7 @@ if __name__ == "__main__":
                                     **options_buffers
 #                                    legend=adress
                                     )
-                    
+                   
                 p_shape.legend.location = "top_right"
                 p_shape.legend.click_policy="hide"
                 p_shape.legend.visible = False
@@ -828,6 +864,7 @@ if __name__ == "__main__":
                         
                             params_iso = {
                                 'token': TOKEN,
+                                'address': adress,
                                 'from_place': from_place,
                                 'time_in': time_value,
                                 'min_date': date_value,
@@ -871,6 +908,7 @@ if __name__ == "__main__":
                     
                         params_iso = {
                             'token': TOKEN,
+                            'address': adress,
                             'from_place': from_place,
                             'time_in': time_value,
                             'min_date': date_value,
@@ -900,6 +938,29 @@ if __name__ == "__main__":
                             l_dict_iso.append(dict_source)
         
             #EXPORT NO_TILES PNG
+            #Add origins points
+            if origine_screen == 1:
+                data = dict(
+                            x=x,
+                            y=y,
+                            adress=l_adress,
+                            color=l_colors
+                            )
+                source_origins.data.update(data)
+                
+                poly_circles = p_shape.circle(
+                    'x', 
+                    'y', 
+                    source=source_origins,
+                    fill_color='color', 
+                    fill_alpha = 1.0,
+                    size=10,
+                    line_color='black',
+                    line_alpha=1.0,
+                    line_width=1.0, 
+#                    legend="Origins"
+                        )
+                
             #Set range of figure
             if (start_x != end_x) and (start_y != end_y):
                 p_shape.x_range = Range1d(start_x, end_x)
@@ -963,7 +1024,7 @@ if __name__ == "__main__":
                     line_color='black',
                     line_alpha=1.0,
                     line_width=1.0, 
-                    legend="Origins"
+#                    legend="Origins"
                         )
             
             p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
@@ -973,11 +1034,11 @@ if __name__ == "__main__":
                 p_shape.x_range = Range1d(start_x, end_x)
                 p_shape.y_range = Range1d(start_y, end_y)
                 
-            else:
-                x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
-                y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
-                p_shape.x_range = Range1d(x_range_start, x_range_end)
-                p_shape.y_range = Range1d(y_range_start, y_range_end)
+#            else:
+#                x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
+#                y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
+#                p_shape.x_range = Range1d(x_range_start, x_range_end)
+#                p_shape.y_range = Range1d(y_range_start, y_range_end)
                 
             p_shape.background_fill_color = None
             p_shape.border_fill_color = None
@@ -1007,15 +1068,15 @@ if __name__ == "__main__":
                     json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
             
             #EXPORT ONLY TILES
-            x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
-            y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
+#            x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
+#            y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
             
             p_shape = make_plot(params_plot)
             #Delete logo and toolbar
             p_shape.toolbar.logo = None
             p_shape.toolbar_location = None
-            p_shape.x_range = Range1d(x_range_start, x_range_end)
-            p_shape.y_range = Range1d(y_range_start, y_range_end)
+#            p_shape.x_range = Range1d(x_range_start, x_range_end)
+#            p_shape.y_range = Range1d(y_range_start, y_range_end)
             
             p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
             
@@ -1080,6 +1141,7 @@ if __name__ == "__main__":
         
         params_iso = {
                 'token': TOKEN,
+                'address': adress,
                 'from_place': from_place,
                 'time_in': time_value,
                 'min_date': date_value,

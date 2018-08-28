@@ -116,6 +116,8 @@ def get_iso(params, gdf_poly_mask, id_):
     
     TOKEN = params['token']
     from_place = params['from_place']
+    if 'address' in params:
+        address = params['address']
     time_in = params['time_in']
     min_date = params['min_date']  #format YYYYMMDDThhmmss
     step = params['step']
@@ -176,7 +178,7 @@ def get_iso(params, gdf_poly_mask, id_):
 
     else:
         code = None
-
+    
     if (code == 200 and step_mn == 0):
 #        print ("YES")
         json_response = json.dumps(r.json())
@@ -187,7 +189,10 @@ def get_iso(params, gdf_poly_mask, id_):
                     geometry=MultiPolygon(
                             iso["geojson"]["coordinates"]
                             ), 
-                    properties={"time":duration}
+                    properties={
+                            "time":duration,
+                            "address": address
+                            }
                     )
             gdf_polys.append(multi)
  
@@ -209,7 +214,7 @@ def get_iso(params, gdf_poly_mask, id_):
                 color_switch
                 )
         
-        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color'])
+        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color', 'address'])
         
         #MEASURE DIFFERENTIAL
         source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly=gdf_poly, color=color) #TODO: make this work
@@ -233,7 +238,7 @@ def get_iso(params, gdf_poly_mask, id_):
             source_convex, source_envelope, source_simplified = None, None, None
         
         #GEOJSON POLY
-        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color'])
+        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color', 'address'])
         source_polys_geojson = json.dumps(gdf_geojson)
         
         

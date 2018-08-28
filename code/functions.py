@@ -860,13 +860,14 @@ def create_buffers(params_buffer):
     times = params_buffer["times"]
     contours = params_buffer["contours"]
     from_place = params_buffer["from_place"]
+    address = params_buffer["address"]
     
     buffers, distances = [], []
     
     point_out = transform(p_in, p_out, from_place[0], from_place[1])
     
-    for time in times:
-        distance = time*60 * (TRANSIT*1000) // 3600
+    for time_ in times:
+        distance = time_*60 * (TRANSIT*1000) // 3600
         buffer = Point(point_out).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
         buffers.append(buffer)
         distances.append(distance)
@@ -878,10 +879,10 @@ def create_buffers(params_buffer):
                     "geometry":buffers,
                     "times":times,
                     "width":contours,
-                    "fill_alpha":opacities
+                    "fill_alpha":opacities,
+                    "address":address
             }
     )
-    
     
     gdf_buffer = gpd.GeoDataFrame(df,crs={'init': 'epsg:3857'}, geometry="geometry")
     

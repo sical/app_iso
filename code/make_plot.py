@@ -50,7 +50,8 @@ def make_plot(params_plot):
             width=params["fig_params"]["width"], 
             height=params["fig_params"]["height"],
             match_aspect=True, 
-            aspect_scale=1
+            aspect_scale=1,
+            sizing_mode="fixed"
             )
     
     columns = [
