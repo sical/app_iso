@@ -160,7 +160,6 @@ def get_iso(params, gdf_poly_mask, id_):
 #    print ("CUT", cutoffs)
     gdf_polys = []
     
-    
     if l_cuts == []:
         url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}{}'.format(
                 id_,
@@ -191,7 +190,8 @@ def get_iso(params, gdf_poly_mask, id_):
                             ), 
                     properties={
                             "time":duration,
-                            "address": address
+                            "address": address,
+                            "datetime": date_time
                             }
                     )
             gdf_polys.append(multi)
@@ -214,7 +214,7 @@ def get_iso(params, gdf_poly_mask, id_):
                 color_switch
                 )
         
-        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color', 'address'])
+        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time', 'color', 'address', 'datetime'])
         
         #MEASURE DIFFERENTIAL
         source_buffer,source_buffer_geojson = measure_differential(from_place, step, gdf_poly=gdf_poly, color=color) #TODO: make this work
@@ -238,7 +238,7 @@ def get_iso(params, gdf_poly_mask, id_):
             source_convex, source_envelope, source_simplified = None, None, None
         
         #GEOJSON POLY
-        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color', 'address'])
+        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color', 'address', 'datetime'])
         source_polys_geojson = json.dumps(gdf_geojson)
         
         
@@ -252,12 +252,15 @@ def get_iso(params, gdf_poly_mask, id_):
     elif (l_cuts!=[] and step_mn != 0):
         for cut in l_cuts:
             cutoffs = ''.join(cut)
+            print ("l_cuts", l_cuts)
+            print ("cut", cut)
+            print ("cutoffs", cutoffs)
             url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}'.format(
-            id_,
-            from_place,
-            date_time,
-            cutoffs,
-            str_modes
+                    id_,
+                    from_place,
+                    date_time,
+                    cutoffs,
+                    str_modes
             )
             
 #            print (url)
@@ -281,7 +284,11 @@ def get_iso(params, gdf_poly_mask, id_):
                         geometry=MultiPolygon(
                                 iso["geojson"]["coordinates"]
                                 ), 
-                        properties={"time":duration}
+                        properties={
+                            "time":duration,
+                            "address": address,
+                            "datetime": date_time
+                            }
                         )
                 gdf_polys.append(multi)
  

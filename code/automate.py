@@ -37,6 +37,7 @@ warnings.filterwarnings('ignore')
 from get_iso import get_iso, overlay
 from make_plot import make_plot
 from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded
+from bokeh_tools import get_bbox
 from csv_to_json import csv_to_json
 
 #Set the webdriver 
@@ -45,6 +46,8 @@ my_webdriver = None
 places_cache = {} # dict to keep lat/lon if adress already been geocoded 
 end_loop = False
 tolerance = 400
+
+used_colors = [] #list of colors used to get unique color
 
 columns_with_array_of_str = [
         "colors_iso",
@@ -55,61 +58,91 @@ columns_with_array_of_str = [
         "buffer_contour_size",
         "excluded_modes"
         ]
-    
 
-def change_color(source):
-        global used_colors
+def get_range_colors(color, value_max):
+    if color - value_max < 0:
+        color_start = 0
+    else:
+        color_start = color - value_max
+        
+    if color + value_max > 255:
+        color_end = 255
+    else:
+        color_end = color + value_max
+        
+    range_color = [i for i in range(color_start, color_end, 1)]
+    
+    return range_color
+
+def change_color(source, used_colors, value_max):
         #Give each polygon a unique color
         l_colors = []
         nb = len(source.data['color'])
         
         if nb != 0:
-            r,g,b = hex2rgb(source.data['color'][0])
-            j = 1
-            
-            if r + nb >= 255:
-                for i in range(0, nb):
-                    new_color = r - j, g, b
-                    new_color = colors_blend(new_color, new_color)
-                    
-                    if new_color not in used_colors:
-                        used_colors.append(new_color)
-                        l_colors.append(new_color)
-                    else:
-                        while True:
-                            new_color = r - j, g, b
-                            new_color = colors_blend(new_color, new_color)
-                            if new_color not in used_colors:
-                                used_colors.append(new_color)
-                                l_colors.append(new_color)
-                                break
-                            else:
-                                j += 1
-                                
+            for i in range(0, nb):
+                r,g,b = hex2rgb(source.data['color'][0])
                 
-            else:
-                for i in range(0, nb):
-                    new_color = r + j, g, b
+                reds = get_range_colors(r, value_max)
+                greens = get_range_colors(g, value_max)
+                blues = get_range_colors(b, value_max)
+                
+                new_color = random.choice(reds), random.choice(greens), random.choice(blues)
+                
+                if new_color in used_colors:
+                    while True:
+                        new_color = random.choice(reds), random.choice(greens), random.choice(blues)
+                        new_color = colors_blend(new_color, new_color)
+                        if new_color not in used_colors:
+                            l_colors.append(new_color)
+                            used_colors.append(new_color)
+                            break
+                else:
                     new_color = colors_blend(new_color, new_color)
-                    
-                    if new_color not in used_colors:
-                        used_colors.append(new_color)
-                        l_colors.append(new_color)
-                    else:
-                        while True:
-                            new_color = r + j, g, b
-                            new_color = colors_blend(new_color, new_color)
-                            if new_color not in used_colors:
-                                used_colors.append(new_color)
-                                l_colors.append(new_color)
-                                break
-                            else:
-                                j += 1
-                                
+                    l_colors.append(new_color)
+                    used_colors.append(new_color)
+            
+#            if r + nb >= 255:
+#                for i in range(0, nb):
+#                    new_color = r - i, g, b
+#                    new_color = colors_blend(new_color, new_color)
+#                    
+#                    l_colors.append(new_color)
+#                
+#            else:
+#                for i in range(0, nb):
+#                    new_color = r + i, g, b
+#                    new_color = colors_blend(new_color, new_color)
+#                    l_colors.append(new_color)
             
             source.data['color'] = np.array(l_colors)
         
         return source
+        
+
+#def change_color(source, used_colors):
+#        #Give each polygon a unique color
+#        l_colors = []
+#        nb = len(source.data['color'])
+#        
+#        if nb != 0:
+#            r,g,b = hex2rgb(source.data['color'][0])
+#            
+#            if r + nb >= 255:
+#                for i in range(0, nb):
+#                    new_color = r - i, g, b
+#                    new_color = colors_blend(new_color, new_color)
+#                    l_colors.append(new_color)
+#                
+#            else:
+#                for i in range(0, nb):
+#                    new_color = r + i, g, b
+#                    new_color = colors_blend(new_color, new_color)
+#                    l_colors.append(new_color)
+#            
+#            source.data['color'] = np.array(l_colors)
+#        
+#        return source
     
     
 def pairwise(iterable):
@@ -143,13 +176,15 @@ def run(params_iso,x,y,adress, color):
     source_envelope = data['source_envelope']
     source_simplified = data['source_simplified']
     
+    value_max = 20
+    
     list_gdf.append(gdf_poly)
     
     #Give each polygon a unique color
     if step_mn == 0:
         #UNCOMMENT 2 LINES IF UNIQUE COLOR FOR EACH POLYGON IS NEEDED
-        source = change_color(source)
-        data_intersection = change_color(data_intersection)
+        source = change_color(source, used_colors, value_max)
+        data_intersection = change_color(data_intersection, used_colors, value_max)
         
         #DataSource to dict
         dict_source = {}
@@ -473,9 +508,6 @@ if __name__ == "__main__":
 
     fmt = 'Elapsed time: {0.minutes} minutes {0.seconds} seconds'
     
-    #List of colors used
-    used_colors = []
-    
     #Default
     default = "./params/default.json"
     default = json.load(open(default))
@@ -661,11 +693,21 @@ if __name__ == "__main__":
             #Projections
             inProj = params["proj"]["inProj"]
             outProj = params["proj"]["outProj"]
+            epsg_in = Proj(init=inProj)
+            epsg_out = Proj(init=outProj)
             ####################
             
             #Range for figure
-            start_x, end_x = param['start_x'], param['end_x']
-            start_y, end_y = param['start_y'], param['end_y']
+            points = []
+            for element in param["adresses"]:
+                coords = geocode(element, places_cache)
+                coords = transform(epsg_in,epsg_out,coords[0],coords[1]) 
+                points.append(coords)
+                
+            bounds = get_bbox(points, param["distance_bbox"])
+            start_x, end_x = bounds.start_x, bounds.end_x
+            start_y, end_y = bounds.start_y, bounds.end_y
+            ####################
             
             how = param["how"]
             colors_iso = param["colors_iso"]
@@ -729,8 +771,6 @@ if __name__ == "__main__":
             l_adress = []
             l_colors = colors_iso
             
-            epsg_in = Proj(init=inProj)
-            epsg_out = Proj(init=outProj)
             
             if jump_mn != 0:
                 for adress in adresses:
