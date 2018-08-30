@@ -30,6 +30,7 @@ import numpy as np
 import progressbar
 from docopt import docopt
 from selenium import webdriver
+import geojson
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -46,6 +47,7 @@ my_webdriver = None
 places_cache = {} # dict to keep lat/lon if adress already been geocoded 
 end_loop = False
 tolerance = 400
+value_max = 20
 
 used_colors = [] #list of colors used to get unique color
 
@@ -58,6 +60,7 @@ columns_with_array_of_str = [
         "buffer_contour_size",
         "excluded_modes"
         ]
+
 
 def get_range_colors(color, value_max):
     if color - value_max < 0:
@@ -74,18 +77,20 @@ def get_range_colors(color, value_max):
     
     return range_color
 
-def change_color(source, used_colors, value_max):
+def change_color(colors, used_colors, value_max):
         #Give each polygon a unique color
         l_colors = []
-        nb = len(source.data['color'])
+            
+        nb = len(colors)
+            
+        r,g,b = hex2rgb(colors[0])
+                
+        reds = get_range_colors(r, value_max)
+        greens = get_range_colors(g, value_max)
+        blues = get_range_colors(b, value_max)
         
         if nb != 0:
             for i in range(0, nb):
-                r,g,b = hex2rgb(source.data['color'][0])
-                
-                reds = get_range_colors(r, value_max)
-                greens = get_range_colors(g, value_max)
-                blues = get_range_colors(b, value_max)
                 
                 new_color = random.choice(reds), random.choice(greens), random.choice(blues)
                 
@@ -115,9 +120,10 @@ def change_color(source, used_colors, value_max):
 #                    new_color = colors_blend(new_color, new_color)
 #                    l_colors.append(new_color)
             
-            source.data['color'] = np.array(l_colors)
+#            source.data['color'] = np.array(l_colors)
+            colors = np.array(l_colors)
         
-        return source
+        return colors
         
 
 #def change_color(source, used_colors):
@@ -176,15 +182,16 @@ def run(params_iso,x,y,adress, color):
     source_envelope = data['source_envelope']
     source_simplified = data['source_simplified']
     
-    value_max = 20
-    
     list_gdf.append(gdf_poly)
     
     #Give each polygon a unique color
     if step_mn == 0:
         #UNCOMMENT 2 LINES IF UNIQUE COLOR FOR EACH POLYGON IS NEEDED
-        source = change_color(source, used_colors, value_max)
-        data_intersection = change_color(data_intersection, used_colors, value_max)
+        colors_iso = change_color(source.data['color'], used_colors, value_max)
+        source.data['color'] = colors_iso
+        if data_intersection.data['color'] != []:
+            colors_intersection = change_color(data_intersection.data['color'], used_colors, value_max)
+            data_intersection.data['color'] = colors_intersection
         
         #DataSource to dict
         dict_source = {}
@@ -758,6 +765,7 @@ if __name__ == "__main__":
                 str_modes = ""
             
             l_dict_iso = []
+            l_buffer = []
             
             gdf_poly_mask = None
             
@@ -850,6 +858,8 @@ if __name__ == "__main__":
                     x.append(x_)
                     y.append(y_)
                     l_adress.append(adress)
+                    
+                    fill_colors = change_color(fill_colors, used_colors, value_max)
 
                     params_buffers = {
                             "inproj":epsg_in,
@@ -863,6 +873,13 @@ if __name__ == "__main__":
                             }
 
                     source_buffers = create_buffers(params_buffers)
+                    del params_buffers["inproj"]
+                    del params_buffers["outproj"]
+                    del params_buffers["opacities"]
+                    del params_buffers["from_place"]
+                    params_buffers["colors"] = list(params_buffers["colors"])
+                    
+                    l_buffer.append(params_buffers)
                     
                     options_buffers = dict(
                             source=source_buffers,
@@ -1029,6 +1046,13 @@ if __name__ == "__main__":
             json_name = filename="{}.json".format(params_name)
             with open(json_name, 'w', encoding='utf-8') as outfile:
                 json.dump(param, outfile, sort_keys=True, indent=2)
+                
+            #EXPORT BUFFERS TO JSON
+            if l_buffer != []:
+                buffer_name = export_no_tiles + identity + "_buffer"
+                json_name = filename="{}.json".format(buffer_name)
+                with open(json_name, 'w', encoding='utf-8') as outfile:
+                    json.dump(l_buffer, outfile, sort_keys=True, indent=2)
               
             #EXPORT ISOS TO JSON
             if l_dict_iso != []:

@@ -868,7 +868,13 @@ def create_buffers(params_buffer):
     
     for time_ in times:
         distance = time_*60 * (TRANSIT*1000) // 3600
-        buffer = Point(point_out).buffer(distance, resolution=16, cap_style=1, join_style=1, mitre_limit=1.0)
+        buffer = Point(point_out).buffer(
+                distance, 
+                resolution=16, 
+                cap_style=1, 
+                join_style=1, 
+                mitre_limit=1.0
+                )
         buffers.append(buffer)
         distances.append(distance)
         
