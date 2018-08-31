@@ -61,6 +61,9 @@ columns_with_array_of_str = [
         "excluded_modes"
         ]
 
+def create_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def get_range_colors(color, value_max):
     if color - value_max < 0:
@@ -192,6 +195,11 @@ def run(params_iso,x,y,adress, color):
         if data_intersection.data['color'] != []:
             colors_intersection = change_color(data_intersection.data['color'], used_colors, value_max)
             data_intersection.data['color'] = colors_intersection
+        for element in [source_convex, source_envelope, source_simplified]:
+            if element is not None:
+                element.data['color'] = colors_iso
+            
+        #TODO: faire couleur pour les versions simplifiées ici pour tester ou changer pour les iso et mettre dans get iso. A voir
         
         #DataSource to dict
         dict_source = {}
@@ -251,7 +259,7 @@ def run(params_iso,x,y,adress, color):
             # Convex_hull polygons
             if simplify == "convex" and source_convex is not None:
                 options_iso_convex = dict(
-                        fill_color = options_iso_surf['fill_color'], 
+                        fill_color = 'color', 
                         fill_alpha = options_iso_surf['fill_alpha'],
                         line_color=color, 
                         line_alpha=params["fig_params"]["alpha_cont"],
@@ -270,7 +278,7 @@ def run(params_iso,x,y,adress, color):
             # Envelope polygons
             if simplify == "envelope" and source_envelope is not None:
                 options_iso_envelope = dict(
-                        fill_color = options_iso_surf['fill_color'], 
+                        fill_color = 'color', 
                         fill_alpha = options_iso_surf['fill_alpha'],
                         line_color=color, 
                         line_alpha=params["fig_params"]["alpha_cont"],
@@ -289,7 +297,7 @@ def run(params_iso,x,y,adress, color):
             # Simplified polygons
             if simplify == "simplify" and source_simplified is not None:
                 options_iso_simplified = dict(
-                        fill_color = options_iso_surf['fill_color'], 
+                        fill_color = 'color', 
                         fill_alpha = options_iso_surf['fill_alpha'],
                         line_color=color, 
                         line_alpha=params["fig_params"]["alpha_cont"],
@@ -332,7 +340,7 @@ def run(params_iso,x,y,adress, color):
             # Convex_hull polygons
             if simplify == "convex" and source_convex is not None:
                 options_iso_convex = dict(
-                        line_color = options_iso_surf['line_color'], 
+                        line_color = 'color', 
                         line_alpha = options_iso_surf['line_alpha'],
                         line_width=params["fig_params"]["line_width_cont"], 
                         source=source_convex,
@@ -349,7 +357,7 @@ def run(params_iso,x,y,adress, color):
             # Envelope polygons
             if simplify == "envelope" and source_envelope is not None:
                 options_iso_envelope = dict(
-                        line_color = options_iso_surf['line_color'], 
+                        line_color = 'color', 
                         line_alpha = options_iso_surf['line_alpha'],
                         line_width=params["fig_params"]["line_width_cont"],  
                         source=source_envelope,
@@ -367,7 +375,7 @@ def run(params_iso,x,y,adress, color):
             # Simplified polygons
             if simplify == "simplify" and source_simplified is not None:
                 options_iso_simplified = dict(
-                        line_color = options_iso_surf['line_color'], 
+                        line_color = 'color', 
                         line_alpha = options_iso_surf['line_alpha'],
                         line_width=params["fig_params"]["line_width_cont"], 
                         source=source_simplified,
@@ -741,6 +749,16 @@ if __name__ == "__main__":
             buffer_radar = param["buffer_radar"]
             step_mn = param["step"]
             simplify = param["simplify"]
+            if simplify == "simplify":
+                tolerance = param["tolerance"]
+                topology = param["preserve_topology"]
+                if topology == 1:
+                    topology = True
+                else:
+                    topology = False
+            else:
+                tolerance = None
+                topology = 0
             try:
                 around = param["around"].split(',')
                 around = [int(around[0]), int(around[1])]
@@ -817,7 +835,9 @@ if __name__ == "__main__":
                             'opacity_intersection':opacity_intersection,
                             'opacity_iso':opacity_iso,
                             'str_modes': str_modes,
-                            'tolerance': None
+                            'tolerance': tolerance,
+                            'simplify': simplify,
+                            'topology': topology
                             
                                 }     
                         
@@ -937,7 +957,9 @@ if __name__ == "__main__":
                                 'opacity_intersection':opacity_intersection,
                                 'opacity_iso':opacity_iso,
                                 'str_modes': str_modes,
-                                'tolerance': tolerance
+                                'tolerance': tolerance,
+                                'simplify': simplify,
+                                'topology': topology
                                 
                                     }     
                             
@@ -981,7 +1003,9 @@ if __name__ == "__main__":
                             'opacity_intersection':opacity_intersection,
                             'opacity_iso':opacity_iso,
                             'str_modes': str_modes,
-                            'tolerance': tolerance
+                            'tolerance': tolerance,
+                            'simplify': simplify,
+                            'topology': topology
                             
                                 }     
                         
@@ -1034,6 +1058,7 @@ if __name__ == "__main__":
 #                    visible=False
 #                    )
             
+            create_dir(export_no_tiles)
             name = export_no_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
 #            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
@@ -1107,6 +1132,8 @@ if __name__ == "__main__":
             p_shape.background_fill_color = None
             p_shape.border_fill_color = None
             p_shape.output_backend="webgl"
+            
+            create_dir(export_with_tiles)
             name = export_with_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
 #            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
@@ -1132,18 +1159,19 @@ if __name__ == "__main__":
                     json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
             
             #EXPORT ONLY TILES
-#            x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
-#            y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
+            x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
+            y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
             
             p_shape = make_plot(params_plot)
             #Delete logo and toolbar
             p_shape.toolbar.logo = None
             p_shape.toolbar_location = None
-#            p_shape.x_range = Range1d(x_range_start, x_range_end)
-#            p_shape.y_range = Range1d(y_range_start, y_range_end)
+            p_shape.x_range = Range1d(x_range_start, x_range_end)
+            p_shape.y_range = Range1d(y_range_start, y_range_end)
             
             p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
             
+            create_dir(export_only_tiles)
             name = export_only_tiles + identity
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
             

@@ -133,6 +133,8 @@ def get_iso(params, gdf_poly_mask, id_):
     coeff_conv = 0.2 # See Brinkhoff et al. paper
     str_modes = params['str_modes']
     tolerance = params['tolerance']
+    method = params['simplify']
+    topology = params['topology']
     
     color = colors_blend(color, color)
     
@@ -233,7 +235,7 @@ def get_iso(params, gdf_poly_mask, id_):
         #SOURCE POLYS BASIC #GO UP IF INTERSECTION OF SIMPLIFICATED NEEDED
         ## Simplify
         if tolerance is not None:
-            source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance)
+            source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance, preserve_topology=topology)
         else:
             source_convex, source_envelope, source_simplified = None, None, None
         

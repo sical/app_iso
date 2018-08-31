@@ -21,7 +21,7 @@ from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 #geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
 
-geolocator = Photon()
+geolocator = Nominatim()
 
 
 #def gdf_to_geojson(gdf, properties):
@@ -926,11 +926,11 @@ def list_excluded(modes):
     
     return str_modes
 
-def simplify(gdf, tolerance):
+def simplify(gdf, tolerance, preserve_topology=True):
     ## Simplify
     convex_hull = gdf.geometry.convex_hull
     envelope = gdf.geometry.envelope
-    simplified = gdf.geometry.simplify(tolerance)
+    simplified = gdf.geometry.simplify(tolerance,  preserve_topology=preserve_topology)
     
     convex_gdf = copy.deepcopy(gdf)
     envelope_gdf = copy.deepcopy(gdf)
