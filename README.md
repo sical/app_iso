@@ -201,20 +201,37 @@ It is also possible to use a script ```./code/automate.py``` that generates PNG 
 | **jump**                  | 2 values for "jumping" through time (*first number for interval between 2 jumps in minutes , second number for number of "jumps"*), 0 for no jump | str | *60,2* |
 | **duration**              | duration for isochrone request (minutes) | int | *20* |
 | **step**                  | step value (1 for a duration of 20 mns will make 20 isochrones: 1mn, 2 mn, 3 mn, ...). 0 for no step | int | *1* |
-| **symplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex* |
- | **excluded_modes**				|	list of modes you want to exclude, default [] (*empty list*), (*see [here](#Modes)*) for possibilities | list of str | *["Metro","RapidTransit"]* |
+| **simplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex* |
+| **tolerance**							|	tolerance number for simplify method (higher is the number, greater is the simplification), default 50 | int | *100* |
+| **preserve_topology**			|	preserve or not the topology (*1 => yes, 0 => no*), default 1 | int | *1* |
+| **excluded_modes**				|	list of modes you want to exclude, default [] (*empty list*), (*see [here](#Modes)*) for possibilities | list of str | *["Metro","RapidTransit"]* |
 | **buffer_radar**         	|	determine if a buffer radar is added to the figure (0 => No, 1 => Yes, default 0) | int | 0 |
 | **around**         	      |	determine if a buffer is used to get points around origin to search for differences if points is moved from *x* meters ([distance in meters, precision]). Leave blank if you don't want to use it | list of int | *100,3* |
 | **origine_screen**        | 1 if origine on map, 0 if not (*only works on maps with tiles*) | int | *1* |
 | **only_overlay**          | 1 if only overlay on map, 0 if not | int | *1* |
 | **only_buffer**           | 1 if only buffers and no isochrone, 0 if not | int | *1* |
-| **buffer_times**          | list of string lists to give time for each buffer | list of str | *["10,20,30", "10,20,30"]* |
+| **buffer_times**          | list of string lists to set duration for each buffer in minutes | list of str | *["10,20,30", "10,20,30"]* |
 | **buffer_opacity**        | list of floats to manage opacity. **For now, must set same opacity for each buffer** | list of floats | *[0.5, 0.5]* |
 | **buffer_color**          | list of hex colors for buffers, number must be equal to number of addresses | list of str | *["#ff0000","#0000ff"]* |
 | **buffer_contour_size**   | list of string lists with contour width for each buffer | list of str | *["0.5,1.0,2.0", "0.5,1.0,2.0"]* |
 | **export_no_tiles**       |	Path (relative or absolute) to directory for no-tiles images (*use // to separate*) | str | *.//output_png//tests//no_tiles//* |
-| **export_with_tiles**       |	Path (relative or absolute) to directory for with-tiles images (*use // to separate*) | str | *.//output_png//tests//with_tiles//* |
-| **export_anim**       |	Path (relative or absolute) to directory for animation export (*use // to separate*) | str | *.//output_png//tests//anim//* |
+| **export_with_tiles**     |	Path (relative or absolute) to directory for with-tiles images (*use // to separate*) | str | *.//output_png//tests//with_tiles//* |
+| **export_anim**           |	Path (relative or absolute) to directory for animation export (*use // to separate*) | str | *.//output_png//tests//anim//* |
+| **inProj**                |	epsg for input coordinates (*from Navitia API*) | str | *epsg:4326* |
+| **outProj**               |	epsg for output coordinates (*to be used with Bokeh*) | str | *epsg:3857* |
+| **width**                 |	width of the plot in pixels  | int | *800* |
+| **height**                |	height of the plot in pixels  | int | *800* |
+| **alpha_tile**            |	opacity for tiles | float | *0.8* |
+| **alpha_surf**            |	opacity for polygons | float | *0.8* |
+| **alpha_cont**            |	opacity for polylines | float | *0.8* |
+| **alpha_building**        |	opacity for building layer | float | *0.8* |
+| **alpha_network**         |	opacity for network layer | float | *0.8* |
+| **color_network**         |	color for network | str | *#0000ff* |
+| **line_width_surf**       |	contour size for polygons | int | *2* |
+| **line_width_surf**       |	contour size for polylines | int | *2* |
+| **line_width_building**   |	contour size for buildings | int | *1* |
+| **distance_bbox**         |	distance in meters to measure a bounding box around a centroid | int | *15000* |
+
 
 ##### Modes
 > ***API is case sensitive so respect lowercase and uppercase.***

@@ -696,8 +696,7 @@ if __name__ == "__main__":
                     		"color_network": param["color_network"],
                     		"line_width_surf": param["line_width_surf"],
                     		"line_width_cont": param["line_width_cont"],
-                    		"line_width_building": param["line_width_building"], 
-                    		"field": param["field"]
+                    		"line_width_building": param["line_width_building"]
             }
             
             params = {}
