@@ -10,7 +10,7 @@ from bokeh.models import ColumnDataSource, HoverTool, TapTool, Slider, CustomJS
 from bokeh.models.widgets import Tabs, Div, RadioGroup
 from bokeh.plotting import figure, curdoc
 from bokeh.layouts import row, widgetbox
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, LineString
 from collections import namedtuple
 
 Bounds = namedtuple("Bounds", ["start_x", "end_x", "start_y", "end_y"])
@@ -168,17 +168,18 @@ def get_bbox(points, distance):
     """
     Get a bounding box from a list of points coords
     """
-    if len(points) >=3:
-        bounds_ = Polygon(points).centroid.buffer(
-                distance, 
-                resolution=16, 
-                cap_style=1, 
-                join_style=1, 
-                mitre_limit=1.0
-                ).bounds
+    
+    if len(points) == 2:
+        line = LineString(points)
+        pt = line.interpolate(line.length/2)        
+    
+    elif len(points) >=3:
+        pt = Polygon(points).centroid
+        
     else:
-        point = Point(points[0])
-        bounds_ = point.buffer(
+        pt = Point(points[0])
+    
+    bounds_ = pt.buffer(
                 distance, 
                 resolution=16, 
                 cap_style=1, 
