@@ -931,20 +931,24 @@ def simplify(gdf, tolerance, preserve_topology=True):
     convex_hull = gdf.geometry.convex_hull
     envelope = gdf.geometry.envelope
     simplified = gdf.geometry.simplify(tolerance,  preserve_topology=preserve_topology)
+    buffered = gdf.geometry.buffer(50, resolution=30)
     
     convex_gdf = copy.deepcopy(gdf)
     envelope_gdf = copy.deepcopy(gdf)
     simplified_gdf = copy.deepcopy(gdf)
+    buffered_gdf = copy.deepcopy(gdf)
     
     convex_gdf.geometry = convex_hull
     envelope_gdf.geometry = envelope
     simplified_gdf.geometry = simplified
+    buffered_gdf.geometry = buffered
     
     source_convex = convert_GeoPandas_to_Bokeh_format(convex_gdf)
     source_envelope = convert_GeoPandas_to_Bokeh_format(envelope_gdf)
     source_simplified = convert_GeoPandas_to_Bokeh_format(simplified_gdf)
+    source_buffered = convert_GeoPandas_to_Bokeh_format(buffered_gdf)
     
-    return source_convex, source_envelope, source_simplified
+    return source_convex, source_envelope, source_simplified, source_buffered
     
 def buffer_point(point, inProj, outProj, distance, precision):
     '''

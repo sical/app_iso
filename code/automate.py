@@ -184,6 +184,7 @@ def run(params_iso,x,y,adress, color):
     source_convex = data['source_convex']
     source_envelope = data['source_envelope']
     source_simplified = data['source_simplified']
+    source_buffered = data['source_buffered']
     
     list_gdf.append(gdf_poly)
     
@@ -195,7 +196,7 @@ def run(params_iso,x,y,adress, color):
         if data_intersection.data['color'] != []:
             colors_intersection = change_color(data_intersection.data['color'], used_colors, value_max)
             data_intersection.data['color'] = colors_intersection
-        for element in [source_convex, source_envelope, source_simplified]:
+        for element in [source_convex, source_envelope, source_simplified, source_buffered]:
             if element is not None:
                 element.data['color'] = colors_iso
             
@@ -312,6 +313,25 @@ def run(params_iso,x,y,adress, color):
                     **options_iso_simplified,
                     name=name + " (simplified)"
                     )
+                
+            # Buffered polygons
+            if simplify == "buffered" and source_buffered is not None:
+                options_iso_buffered = dict(
+                        fill_color = 'color', 
+                        fill_alpha = options_iso_surf['fill_alpha'],
+                        line_color=color, 
+                        line_alpha=params["fig_params"]["alpha_cont"],
+                        line_width=params["fig_params"]["line_width_surf"], 
+                        source=source_buffered,
+                        legend=name + " (buffered)"
+                        )
+                
+                poly_buffered = p_shape.patches(
+                    'xs', 
+                    'ys', 
+                    **options_iso_buffered,
+                    name=name + " (buffered)"
+                    )
             ###########################################################
             
         elif shape == "line":
@@ -387,6 +407,23 @@ def run(params_iso,x,y,adress, color):
                     'ys', 
                     **options_iso_simplified,
                     name=name + " (simplified)"
+                    )
+                
+            # Buffered polygons
+            if simplify == "buffered" and source_buffered is not None:
+                options_iso_buffered = dict(
+                        line_color = 'color', 
+                        line_alpha = options_iso_surf['line_alpha'],
+                        line_width=params["fig_params"]["line_width_cont"], 
+                        source=source_simplified,
+                        legend=name + " (buffered)"
+                        )
+                
+                poly_buffered = p_shape.multi_line(
+                    'xs', 
+                    'ys', 
+                    **options_iso_buffered,
+                    name=name + " (buffered)"
                     )
             ###########################################################
             
@@ -756,8 +793,8 @@ if __name__ == "__main__":
                 else:
                     topology = False
             else:
-                tolerance = None
-                topology = 0
+                tolerance = 10
+                topology = False
             try:
                 around = param["around"].split(',')
                 around = [int(around[0]), int(around[1])]
@@ -1049,6 +1086,7 @@ if __name__ == "__main__":
             p_shape.output_backend="webgl"
             p_shape.background_fill_color = None
             p_shape.border_fill_color = None
+            p_shape.outline_line_color = None
             
 #            p_shape.add_tile(
 #                    STAMEN_TERRAIN_RETINA, 

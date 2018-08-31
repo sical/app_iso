@@ -179,6 +179,9 @@ def get_iso(params, gdf_poly_mask, id_):
 
     else:
         code = None
+        
+    print ("code", code)
+    print ("url", url)
     
     if (code == 200 and step_mn == 0):
 #        print ("YES")
@@ -234,10 +237,10 @@ def get_iso(params, gdf_poly_mask, id_):
         
         #SOURCE POLYS BASIC #GO UP IF INTERSECTION OF SIMPLIFICATED NEEDED
         ## Simplify
-        if tolerance is not None:
-            source_convex, source_envelope, source_simplified = simplify(gdf_stats, tolerance, preserve_topology=topology)
+        if method is not None:
+            source_convex, source_envelope, source_simplified, source_buffered = simplify(gdf_stats, tolerance, preserve_topology=topology)
         else:
-            source_convex, source_envelope, source_simplified = None, None, None
+            source_convex, source_envelope, source_simplified, source_buffered = None, None, None, None
         
         #GEOJSON POLY
         gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color', 'address', 'datetime'])
@@ -350,7 +353,10 @@ def get_iso(params, gdf_poly_mask, id_):
         
         
     else:
-        if r.json()["error"]["message"]:
+        if r.json()["message"]:
+            status = str(r.json()["message"]) + ": " + "Measure not possible"
+            print ('ERROR:', status)
+        elif r.json()["error"]["message"]:
             status = str(r.json()["error"]["message"]) + ": " + "Measure not possible"
             print ('ERROR:', status)
         else:
@@ -370,6 +376,7 @@ def get_iso(params, gdf_poly_mask, id_):
             'source_buffer_geojson': source_buffer_geojson,
             'source_convex': source_convex,
             'source_simplified': source_simplified,
-            'source_envelope': source_envelope
+            'source_envelope': source_envelope,
+            'source_buffered': source_buffered
             }
      
