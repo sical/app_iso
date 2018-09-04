@@ -31,13 +31,14 @@ import progressbar
 from docopt import docopt
 from selenium import webdriver
 import geojson
+import pandas as pd
 import warnings
 
 warnings.filterwarnings('ignore')
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
-from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded
+from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded, time_profile, seconds_to_time
 from bokeh_tools import get_bbox
 from csv_to_json import csv_to_json
 
@@ -49,6 +50,8 @@ end_loop = False
 tolerance = 400
 value_max = 20
 
+dict_all_times = {}
+
 used_colors = [] #list of colors used to get unique color
 
 columns_with_array_of_str = [
@@ -58,7 +61,8 @@ columns_with_array_of_str = [
         "buffer_opacity",
         "buffer_color",
         "buffer_contour_size",
-        "excluded_modes"
+        "excluded_modes",
+        "durations"
         ]
 
 def create_dir(path):
@@ -172,7 +176,12 @@ def run(params_iso,x,y,adress, color):
     global gdf_poly_mask
     global alert
     
+    start_time = time.time()
+    
     data = get_iso(params_iso, gdf_poly_mask, id_)
+    dict_time["get_iso"] += time_profile(start_time, option="ms")
+    start_time = time.time()
+    
     gdf_poly_mask = data['gdf_poly_mask']
 
     source = data['source']
@@ -199,8 +208,6 @@ def run(params_iso,x,y,adress, color):
         for element in [source_convex, source_envelope, source_simplified, source_buffered]:
             if element is not None:
                 element.data['color'] = colors_iso
-            
-        #TODO: faire couleur pour les versions simplifiées ici pour tester ou changer pour les iso et mettre dans get iso. A voir
         
         #DataSource to dict
         dict_source = {}
@@ -835,6 +842,8 @@ if __name__ == "__main__":
             
             
             if jump_mn != 0:
+                dict_time = {}
+                dict_time["get_iso"] = 0
                 for adress in adresses:
                     end_loop = False
                     index_list = adresses.index(adress)
@@ -873,12 +882,13 @@ if __name__ == "__main__":
                             'str_modes': str_modes,
                             'tolerance': tolerance,
                             'simplify': simplify,
-                            'topology': topology
-                            
+                            'topology': topology,
+                            'durations': param["durations"]
                                 }     
                         
                         if nb == jump_nb-1:
                             end_loop = True
+                        
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
                         if step_mn == 0:
@@ -927,8 +937,11 @@ if __name__ == "__main__":
                             "from_place":place,
                             "address":adress
                             }
-
+                    
+                    start_time = time.time()
                     source_buffers = create_buffers(params_buffers)
+                    dict_time = {}
+                    dict_time["buffer"] = time_profile(start_time, option="ms")
                     del params_buffers["inproj"]
                     del params_buffers["outproj"]
                     del params_buffers["opacities"]
@@ -959,6 +972,8 @@ if __name__ == "__main__":
                         
             else:
                 if around != []:
+                    dict_time = {}
+                    dict_time["get_iso"] = 0
                     for adress in adresses:
                         index_list = adresses.index(adress)
                         color = colors_iso[index_list]
@@ -995,8 +1010,8 @@ if __name__ == "__main__":
                                 'str_modes': str_modes,
                                 'tolerance': tolerance,
                                 'simplify': simplify,
-                                'topology': topology
-                                
+                                'topology': topology,
+                                'durations': param["durations"]
                                     }     
                             
                             p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress,color)
@@ -1009,6 +1024,8 @@ if __name__ == "__main__":
                                 l_dict_iso.append(dict_source)
                             
                 else:
+                    dict_time = {}
+                    dict_time["get_iso"] = 0
                     for adress in adresses:
                         index_list = adresses.index(adress)
                         color = colors_iso[index_list]
@@ -1041,10 +1058,10 @@ if __name__ == "__main__":
                             'str_modes': str_modes,
                             'tolerance': tolerance,
                             'simplify': simplify,
-                            'topology': topology
-                            
-                                }     
-                        
+                            'topology': topology,
+                            'durations': param["durations"]
+                                }    
+
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
                         if step_mn == 0:
@@ -1097,11 +1114,15 @@ if __name__ == "__main__":
             
             create_dir(export_no_tiles)
             name = export_no_tiles + identity
+            start_time = time.time()
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+            dict_time["png_no_tiles"] = time_profile(start_time, option="ms")
 #            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
 #            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
             p_shape.output_backend="svg"
+            start_time = time.time()
             export_svgs(p_shape, filename="{}.svg".format(name), webdriver=my_webdriver)
+            dict_time["svg"] = time_profile(start_time, option="ms")
             
             #EXPORT PARAMS TO JSON
             params_name = export_no_tiles + identity + "_params"
@@ -1172,7 +1193,9 @@ if __name__ == "__main__":
             
             create_dir(export_with_tiles)
             name = export_with_tiles + identity
+            start_time = time.time()
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+            dict_time["png_with_tiles"] = time_profile(start_time, option="ms")
 #            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
 #            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
                 
@@ -1210,7 +1233,10 @@ if __name__ == "__main__":
             
             create_dir(export_only_tiles)
             name = export_only_tiles + identity
+            
+            start_time = time.time()
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+            dict_time["only_tiles"] = time_profile(start_time, option="ms")
             
             #RESET
             p_shape = make_plot(params_plot)
@@ -1229,13 +1255,35 @@ if __name__ == "__main__":
     #        gdfs = pd.concat(list_gdf)
             
             exe_duration = time.time() - start_time
+            dict_all_times[param["id"]] = dict_time
+            
             
     #        gdfs.to_csv("test.csv")
             
-            time.sleep(5) #sleep 5 seconds to avoid a Geocoder problem
+            time.sleep(2) #sleep 5 seconds to avoid a Geocoder problem
     #        print (fmt.format(rd(seconds=exe_duration)))
             
             bar.update(i+1)
+    
+    #EXPORT LOGS
+    df_times = pd.DataFrame.from_dict(dict_all_times, orient='index')
+    dict_ = {}
+    
+    for col in df_times.columns:
+        tmp = {}
+        tmp["mean"] = df_times[col].mean()
+        tmp["max"] = df_times[col].max()
+        tmp["min"] = df_times[col].min()
+        dict_[col] = tmp
+        
+    df_ = pd.DataFrame.from_dict(dict_, orient='columns')
+    df = pd.concat([df_times, df_])
+    
+    for col in df.columns:
+        new_col = col + "_format"
+        df[new_col] = df[col].map(lambda x: seconds_to_time(x/1000, option="format"))
+        
+    df.to_csv("time_logs.csv")
     
     if anim is True:
         adress = "20 hameau de la commanderie, 59840 LOMPRET"

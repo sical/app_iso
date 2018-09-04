@@ -133,8 +133,9 @@ def get_iso(params, gdf_poly_mask, id_):
     coeff_conv = 0.2 # See Brinkhoff et al. paper
     str_modes = params['str_modes']
     tolerance = params['tolerance']
-    method = params['simplify']
+    method_simpl = params['simplify']
     topology = params['topology']
+    durations = params['durations']
     
     color = colors_blend(color, color)
     
@@ -142,19 +143,30 @@ def get_iso(params, gdf_poly_mask, id_):
     
     l_cuts = []
     
-    if step_mn != 0:
-        if nb_iter < 10:
-            step = int(step)
-            nb_iter = step//(step_mn*60)
-            cutoffs, list_time, cuts = _cutoffs(nb_iter, step_mn*60)
+    # TODO: ajouter ici un systeme pour gérer des listes de temps ou similaire
+    
+    if durations != []:
+        durations = [i*60 for i in durations]
+        if len(durations) < 10:
+            cutoffs, list_time, cuts = _cutoffs(0, 0, durations=durations)
             l_cuts = [cuts[x:x+10] for x in range(0, len(cuts),10)]
-                
         else:
-            cutoffs, list_time, cuts = _cutoffs(nb_iter, step_mn*60)
+            cutoffs, list_time, cuts = _cutoffs(0, 0, durations=durations)
             l_cuts = [cuts,]
     else:
-        nb_iter = 1
-        cutoffs, list_time, cuts = _cutoffs(nb_iter, step)
+        if step_mn != 0:
+            if nb_iter < 10:
+                step = int(step)
+                nb_iter = step//(step_mn*60)
+                cutoffs, list_time, cuts = _cutoffs(nb_iter, step_mn*60)
+                l_cuts = [cuts[x:x+10] for x in range(0, len(cuts),10)]
+                    
+            else:
+                cutoffs, list_time, cuts = _cutoffs(nb_iter, step_mn*60)
+                l_cuts = [cuts,]
+        else:
+            nb_iter = 1
+            cutoffs, list_time, cuts = _cutoffs(nb_iter, step)
 #    if nb_iter > 11:
 #        print ("Please select a number of iterations inferior to 11")
 #        return
@@ -179,9 +191,7 @@ def get_iso(params, gdf_poly_mask, id_):
 
     else:
         code = None
-        
-    print ("code", code)
-    print ("url", url)
+
     
     if (code == 200 and step_mn == 0):
 #        print ("YES")
@@ -237,7 +247,7 @@ def get_iso(params, gdf_poly_mask, id_):
         
         #SOURCE POLYS BASIC #GO UP IF INTERSECTION OF SIMPLIFICATED NEEDED
         ## Simplify
-        if method is not None:
+        if method_simpl is not None:
             source_convex, source_envelope, source_simplified, source_buffered = simplify(gdf_stats, tolerance, preserve_topology=topology)
         else:
             source_convex, source_envelope, source_simplified, source_buffered = None, None, None, None
@@ -257,9 +267,9 @@ def get_iso(params, gdf_poly_mask, id_):
     elif (l_cuts!=[] and step_mn != 0):
         for cut in l_cuts:
             cutoffs = ''.join(cut)
-            print ("l_cuts", l_cuts)
-            print ("cut", cut)
-            print ("cutoffs", cutoffs)
+#            print ("l_cuts", l_cuts)
+#            print ("cut", cut)
+#            print ("cutoffs", cutoffs)
             url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}'.format(
                     id_,
                     from_place,
@@ -350,6 +360,7 @@ def get_iso(params, gdf_poly_mask, id_):
         source_simplified = None
         source_convex = None
         source_buffer_geojson = None
+        source_buffered = None
         
         
     else:

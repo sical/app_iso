@@ -65,12 +65,27 @@ geolocator = Nominatim()
 #            feature.pop(properties, None)
 #    return json.dumps(geojson_)
 
-def seconds_to_time(seconds): 
-    m, s = divmod(seconds, 60)
+def seconds_to_time(seconds, option="all"): 
+    milliseconds = int(round(seconds * 1000))
+    s, ms = divmod(milliseconds, 1000)
+    m, s = divmod(s, 60)
     h, m = divmod(m, 60)
-    time_format = "%02d:%02d:%02d" % (h, m, s)
+    time_format = "%02d:%02d:%02d:%02d" % (h, m, s, ms)
     
-    return time_format
+    if option == "all":
+        return time_format, milliseconds
+    elif option == "ms":
+        return milliseconds
+    elif option == "format":
+        return time_format
+    
+
+def time_profile(start, option="all"):
+    end = time.time()
+    seconds = seconds_to_time(end - start, option=option)
+    
+    return seconds
+    
 
 def colors_blend(c1, c2):
     if "#" in str(c1):
@@ -302,7 +317,7 @@ def m_poly_to_pts(multipoly):
     return x,y
 
 
-def _cutoffs(nb_iter, step):
+def _cutoffs(nb_iter, step, durations=[]):
     """
     Returns a string for Navitia API for step and seconds by step
     Returns a list of time values
@@ -310,16 +325,24 @@ def _cutoffs(nb_iter, step):
     @param nb_iter (number): numer of iterations
     @param step (number): number of steps
     """
-    end = step*(nb_iter+1)
     list_time = []
     cutoffs = ""
     cuts = []
-
-    for i in range(step, end, step):
-        cut = "&boundary_duration[]=" + str(i)
-        cutoffs += cut
-        cuts.append(cut)
-        list_time.append(i)
+    
+    if durations != []:
+        for i in durations:
+            cut = "&boundary_duration[]=" + str(i)
+            cutoffs += cut
+            cuts.append(cut)
+            list_time.append(i)
+    else:
+        end = step*(nb_iter+1)
+    
+        for i in range(step, end, step):
+            cut = "&boundary_duration[]=" + str(i)
+            cutoffs += cut
+            cuts.append(cut)
+            list_time.append(i)
     
     return cutoffs, list_time, cuts
 
@@ -328,7 +351,7 @@ def create_pts(gdf_poly):
     """
     Create points ColumnDataSource from GeoDataFrame of polygons
     
-    @param gdf_poly (GeoDataFrame): GeoDataFrame polygonss
+    @param gdf_poly (GeoDataFrame): GeoDataFrame polygons
     
     Returns ColumnDataSource
     """
