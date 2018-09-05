@@ -20,6 +20,8 @@ from bokeh.io import export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
 from bokeh.models import ColumnDataSource
 from bokeh.models import Range1d
+from shapely.geometry import Polygon
+from geopandas import GeoDataFrame
 from dotenv import load_dotenv
 from pathlib import Path
 import json
@@ -38,7 +40,7 @@ warnings.filterwarnings('ignore')
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
-from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded, time_profile, seconds_to_time
+from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded, time_profile, seconds_to_time, convert_GeoPandas_to_Bokeh_format
 from bokeh_tools import get_bbox
 from csv_to_json import csv_to_json
 
@@ -197,9 +199,10 @@ def run(params_iso,x,y,adress, color):
     
     list_gdf.append(gdf_poly)
     
-    #Give each polygon a unique color
-    if step_mn == 0:
-        #UNCOMMENT 2 LINES IF UNIQUE COLOR FOR EACH POLYGON IS NEEDED
+    #TODO: VOIR ICI POUR LES CHANGEMENTS DE COULEURS !!! Prendre le .geojson du geojson généré, itérer dessus et rebalancer le tout. 
+    
+    #Give each polygon a unique color 
+    if step_mn == 0 and params_iso["durations"] == []:
         colors_iso = change_color(source.data['color'], used_colors, value_max)
         source.data['color'] = colors_iso
         if data_intersection.data['color'] != []:
@@ -225,8 +228,57 @@ def run(params_iso,x,y,adress, color):
                 dict_intersection[key] = new_value
             else:
                 dict_intersection[key] = value
+        
+        color = 'color' 
+#        print ("######## CASE 1 #############")
+#        print (source.data['xs'])
+#        print ("#############################")
     
     else:
+        geo = json.loads(source.geojson)["features"]
+        nb_colors = len(geo)
+        colors = [params_iso['color'] for i in range(0, nb_colors)]
+        color = change_color(colors, used_colors, value_max)
+#        xs = []
+#        ys = []
+#        for poly in geo:
+#            coords = poly["geometry"]["coordinates"][0]
+#            x = np.array([i[0] for i in coords])
+#            y = np.array([i[1] for i in coords])
+#            xs.append(list(x))
+#            ys.append(list(y))
+#            
+#        source = ColumnDataSource(data=dict(
+#                xs = xs,
+#                ys = xs,
+#                color = color
+#                )
+#        )
+        
+        dict_poly = {}
+        i_ = 0
+        for poly, color_ in zip(geo, color):
+            tmp = {}
+            coords = poly["geometry"]["coordinates"][0]
+            tmp["geometry"] = Polygon(coords)
+            tmp["color"] = color_
+            dict_poly[i_] = tmp
+            i_+=1
+        
+        df = pd.DataFrame.from_dict(dict_poly, orient="index")
+        crs = {'init':'epsg:3857'}
+        gdf = GeoDataFrame(df, crs=crs, geometry=df['geometry'])
+        source = convert_GeoPandas_to_Bokeh_format(gdf)
+        
+#        print ("========= CASE 2 ===========")
+#        print (source.data['xs'])
+#        print ("============================")
+        color = 'color'
+        
+        
+        
+#        geo = json.loads(geojson.geojson)["features"]
+#        for geo in source.geojson
         dict_source = {}
         dict_intersection = {}
         
@@ -236,14 +288,11 @@ def run(params_iso,x,y,adress, color):
     
 #        source_intersection.data.update(data_intersection.data)
         
-    if step_mn == 0:
-        color = 'color' 
-        
     if only_overlay == 0:
         if shape == "poly":
             name = "polys" + str(counter_polys)
             options_iso_surf = dict(
-                    fill_color=color, 
+                    fill_color='color', 
                     fill_alpha = params_iso['opacity_iso'],
                     line_color=color, 
                     line_alpha=params["fig_params"]["alpha_cont"],
@@ -251,6 +300,7 @@ def run(params_iso,x,y,adress, color):
                     source=source,
                     legend="Isochrone_polys" + str(counter_polys)
                     )
+            
             if simplify == "None":
                 poly_patches = p_shape.patches(
                     'xs', 
@@ -891,7 +941,7 @@ if __name__ == "__main__":
                         
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
-                        if step_mn == 0:
+                        if step_mn == 0 and params_iso["durations"] == []:
                             del dict_source['xs']
                             del dict_source['ys']
                             del dict_intersection['xs']
@@ -1016,7 +1066,7 @@ if __name__ == "__main__":
                             
                             p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress,color)
                             
-                            if step_mn == 0:
+                            if step_mn == 0 and params_iso["durations"] == []:
                                 del dict_source['xs']
                                 del dict_source['ys']
                                 del dict_intersection['xs']
@@ -1064,7 +1114,7 @@ if __name__ == "__main__":
 
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
-                        if step_mn == 0:
+                        if step_mn == 0 and params_iso["durations"] == []:
                             del dict_source['xs']
                             del dict_source['ys']
                             del dict_intersection['xs']

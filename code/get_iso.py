@@ -142,8 +142,7 @@ def get_iso(params, gdf_poly_mask, id_):
     date_time = min_date.isoformat() + "T" + time_in
     
     l_cuts = []
-    
-    # TODO: ajouter ici un systeme pour gérer des listes de temps ou similaire
+
     
     if durations != []:
         durations = [i*60 for i in durations]
@@ -256,7 +255,6 @@ def get_iso(params, gdf_poly_mask, id_):
         gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time', 'color', 'address', 'datetime'])
         source_polys_geojson = json.dumps(gdf_geojson)
         
-        
         if shape == "poly" or shape == "line":
             source = source_polys
         else:
@@ -264,7 +262,7 @@ def get_iso(params, gdf_poly_mask, id_):
         
         status = ""
         
-    elif (l_cuts!=[] and step_mn != 0):
+    elif (l_cuts!=[] or step_mn != 0):
         for cut in l_cuts:
             cutoffs = ''.join(cut)
 #            print ("l_cuts", l_cuts)
@@ -312,6 +310,7 @@ def get_iso(params, gdf_poly_mask, id_):
         
         gdf_poly.crs = {'init': inProj}
         gdf_poly = gdf_poly.to_crs({'init': outProj})
+        
         
         #Difference
 #        gdf_poly["poly_shift"] = gdf_poly["geometry"].shift(-1)
