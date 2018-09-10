@@ -17,7 +17,7 @@ import time
 import random
 
 from bokeh.io import export_png, export_svgs
-from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA
+from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA, CARTODBPOSITRON_RETINA
 from bokeh.models import ColumnDataSource
 from bokeh.models import Range1d
 from shapely.geometry import Polygon
@@ -44,10 +44,18 @@ from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffe
 from bokeh_tools import get_bbox
 from csv_to_json import csv_to_json
 
+#Set the provider
+tile_provider = CARTODBPOSITRON_RETINA
+
 #Set the webdriver 
 my_webdriver = None
 
-places_cache = {} # dict to keep lat/lon if adress already been geocoded 
+try:
+    places_cache = "./params/places_cache.json"
+    places_cache = json.load(open(places_cache))
+except:
+    places_cache = {} # dict to keep lat/lon if adress already been geocoded 
+    
 end_loop = False
 tolerance = 400
 value_max = 20
@@ -274,8 +282,6 @@ def run(params_iso,x,y,adress, color):
 #        print (source.data['xs'])
 #        print ("============================")
         color = 'color'
-        
-        
         
 #        geo = json.loads(geojson.geojson)["features"]
 #        for geo in source.geojson
@@ -1156,7 +1162,7 @@ if __name__ == "__main__":
             p_shape.outline_line_color = None
             
 #            p_shape.add_tile(
-#                    STAMEN_TERRAIN_RETINA, 
+#                    tile_provider, 
 #                    alpha=0.5, 
 #                    name="no_tile",
 #                    visible=False
@@ -1224,7 +1230,7 @@ if __name__ == "__main__":
 #                    legend="Origins"
                         )
             
-            p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+            p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
             
             #Set range of figure
             if (start_x != end_x) and (start_y != end_y):
@@ -1279,7 +1285,7 @@ if __name__ == "__main__":
             p_shape.x_range = Range1d(x_range_start, x_range_end)
             p_shape.y_range = Range1d(y_range_start, y_range_end)
             
-            p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+            p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
             
             create_dir(export_only_tiles)
             name = export_only_tiles + identity
@@ -1334,6 +1340,10 @@ if __name__ == "__main__":
         df[new_col] = df[col].map(lambda x: seconds_to_time(x/1000, option="format"))
         
     df.to_csv("time_logs.csv")
+    
+    #WRITE PLACES_CACHE
+    with open("./params/places_cache.json", 'w', encoding='utf-8') as outfile:
+        json.dump(places_cache, outfile, sort_keys=True, indent=2)
     
     if anim is True:
         adress = "20 hameau de la commanderie, 59840 LOMPRET"
@@ -1392,7 +1402,7 @@ if __name__ == "__main__":
             p_shape = run(params_iso, x,y,l_adress)
         
             #EXPORT NO_TILES PNG
-            p_shape.add_tile(STAMEN_TERRAIN_RETINA, alpha=params["fig_params"]["alpha_tile"], name="tile")
+            p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
             
             #ADD TITLE
             title = "From: " + adress + ", Duration: " + str(step_value//60) + "mn at " + str(time_value)

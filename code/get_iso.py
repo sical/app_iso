@@ -4,7 +4,7 @@ Created on Thu Apr 26 16:55:25 2018
 
 @author: thomas
 """
-
+import time
 import requests
 from geojson import Feature, MultiPolygon, FeatureCollection, Polygon
 import geojson
@@ -146,7 +146,7 @@ def get_iso(params, gdf_poly_mask, id_):
     
     if durations != []:
         durations = [i*60 for i in durations]
-        if len(durations) < 10:
+        if len(durations) > 10:
             cutoffs, list_time, cuts = _cutoffs(0, 0, durations=durations)
             l_cuts = [cuts[x:x+10] for x in range(0, len(cuts),10)]
         else:
@@ -275,7 +275,6 @@ def get_iso(params, gdf_poly_mask, id_):
                     cutoffs,
                     str_modes
             )
-            
 #            print (url)
 #            print ("#########################")
             
@@ -283,7 +282,7 @@ def get_iso(params, gdf_poly_mask, id_):
                     'accept': 'application/json',
                     'Authorization': TOKEN
                     }
-    
+
             r = requests.get(url, headers=headers)
             code = r.status_code
             
@@ -304,6 +303,8 @@ def get_iso(params, gdf_poly_mask, id_):
                             }
                         )
                 gdf_polys.append(multi)
+                
+#            time.sleep(1) #Sleep to avoid API timeout
  
         collection = FeatureCollection(gdf_polys)
         gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])

@@ -11,14 +11,14 @@ from geopy.geocoders import Nominatim, Photon
 import osmnx as ox
 import json
 import numpy as np
-from shapely.geometry import MultiPolygon, Point
+from shapely.geometry import MultiPolygon, Point, Polygon
 from pyproj import transform, Proj 
 import copy
 import time
 
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, HoverTool
 
-#geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
+geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
 
 geolocator = Nominatim()
@@ -131,6 +131,7 @@ def gdf_to_geojson(gdf, properties):
     """
     
     geojson_ = {"type":"FeatureCollection", "features":[]}
+    
     for line in gdf.itertuples():
         if (isinstance(line.geometry, MultiPolygon)):
             for poly in line.geometry:
@@ -262,13 +263,13 @@ def geocode(adress, places_cache):
         location = geolocator.geocode(adress)
         if location is None:
             print ('Error on : ' + adress)
-        places_cache[adress] = location
+        places_cache[adress] = location.longitude, location.latitude
         time.sleep(5)
+        return location.longitude, location.latitude 
     else:
         location = places_cache[adress]
+        return location[0], location[1]
     
-    return location.longitude, location.latitude 
-
 
 def _convert_epsg(inProj, outProj, geojson_, duration):
     """
@@ -986,4 +987,24 @@ def buffer_point(point, inProj, outProj, distance, precision):
     
     return coords
     
+def cds_to_geojson(cds):
+    """
+    Transform Bokeh ColumnDataSource to GeoJSON
+    """
+    #CDS TO DF
+    df = pd.DataFrame.from_dict(cds.data,orient='index').transpose()
+    
+    l_poly = []
+    for xs,ys in zip(cds.data["xs"], cds.data["ys"]):
+        poly = Polygon([(x,y) for x,y in zip(xs,ys)])
+        l_poly.append(poly)
+        
+    df = df.drop(["xs","ys"], axis=1)
+    crs = {"init": "epsg:3857"}
+    gdf = gpd.GeoDataFrame(df, crs=crs, geometry=l_poly)
+    properties = list(df.columns)
+    properties.remove("geometry")
+    geo_dump = gdf_to_geojson(gdf, properties)[0]
+    
+    return geo_dump
     
