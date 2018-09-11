@@ -25,6 +25,7 @@ from geopandas import GeoDataFrame
 from dotenv import load_dotenv
 from pathlib import Path
 import json
+import copy
 from dateutil.relativedelta import relativedelta as rd
 from pyproj import transform, Proj
 import imageio
@@ -40,7 +41,7 @@ warnings.filterwarnings('ignore')
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
-from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded, time_profile, seconds_to_time, convert_GeoPandas_to_Bokeh_format
+from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded, time_profile, seconds_to_time, convert_GeoPandas_to_Bokeh_format, cds_to_geojson, create_dir, write_geojson, dict_geojson
 from bokeh_tools import get_bbox
 from csv_to_json import csv_to_json
 
@@ -75,9 +76,7 @@ columns_with_array_of_str = [
         "durations"
         ]
 
-def create_dir(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
+
 
 def get_range_colors(color, value_max):
     if color - value_max < 0:
@@ -185,6 +184,7 @@ def run(params_iso,x,y,adress, color):
     global p_shape
     global gdf_poly_mask
     global alert
+    global unique_id
     
     start_time = time.time()
     
@@ -238,6 +238,8 @@ def run(params_iso,x,y,adress, color):
                 dict_intersection[key] = value
         
         color = 'color' 
+        
+        colors_geo = colors_iso
 #        print ("######## CASE 1 #############")
 #        print (source.data['xs'])
 #        print ("#############################")
@@ -247,6 +249,7 @@ def run(params_iso,x,y,adress, color):
         nb_colors = len(geo)
         colors = [params_iso['color'] for i in range(0, nb_colors)]
         color = change_color(colors, used_colors, value_max)
+        colors_geo = color
 #        xs = []
 #        ys = []
 #        for poly in geo:
@@ -287,7 +290,6 @@ def run(params_iso,x,y,adress, color):
 #        for geo in source.geojson
         dict_source = {}
         dict_intersection = {}
-        
     
     if source is None:
         shape = ""
@@ -316,6 +318,10 @@ def run(params_iso,x,y,adress, color):
                     )
                 
                 counter_polys += 1 
+                
+            #EXPORT TO GEOJSON
+            cds = dict_geojson(options_iso_surf, colors_geo)
+            write_geojson(cds, params_iso["id"], unique_id)
             
             ###########################################################
             # SIMPLIFIED VERSIONS
@@ -338,6 +344,10 @@ def run(params_iso,x,y,adress, color):
                     **options_iso_convex,
                     name=name + " (convex)"
                     )
+                
+                #EXPORT TO GEOJSON
+                cds = dict_geojson(options_iso_convex, colors_geo)
+                write_geojson(cds, params_iso["id"], unique_id)
             
             # Envelope polygons
             if simplify == "envelope" and source_envelope is not None:
@@ -358,6 +368,10 @@ def run(params_iso,x,y,adress, color):
                     name=name + " (envelope)"
                     )
                 
+                #EXPORT TO GEOJSON
+                cds = dict_geojson(options_iso_envelope, colors_geo)
+                write_geojson(cds, params_iso["id"], unique_id)
+                
             # Simplified polygons
             if simplify == "simplify" and source_simplified is not None:
                 options_iso_simplified = dict(
@@ -377,6 +391,10 @@ def run(params_iso,x,y,adress, color):
                     name=name + " (simplified)"
                     )
                 
+                #EXPORT TO GEOJSON
+                cds = dict_geojson(options_iso_simplified, colors_geo)
+                write_geojson(cds, params_iso["id"], unique_id)
+                
             # Buffered polygons
             if simplify == "buffered" and source_buffered is not None:
                 options_iso_buffered = dict(
@@ -395,6 +413,11 @@ def run(params_iso,x,y,adress, color):
                     **options_iso_buffered,
                     name=name + " (buffered)"
                     )
+                
+                #EXPORT TO GEOJSON
+                cds = dict_geojson(options_iso_buffered, colors_geo)
+                write_geojson(cds, params_iso["id"], unique_id)
+                
             ###########################################################
             
         elif shape == "line":
@@ -609,6 +632,8 @@ def run(params_iso,x,y,adress, color):
 ###################################################
 
 if __name__ == "__main__":
+    
+    unique_id = 0
 
     #Parameters
     try:
@@ -939,7 +964,8 @@ if __name__ == "__main__":
                             'tolerance': tolerance,
                             'simplify': simplify,
                             'topology': topology,
-                            'durations': param["durations"]
+                            'durations': param["durations"],
+                            'id': param["id"]
                                 }     
                         
                         if nb == jump_nb-1:
@@ -1067,7 +1093,8 @@ if __name__ == "__main__":
                                 'tolerance': tolerance,
                                 'simplify': simplify,
                                 'topology': topology,
-                                'durations': param["durations"]
+                                'durations': param["durations"],
+                                'id': param["id"]
                                     }     
                             
                             p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress,color)
@@ -1115,7 +1142,8 @@ if __name__ == "__main__":
                             'tolerance': tolerance,
                             'simplify': simplify,
                             'topology': topology,
-                            'durations': param["durations"]
+                            'durations': param["durations"],
+                            'id': param["id"]
                                 }    
 
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
@@ -1391,7 +1419,8 @@ if __name__ == "__main__":
                 'color':color,
                 'color_switch': "white",
                 'opacity_intersection':0.0,
-                'opacity_iso':opacity_iso
+                'opacity_iso':opacity_iso,
+                'id': param["id"]
                     }     
      
         for i in range(0,range_value):

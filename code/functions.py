@@ -4,10 +4,12 @@ Created on Thu Apr 12 13:31:04 2018
 
 @author: thomas
 """
+import os
 import math
 import pandas as pd
 import geopandas as gpd
 from geopy.geocoders import Nominatim, Photon
+import geojson
 import osmnx as ox
 import json
 import numpy as np
@@ -131,6 +133,7 @@ def gdf_to_geojson(gdf, properties):
     """
     
     geojson_ = {"type":"FeatureCollection", "features":[]}
+    style_col = ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity"]
     
     for line in gdf.itertuples():
         if (isinstance(line.geometry, MultiPolygon)):
@@ -140,6 +143,7 @@ def gdf_to_geojson(gdf, properties):
                     l_poly.extend([[pt[0],pt[1]]])
                 feature = {"type":"Feature",
                        "properties":{},
+                       "style":{},
                        "geometry":{
                                "type":"Polygon",
                                "coordinates":[]
@@ -152,7 +156,11 @@ def gdf_to_geojson(gdf, properties):
                         value_prop = gdf.at[line.Index, prop]
                         if type(value_prop) == np.int64:
                             value_prop = int(value_prop)
-                        feature["properties"][prop] = value_prop
+                        
+                        if prop not in style_col:
+                            feature["properties"][prop] = value_prop
+                        else:
+                            feature["style"][prop] = value_prop
                 
                     geojson_["features"].append(feature)
                 else:
@@ -163,6 +171,7 @@ def gdf_to_geojson(gdf, properties):
                 l_poly.extend([[pt[0],pt[1]]])
             feature = {"type":"Feature",
                    "properties":{},
+                   "style":{},
                    "geometry":{
                            "type":"Polygon",
                            "coordinates":[]
@@ -175,7 +184,10 @@ def gdf_to_geojson(gdf, properties):
                     value_prop = gdf.at[line.Index, prop]
                     if type(value_prop) == np.int64:
                         value_prop = int(value_prop)
-                    feature["properties"][prop] = value_prop
+                    if prop not in style_col:
+                        feature["properties"][prop] = value_prop
+                    else:
+                        feature["style"][prop] = value_prop
             
                 geojson_["features"].append(feature)
             else:
@@ -987,15 +999,15 @@ def buffer_point(point, inProj, outProj, distance, precision):
     
     return coords
     
-def cds_to_geojson(cds):
+def cds_to_geojson(data):
     """
     Transform Bokeh ColumnDataSource to GeoJSON
     """
     #CDS TO DF
-    df = pd.DataFrame.from_dict(cds.data,orient='index').transpose()
+    df = pd.DataFrame.from_dict(data,orient='index').transpose()
     
     l_poly = []
-    for xs,ys in zip(cds.data["xs"], cds.data["ys"]):
+    for xs,ys in zip(data["xs"], data["ys"]):
         poly = Polygon([(x,y) for x,y in zip(xs,ys)])
         l_poly.append(poly)
         
@@ -1004,7 +1016,36 @@ def cds_to_geojson(cds):
     gdf = gpd.GeoDataFrame(df, crs=crs, geometry=l_poly)
     properties = list(df.columns)
     properties.remove("geometry")
-    geo_dump = gdf_to_geojson(gdf, properties)[0]
+    geo_dump = gdf_to_geojson(gdf, properties)[1]
     
     return geo_dump
+
+def create_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+def write_geojson(cds, id_, unique_id):
     
+    geo = cds_to_geojson(cds)
+    dir_json = "./geojson/" + id_
+    create_dir(dir_json)
+    name_geo = dir_json + "/" + str(unique_id) + ".geojson"
+    with open(name_geo, 'w') as outfile:
+        geojson.dump(geo, outfile)
+        
+def dict_geojson(options_dict, colors):
+    dict_ = {}
+    for k,v in options_dict["source"].data.items():
+        dict_[k] = v
+    nb = len(colors)
+    tmp = {
+            "fill": colors,
+            "fill-opacity": [options_dict["fill_alpha"] for i in range(0,nb)],
+            "stroke": colors,
+            "stroke-opacity": [options_dict["line_alpha"] for i in range(0,nb)],
+            "stroke-width": [options_dict["line_width"] for i in range(0,nb)]
+            }
+    dict_.update(tmp)
+    
+    return dict_
+        
