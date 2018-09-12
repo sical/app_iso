@@ -18,8 +18,9 @@ import random
 
 from bokeh.io import export_png, export_svgs
 from bokeh.tile_providers import STAMEN_TONER, STAMEN_TERRAIN_RETINA, CARTODBPOSITRON_RETINA
-from bokeh.models import ColumnDataSource
-from bokeh.models import Range1d
+from bokeh.models import ColumnDataSource, Range1d, WheelZoomTool, PanTool
+from bokeh.resources import CDN
+from bokeh.embed import file_html
 from shapely.geometry import Polygon
 from geopandas import GeoDataFrame
 from dotenv import load_dotenv
@@ -1233,6 +1234,16 @@ if __name__ == "__main__":
                 json_name = filename="{}.json".format(overlay_name)
                 with open(json_name, 'w', encoding='utf-8') as outfile:
                     json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
+                    
+            #EXPORT TO HTLM
+#            create_dir("./html/")
+#            name = "./html/" + identity + ".html"
+#            p_shape.add_tools(WheelZoomTool())
+#            p_shape.add_tools(PanTool())
+#            
+#            html = file_html(p_shape, CDN, identity)
+#            with open(name, "w") as f:
+#                f.write(html)
             
             #EXPORT WITH_TILES PNG
             #Add origins points
@@ -1321,6 +1332,7 @@ if __name__ == "__main__":
             start_time = time.time()
             export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
             dict_time["only_tiles"] = time_profile(start_time, option="ms")
+            
             
             #RESET
             p_shape = make_plot(params_plot)

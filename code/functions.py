@@ -133,7 +133,7 @@ def gdf_to_geojson(gdf, properties):
     """
     
     geojson_ = {"type":"FeatureCollection", "features":[]}
-    style_col = ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity"]
+#    style_col = ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity"]
     
     for line in gdf.itertuples():
         if (isinstance(line.geometry, MultiPolygon)):
@@ -143,11 +143,11 @@ def gdf_to_geojson(gdf, properties):
                     l_poly.extend([[pt[0],pt[1]]])
                 feature = {"type":"Feature",
                        "properties":{},
-                       "style":{},
                        "geometry":{
                                "type":"Polygon",
                                "coordinates":[]
-                               }
+                               },
+                       "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
                        }
                 feature["geometry"]["coordinates"] = [list(reversed(l_poly))]
             
@@ -156,11 +156,7 @@ def gdf_to_geojson(gdf, properties):
                         value_prop = gdf.at[line.Index, prop]
                         if type(value_prop) == np.int64:
                             value_prop = int(value_prop)
-                        
-                        if prop not in style_col:
-                            feature["properties"][prop] = value_prop
-                        else:
-                            feature["style"][prop] = value_prop
+                        feature["properties"][prop] = value_prop
                 
                     geojson_["features"].append(feature)
                 else:
@@ -171,11 +167,11 @@ def gdf_to_geojson(gdf, properties):
                 l_poly.extend([[pt[0],pt[1]]])
             feature = {"type":"Feature",
                    "properties":{},
-                   "style":{},
                    "geometry":{
                            "type":"Polygon",
                            "coordinates":[]
-                           }
+                           },
+                   "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
                    }
             feature["geometry"]["coordinates"] = [list(reversed(l_poly))]
         
@@ -184,10 +180,7 @@ def gdf_to_geojson(gdf, properties):
                     value_prop = gdf.at[line.Index, prop]
                     if type(value_prop) == np.int64:
                         value_prop = int(value_prop)
-                    if prop not in style_col:
-                        feature["properties"][prop] = value_prop
-                    else:
-                        feature["style"][prop] = value_prop
+                    feature["properties"][prop] = value_prop
             
                 geojson_["features"].append(feature)
             else:
@@ -1027,7 +1020,7 @@ def create_dir(path):
 def write_geojson(cds, id_, unique_id):
     
     geo = cds_to_geojson(cds)
-    dir_json = "./geojson/" + id_
+    dir_json = "./geojson/" + str(id_)
     create_dir(dir_json)
     name_geo = dir_json + "/" + str(unique_id) + ".geojson"
     with open(name_geo, 'w') as outfile:
