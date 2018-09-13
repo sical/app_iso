@@ -166,7 +166,22 @@ def change_color(colors, used_colors, value_max):
 #            source.data['color'] = np.array(l_colors)
 #        
 #        return source
+
+def apply_color(x, dict_):
+    return (dict_[x])
+
+def change_color_again(cds):
+    df = pd.DataFrame.from_dict(cds.data)
+    dur_color = {}
     
+    for dur in df["time"].unique():
+        color = list(df["color"].loc[df["time"] == dur])[0]
+        dur_color[dur] = color
+
+    df['color'] = df["time"].apply(lambda x: apply_color(x, dur_color))
+    new_cds = ColumnDataSource(df)
+    
+    return new_cds
     
 def pairwise(iterable):
     """
@@ -274,6 +289,7 @@ def run(params_iso,x,y,adress, color):
             coords = poly["geometry"]["coordinates"][0]
             tmp["geometry"] = Polygon(coords)
             tmp["color"] = color_
+            tmp["time"] = poly["properties"]["time"]
             dict_poly[i_] = tmp
             i_+=1
         
@@ -291,6 +307,9 @@ def run(params_iso,x,y,adress, color):
 #        for geo in source.geojson
         dict_source = {}
         dict_intersection = {}
+    
+    #CHANGE COLOR AGAIN
+    source = change_color_again(source)
     
     if source is None:
         shape = ""

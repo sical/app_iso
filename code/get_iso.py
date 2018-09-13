@@ -342,7 +342,7 @@ def get_iso(params, gdf_poly_mask, id_):
         ############
         
 #        gdf_poly = difference.sort_values(by='time', ascending=False)
-        poly_json, _geojson = gdf_to_geojson(gdf_poly, [])
+        poly_json, _geojson = gdf_to_geojson(gdf_poly, ['time'])
 #        gdf_stats = gpd.GeoDataFrame.from_features(_geojson['features'])
 #        source = convert_GeoPandas_to_Bokeh_format(gdf_stats)
 #        gdf_json, gdf_geojson = gdf_to_geojson(gdf_stats, ['time'])
