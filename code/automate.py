@@ -109,35 +109,24 @@ def change_color(colors, used_colors, value_max):
         if nb != 0:
             for i in range(0, nb):
                 
-                new_color = random.choice(reds), random.choice(greens), random.choice(blues)
-                
-                if new_color in used_colors:
-                    while True:
-                        new_color = random.choice(reds), random.choice(greens), random.choice(blues)
-                        new_color = colors_blend(new_color, new_color)
-                        if new_color not in used_colors:
-                            l_colors.append(new_color)
-                            used_colors.append(new_color)
-                            break
-                else:
-                    new_color = colors_blend(new_color, new_color)
-                    l_colors.append(new_color)
-                    used_colors.append(new_color)
-            
-#            if r + nb >= 255:
-#                for i in range(0, nb):
-#                    new_color = r - i, g, b
-#                    new_color = colors_blend(new_color, new_color)
-#                    
-#                    l_colors.append(new_color)
+#                new_color = random.choice(reds), random.choice(greens), random.choice(blues)
 #                
-#            else:
-#                for i in range(0, nb):
-#                    new_color = r + i, g, b
+#                if new_color in used_colors:
+#                    while True:
+#                        new_color = random.choice(reds), random.choice(greens), random.choice(blues)
+#                        new_color = colors_blend(new_color, new_color)
+#                        if new_color not in used_colors:
+#                            l_colors.append(new_color)
+#                            used_colors.append(new_color)
+#                            break
+#                else:
 #                    new_color = colors_blend(new_color, new_color)
 #                    l_colors.append(new_color)
-            
-#            source.data['color'] = np.array(l_colors)
+#                    used_colors.append(new_color)
+                    
+                
+                l_colors.append(colors[0])
+                
             colors = np.array(l_colors)
         
         return colors
@@ -182,6 +171,22 @@ def change_color_again(cds):
     new_cds = ColumnDataSource(df)
     
     return new_cds
+
+def modify_color(duration, color):
+    duration = duration/60
+    color = color[:5]
+    if len(str(duration)) < 2:
+        duration = "0" + str(duration)
+    
+    return str(color) + str(duration)
+
+def change_color_again_again(cds):
+    df = pd.DataFrame.from_dict(cds.data)
+    df['color'] = np.vectorize(modify_color)(df['time'], df['color'])
+#    df['color'] = df.apply(lambda x: modify_color(x["time"], x["color"], axis=1))
+    new_cds = ColumnDataSource(df)
+    
+    return new_cds
     
 def pairwise(iterable):
     """
@@ -222,8 +227,6 @@ def run(params_iso,x,y,adress, color):
     source_buffered = data['source_buffered']
     
     list_gdf.append(gdf_poly)
-    
-    #TODO: VOIR ICI POUR LES CHANGEMENTS DE COULEURS !!! Prendre le .geojson du geojson généré, itérer dessus et rebalancer le tout. 
     
     #Give each polygon a unique color 
     if step_mn == 0 and params_iso["durations"] == []:
@@ -266,21 +269,6 @@ def run(params_iso,x,y,adress, color):
         colors = [params_iso['color'] for i in range(0, nb_colors)]
         color = change_color(colors, used_colors, value_max)
         colors_geo = color
-#        xs = []
-#        ys = []
-#        for poly in geo:
-#            coords = poly["geometry"]["coordinates"][0]
-#            x = np.array([i[0] for i in coords])
-#            y = np.array([i[1] for i in coords])
-#            xs.append(list(x))
-#            ys.append(list(y))
-#            
-#        source = ColumnDataSource(data=dict(
-#                xs = xs,
-#                ys = xs,
-#                color = color
-#                )
-#        )
         
         dict_poly = {}
         i_ = 0
@@ -298,18 +286,14 @@ def run(params_iso,x,y,adress, color):
         gdf = GeoDataFrame(df, crs=crs, geometry=df['geometry'])
         source = convert_GeoPandas_to_Bokeh_format(gdf)
         
-#        print ("========= CASE 2 ===========")
-#        print (source.data['xs'])
-#        print ("============================")
         color = 'color'
         
-#        geo = json.loads(geojson.geojson)["features"]
-#        for geo in source.geojson
         dict_source = {}
         dict_intersection = {}
     
     #CHANGE COLOR AGAIN
-    source = change_color_again(source)
+    source = change_color_again_again(source)
+    colors_geo = source.data['color']
     
     if source is None:
         shape = ""

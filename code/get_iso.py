@@ -304,6 +304,7 @@ def get_iso(params, gdf_poly_mask, id_):
                         )
                 gdf_polys.append(multi)
                 
+                
 #            time.sleep(1) #Sleep to avoid API timeout
  
         collection = FeatureCollection(gdf_polys)
@@ -311,6 +312,16 @@ def get_iso(params, gdf_poly_mask, id_):
         
         gdf_poly.crs = {'init': inProj}
         gdf_poly = gdf_poly.to_crs({'init': outProj})
+        
+        # TODO ADD INTERSECTION CALCUL TO GET STATS
+#        source_intersections, gdf_poly_mask = overlay(
+#                gdf_poly, 
+#                gdf_poly_mask, 
+#                how, 
+#                coeff_ampl, 
+#                coeff_conv,
+#                color_switch
+#                )
         
         
         #Difference
