@@ -99,7 +99,6 @@ def change_color(colors, used_colors, value_max):
         l_colors = []
             
         nb = len(colors)
-            
         r,g,b = hex2rgb(colors[0])
                 
         reds = get_range_colors(r, value_max)
@@ -173,11 +172,10 @@ def change_color_again(cds):
     return new_cds
 
 def modify_color(duration, color):
-    duration = duration/60
+    duration = duration//60
     color = color[:5]
     if len(str(duration)) < 2:
         duration = "0" + str(duration)
-    
     return str(color) + str(duration)
 
 def change_color_again_again(cds):
@@ -306,7 +304,7 @@ def run(params_iso,x,y,adress, color):
             options_iso_surf = dict(
                     fill_color='color', 
                     fill_alpha = params_iso['opacity_iso'],
-                    line_color=color, 
+                    line_color='color', 
                     line_alpha=params["fig_params"]["alpha_cont"],
                     line_width=params["fig_params"]["line_width_surf"], 
                     source=source,
@@ -324,8 +322,9 @@ def run(params_iso,x,y,adress, color):
                 counter_polys += 1 
                 
             #EXPORT TO GEOJSON
-            cds = dict_geojson(options_iso_surf, colors_geo)
-            write_geojson(cds, params_iso["id"], unique_id)
+#            cds = dict_geojson(options_iso_surf, colors_geo)
+#            print (cds)
+#            write_geojson(cds, params_iso["id"], unique_id)
             
             ###########################################################
             # SIMPLIFIED VERSIONS
@@ -539,63 +538,63 @@ def run(params_iso,x,y,adress, color):
             counter_points += 1
         
         
-        if data_intersection is not None:
-    #        name = "Intersection" + str(counter_intersection)
-    #        source_intersection = data_intersection
-            name = "Overlay"
-            source_intersection.data.update(data_intersection.data)
-            options_intersect = dict(
-    #                fill_alpha= params["fig_params"]["alpha_surf"], 
-        #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                    source=source_intersection,
-                    fill_color='color',
-                    fill_alpha=params_iso['opacity_intersection'],
-                    line_color=color, 
-                    line_alpha=params["fig_params"]["alpha_cont"],
-                    line_width=params["fig_params"]["line_width_surf"], 
-    #                fill_color="black", 
-    #                fill_alpha = 0.70,
-    #                line_color="black", 
-    #                line_width=params["fig_params"]["line_width_surf"], 
-                    legend=name
-                    )
-            
-            intersections = p_shape.patches(
-                                            'xs', 
-                                            'ys', 
-                                            **options_intersect
-                                            )
-            counter_intersection += 1
-            
-    else:
-        if data_intersection is not None:
-    #        name = "Intersection" + str(counter_intersection)
-    #        source_intersection = data_intersection
-            name = "Overlay"
-            source_intersection.data.update(data_intersection.data)
-            
-            if end_loop is True:
-                options_intersect = dict(
-        #                fill_alpha= params["fig_params"]["alpha_surf"], 
-            #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
-                        source=source_intersection,
-                        fill_color='color',
-                        fill_alpha=params_iso['opacity_intersection'],
-                        line_color=color, 
-                        line_alpha=params["fig_params"]["alpha_cont"],
-                        line_width=params["fig_params"]["line_width_surf"], 
-        #                fill_color="black", 
-        #                fill_alpha = 0.70,
-        #                line_color="black", 
-        #                line_width=params["fig_params"]["line_width_surf"], 
-                        legend=name
-                        )
-                
-                intersections = p_shape.patches(
-                                                'xs', 
-                                                'ys', 
-                                                **options_intersect
-                                                )
+#        if data_intersection is not None:
+#    #        name = "Intersection" + str(counter_intersection)
+#    #        source_intersection = data_intersection
+#            name = "Overlay"
+#            source_intersection.data.update(data_intersection.data)
+#            options_intersect = dict(
+#    #                fill_alpha= params["fig_params"]["alpha_surf"], 
+#        #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+#                    source=source_intersection,
+#                    fill_color='color',
+#                    fill_alpha=params_iso['opacity_intersection'],
+#                    line_color='color', 
+#                    line_alpha=params["fig_params"]["alpha_cont"],
+#                    line_width=params["fig_params"]["line_width_surf"], 
+#    #                fill_color="black", 
+#    #                fill_alpha = 0.70,
+#    #                line_color="black", 
+#    #                line_width=params["fig_params"]["line_width_surf"], 
+#                    legend=name
+#                    )
+#            
+#            intersections = p_shape.patches(
+#                                            'xs', 
+#                                            'ys', 
+#                                            **options_intersect
+#                                            )
+#            counter_intersection += 1
+#            
+#    else:
+#        if data_intersection is not None:
+#    #        name = "Intersection" + str(counter_intersection)
+#    #        source_intersection = data_intersection
+#            name = "Overlay"
+#            source_intersection.data.update(data_intersection.data)
+#            
+#            if end_loop is True:
+#                options_intersect = dict(
+#        #                fill_alpha= params["fig_params"]["alpha_surf"], 
+#            #            fill_color={'field': params["fig_params"]["field"], 'transform': color_mapper}, 
+#                        source=source_intersection,
+#                        fill_color='color',
+#                        fill_alpha=params_iso['opacity_intersection'],
+#                        line_color='color', 
+#                        line_alpha=params["fig_params"]["alpha_cont"],
+#                        line_width=params["fig_params"]["line_width_surf"], 
+#        #                fill_color="black", 
+#        #                fill_alpha = 0.70,
+#        #                line_color="black", 
+#        #                line_width=params["fig_params"]["line_width_surf"], 
+#                        legend=name
+#                        )
+#                
+#                intersections = p_shape.patches(
+#                                                'xs', 
+#                                                'ys', 
+#                                                **options_intersect
+#                                                )
         
     #Draw buffer radar
     if buffer_radar == 1:
@@ -621,12 +620,11 @@ def run(params_iso,x,y,adress, color):
                                     )
     #Draw only buffers
     
-    
     p_shape.legend.location = "top_right"
     p_shape.legend.click_policy="hide"
     p_shape.legend.visible = False
     
-    return p_shape, dict_source, dict_intersection
+    return p_shape, dict_source, data_intersection.data
 
 ###################################################
 ###################################################
@@ -929,6 +927,7 @@ if __name__ == "__main__":
             if jump_mn != 0:
                 dict_time = {}
                 dict_time["get_iso"] = 0
+                
                 for adress in adresses:
                     end_loop = False
                     index_list = adresses.index(adress)
@@ -976,6 +975,7 @@ if __name__ == "__main__":
                             end_loop = True
                         
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
+                        
                         
                         if step_mn == 0 and params_iso["durations"] == []:
                             del dict_source['xs']
@@ -1113,7 +1113,11 @@ if __name__ == "__main__":
                 else:
                     dict_time = {}
                     dict_time["get_iso"] = 0
-                    for adress in adresses:
+                    
+                    #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
+                    l_intersections = []
+                    
+                    for intersection_index,adress in enumerate(adresses):
                         index_list = adresses.index(adress)
                         color = colors_iso[index_list]
                         
@@ -1152,12 +1156,50 @@ if __name__ == "__main__":
 
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
-                        if step_mn == 0 and params_iso["durations"] == []:
-                            del dict_source['xs']
-                            del dict_source['ys']
-                            del dict_intersection['xs']
-                            del dict_intersection['ys']
-                            l_dict_iso.append(dict_source)
+                        #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
+                        if intersection_index != 0:
+                            excluded = ["token", "shape", "inProj", "outProj", "address", "from_place"]
+                            nb = len(dict_intersection["xs"])
+                            
+                            dict_intersection["addresses"] = [adresses for x in range(0,nb)]
+                            dict_intersection["address"] = [adress for x in range(0,nb)]
+                            dict_intersection["intersection_index"] = [intersection_index for x in range(0,nb)]
+                            
+                            for k,v in params_iso.items():
+                                if k not in excluded:
+                                    dict_intersection[k] = [v for x in range(0,nb)]
+                            
+                            if step_mn == 0 and params_iso["durations"] == []:
+                                del dict_source['xs']
+                                del dict_source['ys']
+                                del dict_intersection['xs']
+                                del dict_intersection['ys']
+                                l_dict_iso.append(dict_source)
+    #                            print (pd.DataFrame.from_dict(dict_intersection))
+                                l_intersections.append(pd.DataFrame.from_dict(dict_intersection))
+                        
+                
+                    #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
+                    df_all_intersections = pd.concat(l_intersections)
+#                    print (df_all_intersections.area)
+#                    print (df_all_intersections.area.where(df_all_intersections.area==0).dropna().size)
+                    
+                    #CHECK IF NULL VALUE FOR AREA
+                    if df_all_intersections.area.where(df_all_intersections.area==0).dropna().size != 0:
+                        df_all_intersections = {}
+                        df_all_intersections["id"] = [param["id"]]
+                        df_all_intersections["area"] = [0]
+                        df_all_intersections = pd.DataFrame.from_dict(df_all_intersections)
+                    else:
+                        print (df_all_intersections["intersection_index"])
+                        print (intersection_index)
+                        print (df_all_intersections.loc[df_all_intersections["intersection_index"] == intersection_index])
+                        df_all_intersections = df_all_intersections.loc[df_all_intersections["intersection_index"] == intersection_index]
+                        df_all_intersections["area_sum"] = df_all_intersections["area"].sum()
+                    
+                    create_dir(export_no_tiles)
+                    name_csv = export_no_tiles + str(param["id"]) + "_intersections_details.csv"
+                    df_all_intersections.to_csv(name_csv, encoding="utf-8")
         
             #EXPORT NO_TILES PNG
             #Add origins points
@@ -1233,10 +1275,10 @@ if __name__ == "__main__":
                     json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
                 
                 #EXPORT OVERLAY TO JSON
-                overlay_name = export_no_tiles + identity + "_overlay"
-                json_name = filename="{}.json".format(overlay_name)
-                with open(json_name, 'w', encoding='utf-8') as outfile:
-                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
+#                overlay_name = export_no_tiles + identity + "_overlay"
+#                json_name = filename="{}.json".format(overlay_name)
+#                with open(json_name, 'w', encoding='utf-8') as outfile:
+#                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
                     
             #EXPORT TO HTLM
 #            create_dir("./html/")
@@ -1311,10 +1353,10 @@ if __name__ == "__main__":
                     json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
                 
                 #EXPORT OVERLAY TO JSON
-                overlay_name = export_with_tiles + identity + "_overlay"
-                json_name = filename="{}.json".format(overlay_name)
-                with open(json_name, 'w', encoding='utf-8') as outfile:
-                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
+#                overlay_name = export_with_tiles + identity + "_overlay"
+#                json_name = filename="{}.json".format(overlay_name)
+#                with open(json_name, 'w', encoding='utf-8') as outfile:
+#                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
             
             #EXPORT ONLY TILES
             x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end

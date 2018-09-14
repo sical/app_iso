@@ -58,16 +58,16 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
             else:
                 source_intersections = ColumnDataSource(
                         data=dict(
-                                xs=[], 
-                                ys=[], 
-                                time=[],
-                                color=[],
-                                area=[],
-                                perimeter=[],
-                                amplitude=[],
-                                convex=[],
-                                norm_notches=[],
-                                complexity=[]
+                                xs=[None], 
+                                ys=[None], 
+                                time=[0],
+                                color=["#ffffff"],
+                                area=[0],
+                                perimeter=[0],
+                                amplitude=[0],
+                                convex=[0],
+                                norm_notches=[0],
+                                complexity=[0]
                                 )
                         )
                 gdf_overlay = gdf_poly.copy()
@@ -75,16 +75,16 @@ def overlay(gdf_poly, gdf_overlay, how, coeff_ampl, coeff_conv, color_switch):
     else:
         source_intersections = ColumnDataSource(
                         data=dict(
-                                xs=[], 
-                                ys=[], 
-                                time=[],
-                                color=[],
-                                area=[],
-                                perimeter=[],
-                                amplitude=[],
-                                convex=[],
-                                norm_notches=[],
-                                complexity=[]
+                                xs=[None], 
+                                ys=[None], 
+                                time=[0],
+                                color=["#ffffff"],
+                                area=[0],
+                                perimeter=[0],
+                                amplitude=[0],
+                                convex=[0],
+                                norm_notches=[0],
+                                complexity=[0]
                                 )
                         )
         gdf_overlay = gdf_poly.copy()
