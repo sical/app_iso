@@ -624,7 +624,10 @@ def run(params_iso,x,y,adress, color):
     p_shape.legend.click_policy="hide"
     p_shape.legend.visible = False
     
-    return p_shape, dict_source, data_intersection.data
+    if data_intersection is None:
+        return p_shape, dict_source, None
+    else:
+        return p_shape, dict_source, data_intersection.data
 
 ###################################################
 ###################################################
@@ -1157,7 +1160,7 @@ if __name__ == "__main__":
                         p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
                         
                         #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
-                        if intersection_index != 0:
+                        if intersection_index != 0 and dict_intersection is not None:
                             excluded = ["token", "shape", "inProj", "outProj", "address", "from_place"]
                             nb = len(dict_intersection["xs"])
                             
@@ -1180,26 +1183,24 @@ if __name__ == "__main__":
                         
                 
                     #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
-                    df_all_intersections = pd.concat(l_intersections)
-#                    print (df_all_intersections.area)
-#                    print (df_all_intersections.area.where(df_all_intersections.area==0).dropna().size)
-                    
-                    #CHECK IF NULL VALUE FOR AREA
-                    if df_all_intersections.area.where(df_all_intersections.area==0).dropna().size != 0:
-                        df_all_intersections = {}
-                        df_all_intersections["id"] = [param["id"]]
-                        df_all_intersections["area"] = [0]
-                        df_all_intersections = pd.DataFrame.from_dict(df_all_intersections)
-                    else:
-                        print (df_all_intersections["intersection_index"])
-                        print (intersection_index)
-                        print (df_all_intersections.loc[df_all_intersections["intersection_index"] == intersection_index])
-                        df_all_intersections = df_all_intersections.loc[df_all_intersections["intersection_index"] == intersection_index]
-                        df_all_intersections["area_sum"] = df_all_intersections["area"].sum()
-                    
-                    create_dir(export_no_tiles)
-                    name_csv = export_no_tiles + str(param["id"]) + "_intersections_details.csv"
-                    df_all_intersections.to_csv(name_csv, encoding="utf-8")
+                    if l_intersections != []:
+                        df_all_intersections = pd.concat(l_intersections)
+    #                    print (df_all_intersections.area)
+    #                    print (df_all_intersections.area.where(df_all_intersections.area==0).dropna().size)
+                        
+                        #CHECK IF NULL VALUE FOR AREA
+                        if df_all_intersections.area.where(df_all_intersections.area==0).dropna().size != 0:
+                            df_all_intersections = {}
+                            df_all_intersections["id"] = [param["id"]]
+                            df_all_intersections["area"] = [0]
+                            df_all_intersections = pd.DataFrame.from_dict(df_all_intersections)
+                        else:
+                            df_all_intersections = df_all_intersections.loc[df_all_intersections["intersection_index"] == intersection_index]
+                            df_all_intersections["area_sum"] = df_all_intersections["area"].sum()
+                        
+                        create_dir(export_no_tiles)
+                        name_csv = export_no_tiles + str(param["id"]) + "_intersections_details.csv"
+                        df_all_intersections.to_csv(name_csv, encoding="utf-8")
         
             #EXPORT NO_TILES PNG
             #Add origins points
