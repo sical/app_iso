@@ -1188,7 +1188,8 @@ if __name__ == "__main__":
                 
                     #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
                     if l_intersections != []:
-                        df_all_intersections = pd.concat(l_intersections)
+#                        df_all_intersections = pd.concat(l_intersections)
+                        df_all_intersections = pd.DataFrame.from_dict(dict_intersection)
     #                    print (df_all_intersections.area)
     #                    print (df_all_intersections.area.where(df_all_intersections.area==0).dropna().size)
 
