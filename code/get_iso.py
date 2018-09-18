@@ -375,15 +375,18 @@ def get_iso(params, gdf_poly_mask, id_):
         
         
     else:
-        if r.json()["message"]:
-            status = str(r.json()["message"]) + ": " + "Measure not possible"
-            print ('ERROR:', status)
-        elif r.json()["error"]["message"]:
-            status = str(r.json()["error"]["message"]) + ": " + "Measure not possible"
-            print ('ERROR:', status)
-        else:
-            status = str(code) + ": " + "Measure not possible"
-            print ('ERROR:', status)
+        try:
+            if r.json()["message"]:
+                status = str(r.json()["message"]) + ": " + "Measure not possible"
+                print ('ERROR:', status)
+            elif r.json()["error"]["message"]:
+                status = str(r.json()["error"]["message"]) + ": " + "Measure not possible"
+                print ('ERROR:', status)
+            else:
+                status = str(code) + ": " + "Measure not possible"
+                print ('ERROR:', status)
+        except:
+            print ("ERROR ON:\n", "URL: ",url, "\nADDRESS: ",address)
         source, shape, source_intersections, gdf_poly_mask = None, None, None, None
 
     return {

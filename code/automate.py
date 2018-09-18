@@ -26,6 +26,7 @@ from geopandas import GeoDataFrame
 from dotenv import load_dotenv
 from pathlib import Path
 import json
+import rapidjson
 import copy
 from dateutil.relativedelta import relativedelta as rd
 from pyproj import transform, Proj
@@ -42,7 +43,7 @@ warnings.filterwarnings('ignore')
 
 from get_iso import get_iso, overlay
 from make_plot import make_plot
-from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded, time_profile, seconds_to_time, convert_GeoPandas_to_Bokeh_format, cds_to_geojson, create_dir, write_geojson, dict_geojson
+from functions import geocode, colors_blend, hex2rgb, buffer_point, create_buffers, str_list_to_list, list_excluded, time_profile, seconds_to_time, convert_GeoPandas_to_Bokeh_format, cds_to_geojson, create_dir, write_geojson, dict_geojson, df_stats_to_json
 from bokeh_tools import get_bbox
 from csv_to_json import csv_to_json
 
@@ -63,6 +64,7 @@ tolerance = 400
 value_max = 20
 
 dict_all_times = {}
+l_intersections_json = []
 
 used_colors = [] #list of colors used to get unique color
 
@@ -1119,6 +1121,7 @@ if __name__ == "__main__":
                     
                     #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
                     l_intersections = []
+                    l_stats = ['amplitude', 'area', 'complexity', 'convex', 'nb_vertices', 'norm_notches', 'perimeter', 'area_sum']
                     
                     for intersection_index,adress in enumerate(adresses):
                         index_list = adresses.index(adress)
@@ -1161,16 +1164,17 @@ if __name__ == "__main__":
                         
                         #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
                         if intersection_index != 0 and dict_intersection is not None:
-                            excluded = ["token", "shape", "inProj", "outProj", "address", "from_place"]
+                            excluded = ["token", "shape", "inProj", "outProj", "address", "from_place", "min_date"]
                             nb = len(dict_intersection["xs"])
+                            l_params = []
                             
                             dict_intersection["addresses"] = [adresses for x in range(0,nb)]
-                            dict_intersection["address"] = [adress for x in range(0,nb)]
                             dict_intersection["intersection_index"] = [intersection_index for x in range(0,nb)]
                             
                             for k,v in params_iso.items():
                                 if k not in excluded:
                                     dict_intersection[k] = [v for x in range(0,nb)]
+                                    l_params.append(k)
                             
                             if step_mn == 0 and params_iso["durations"] == []:
                                 del dict_source['xs']
@@ -1187,21 +1191,33 @@ if __name__ == "__main__":
                         df_all_intersections = pd.concat(l_intersections)
     #                    print (df_all_intersections.area)
     #                    print (df_all_intersections.area.where(df_all_intersections.area==0).dropna().size)
+
                         
                         #CHECK IF NULL VALUE FOR AREA
                         if df_all_intersections.area.where(df_all_intersections.area==0).dropna().size != 0:
-                            df_all_intersections = {}
-                            df_all_intersections["id"] = [param["id"]]
-                            df_all_intersections["area"] = [0]
-                            df_all_intersections = pd.DataFrame.from_dict(df_all_intersections)
+#                            df_all_intersections = {}
+                            nb_element = df_all_intersections["time_in"].count()
+                            df_all_intersections["id"] = [param["id"] for i in range(0, nb_element)]
+                            df_all_intersections["area_sum"] = [0 for i in range(0, nb_element)]
+                            df_all_intersections["nb_poly"] = [0 for i in range(0, nb_element)]
+                            df_all_intersections = df_all_intersections.reset_index()
+#                            print (df_all_intersections)
+#                            df_all_intersections = pd.DataFrame.from_dict(df_all_intersections)
+#                            print (df_all_intersections)
+                            
                         else:
                             df_all_intersections = df_all_intersections.loc[df_all_intersections["intersection_index"] == intersection_index]
                             df_all_intersections["area_sum"] = df_all_intersections["area"].sum()
+                            df_all_intersections["nb_poly"] = len(df_all_intersections.index)
                         
-                        create_dir(export_no_tiles)
-                        name_csv = export_no_tiles + str(param["id"]) + "_intersections_details.csv"
-                        df_all_intersections.to_csv(name_csv, encoding="utf-8")
-        
+#                        #Export to csv
+#                        create_dir(export_no_tiles)
+#                        name_csv = export_no_tiles + str(param["id"]) + "_intersections_details.csv"
+#                        df_all_intersections.to_csv(name_csv, encoding="utf-8")
+                        
+                        #Make list of dict for future json export
+                        l_intersections_json.append(df_stats_to_json(df_all_intersections, l_params, l_stats))
+            
             #EXPORT NO_TILES PNG
             #Add origins points
             if origine_screen == 1:
@@ -1254,6 +1270,7 @@ if __name__ == "__main__":
             start_time = time.time()
             export_svgs(p_shape, filename="{}.svg".format(name), webdriver=my_webdriver)
             dict_time["svg"] = time_profile(start_time, option="ms")
+            
             
             #EXPORT PARAMS TO JSON
             params_name = export_no_tiles + identity + "_params"
@@ -1430,6 +1447,12 @@ if __name__ == "__main__":
     #WRITE PLACES_CACHE
     with open("./params/places_cache.json", 'w', encoding='utf-8') as outfile:
         json.dump(places_cache, outfile, sort_keys=True, indent=2)
+        
+    #EXPORT TO ONE JSON INTERSECTION FILE
+    intersection_name = export_no_tiles + "intersections.json"
+    if l_intersections_json != []:
+        with open(intersection_name, 'w', encoding='utf-8') as outfile:
+            json.dump(l_intersections_json, outfile, sort_keys=True, indent=2)
     
     if anim is True:
         adress = "20 hameau de la commanderie, 59840 LOMPRET"

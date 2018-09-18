@@ -1041,4 +1041,22 @@ def dict_geojson(options_dict, colors):
     dict_.update(tmp)
     
     return dict_
+    
+def df_stats_to_json(df, params, stats):
+    id_ = int(df['id'].iloc[0])
+    dict_params = df.loc[0,params].to_json()
+    stats_details = [x for x in stats if x != "area_sum"]
+    dict_stats_details = df.loc[:,stats_details].to_json()
+    dict_stats_synth = df.loc[0,["area_sum","nb_poly"]]
+#    dict_stats_synth["nb_poly"] = len(df.index)
+    dict_stats_synth = dict_stats_synth.to_json()
+    
+    return {
+            "id": id_,
+            "parameters": json.loads(dict_params),
+            "stats": {
+                    "details": json.loads(dict_stats_details),
+                    "synthesis": json.loads(dict_stats_synth)
+                    }
+            }
         
