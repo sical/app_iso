@@ -393,7 +393,9 @@ Here is the modes you can choose to exclude:
 * ***only_tiles***: directory with files with only tiles:
 	* *png*: image files (*no svg as tiles can not be transformed to vectors*)
 * ***All the files with same name in the 3 directories have the same bounding box***
+<p>
 <img src="./screenshots/illustrations/13_no.png" width="30%"> <img src="./screenshots/illustrations/13_with.png" width="30%"> <img src="./screenshots/illustrations/13_only.png" width="30%">
+</p>
 
 ## Known issues
 - Impossible geolocation with some adresses (*no error message for now, only empty map*)
