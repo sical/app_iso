@@ -36,7 +36,7 @@ NAVITIA_TOKEN=""
 ```
 - Put your Navitia token between the quotation marks and save your file
 
-## Running the Bokeh app
+## Running the Bokeh app [*MAJOR CHANGES FOR AUTOMATE SCRIPT, NEED TO BE CHECKED*]
 - Then open a Anaconda command prompt (*or a system command prompt but with access to the right anaconda python environment*) and write:
 ```
 cd [path/to/app_iso/directory]
@@ -199,7 +199,8 @@ It is also possible to use a script ```./code/automate.py``` that generates PNG 
 | **id_location**           | id for location (group of addresses, used for id) | int | *1* |
 | **time**                  | time for the request (format HH:MM:SS) | str | *08:00:00* |
 | **jump**                  | 2 values for "jumping" through time (*first number for interval between 2 jumps in minutes , second number for number of "jumps"*), 0 for no jump | str | *60,2* |
-| **duration**              | duration for isochrone request (minutes) | int | *20* |
+| **duration**              | duration for isochrone request (minutes). 0 if durations not empty | int | *20* |
+| **durations**             | durations for isochrone request (minutes). [] if duration | list of int | *[10,20,30]* |
 | **step**                  | step value (1 for a duration of 20 mns will make 20 isochrones: 1mn, 2 mn, 3 mn, ...). 0 for no step | int | *1* |
 | **simplify**							|	method to add simplified isochrone (simplify, convex or envelope), default None | str | *convex* |
 | **tolerance**							|	tolerance number for simplify method (higher is the number, greater is the simplification), default 50 | int | *100* |
@@ -231,7 +232,6 @@ It is also possible to use a script ```./code/automate.py``` that generates PNG 
 | **line_width_surf**       |	contour size for polylines | int | *2* |
 | **line_width_building**   |	contour size for buildings | int | *1* |
 | **distance_bbox**         |	distance in meters to measure a bounding box around a centroid | int | *15000* |
-
 
 ##### Modes
 > ***API is case sensitive so respect lowercase and uppercase.***
@@ -272,6 +272,128 @@ Here is the modes you can choose to exclude:
 * Set your parameters into a new sheet (based on examples and on the [readme](https://github.com/sical/app_iso/tree/iso_design#explanations-of-parameters-for-automation-of-isochrones-calculation))
 * Save your sheet to tsv and put the .tsv file to ```./code/params/```
 <img src="./export_tsv.png" width="50%">
+
+#### Outputs
+* ***no_tiles***: directory with files with no tiles in background:
+	* *png*: image files
+	* *svg*: vector files that can be opened with Inkscape or Illustrator for example
+	* *json*: intersections json file when `duration` parameter is used and when there is no `step`, `jump` and `around` (*need to be improved*). Here is the json structure:
+		* `id` => id of parameters
+		* `parameters` => parameters used (*not all of them*)
+		* `stats` => some measures on intersections (*work in progress*). Divided in two parts:
+			* `details` => details on polygons that compose the intersection
+			* `synthesis` => synthesis on intersections: total area and number of Polygons
+		* *See the example below:*
+
+
+``` JSON
+	[
+ {
+	 "id": 0,
+	 "parameters": {
+		 "color": "#4daf4a",
+		 "color_switch": null,
+		 "durations": [],
+		 "how": "intersection",
+		 "id": 0,
+		 "nb_iter": 1,
+		 "opacity_intersection": "None",
+		 "opacity_iso": 0.25,
+		 "simplify": "None",
+		 "step": 1800,
+		 "step_mn": 0,
+		 "str_modes": "",
+		 "time_in": "08:00",
+		 "tolerance": 10,
+		 "topology": false
+	 },
+	 "stats": {
+		 "details": {
+			 "amplitude": {
+				 "0": 0
+			 },
+			 "area": {
+				 "0": 0
+			 },
+			 "complexity": {
+				 "0": 0
+			 },
+			 "convex": {
+				 "0": 0
+			 },
+			 "nb_vertices": {
+				 "0": null
+			 },
+			 "norm_notches": {
+				 "0": 0
+			 },
+			 "perimeter": {
+				 "0": 0
+			 }
+		 },
+		 "synthesis": {
+			 "area_sum": 0,
+			 "nb_poly": 0
+		 }
+	 }
+ },
+ {
+	 "id": 2,
+	 "parameters": {
+		 "color": "#4daf4a",
+		 "color_switch": null,
+		 "durations": [],
+		 "how": "intersection",
+		 "id": 2,
+		 "nb_iter": 1,
+		 "opacity_intersection": "None",
+		 "opacity_iso": 0.25,
+		 "simplify": "None",
+		 "step": 1800,
+		 "step_mn": 0,
+		 "str_modes": "",
+		 "time_in": "08:00",
+		 "tolerance": 10,
+		 "topology": false
+	 },
+	 "stats": {
+		 "details": {
+			 "amplitude": {
+				 "0": -1.707805986e-16
+			 },
+			 "area": {
+				 "0": 35260.564966859
+			 },
+			 "complexity": {
+				 "0": -4.126965987e-17
+			 },
+			 "convex": {
+				 "0": -2.063482993e-16
+			 },
+			 "nb_vertices": {
+				 "0": 181
+			 },
+			 "norm_notches": {
+				 "0": 0
+			 },
+			 "perimeter": {
+				 "0": 665.6894204727
+			 }
+		 },
+		 "synthesis": {
+			 "area_sum": 35260.564966859,
+			 "nb_poly": 1
+		 }
+	 }
+ }
+]
+```
+* ***with_tiles***: directory with files with tiles in background:
+	* *png*: image files (*no svg as tiles can not be transformed to vectors*)
+* ***only_tiles***: directory with files with only tiles:
+	* *png*: image files (*no svg as tiles can not be transformed to vectors*)
+* ***All the files with same name in the 3 directories have the same bounding box***
+<img src="./screenshots/illustrations/13_no.png" width="30%"> <img src="./screenshots/illustrations/13_with.png" width="30%"> <img src="./screenshots/illustrations/13_only.png" width="30%">
 
 ## Known issues
 - Impossible geolocation with some adresses (*no error message for now, only empty map*)
