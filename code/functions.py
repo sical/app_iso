@@ -132,7 +132,11 @@ def gdf_to_geojson(gdf, properties):
     Returns GeoJson object that could be used in bokeh as GeoJsonDataSource
     """
     
-    geojson_ = {"type":"FeatureCollection", "features":[]}
+    geojson_ = {
+            "type":"FeatureCollection", 
+            "features":[],
+            "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
+            }
 #    style_col = ["fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity"]
     
     for line in gdf.itertuples():
@@ -147,14 +151,13 @@ def gdf_to_geojson(gdf, properties):
                                "type":"Polygon",
                                "coordinates":[]
                                },
-                       "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
                        }
                 feature["geometry"]["coordinates"] = [list(reversed(l_poly))]
             
                 if (properties != []) or (properties is not None):
                     for prop in properties:
                         value_prop = gdf.at[line.Index, prop]
-                        if type(value_prop) == np.int64:
+                        if type(value_prop) == np.int64 or type(value_prop) == np.int32:
                             value_prop = int(value_prop)
                         feature["properties"][prop] = value_prop
                 
@@ -178,7 +181,7 @@ def gdf_to_geojson(gdf, properties):
             if (properties != []) or (properties is not None):
                 for prop in properties:
                     value_prop = gdf.at[line.Index, prop]
-                    if type(value_prop) == np.int64:
+                    if type(value_prop) == np.int64 or type(value_prop) == np.int32:
                         value_prop = int(value_prop)
                     feature["properties"][prop] = value_prop
             
@@ -989,6 +992,7 @@ def buffer_point(point, inProj, outProj, distance, precision):
     buffer = point.buffer(distance, precision)
     coords = buffer.exterior.coords
     coords= [transform(outProj, inProj, lat, lon) for lat,lon in coords]
+    del coords[-1]
     
     return coords
     
@@ -1009,6 +1013,7 @@ def cds_to_geojson(data):
     gdf = gpd.GeoDataFrame(df, crs=crs, geometry=l_poly)
     properties = list(df.columns)
     properties.remove("geometry")
+    
     geo_dump = gdf_to_geojson(gdf, properties)[1]
     
     return geo_dump
@@ -1017,10 +1022,9 @@ def create_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def write_geojson(cds, id_, unique_id):
-    
+def write_geojson(cds, id_, unique_id, directory):
     geo = cds_to_geojson(cds)
-    dir_json = "./geojson/" + str(id_)
+    dir_json = os.path.join(directory,str(id_))
     create_dir(dir_json)
     name_geo = dir_json + "/" + str(unique_id) + ".geojson"
     with open(name_geo, 'w') as outfile:
@@ -1043,7 +1047,10 @@ def dict_geojson(options_dict, colors):
     return dict_
     
 def df_stats_to_json(df, params, stats):
-    id_ = int(df['id'].iloc[0])
+    if isinstance(df['id'].iloc[0], str):
+        id_ = df['id'].iloc[0]
+    else:
+        id_ = int(df['id'].iloc[0])
     dict_params = df.loc[0,params].to_json()
     stats_details = [x for x in stats if x != "area_sum"]
     dict_stats_details = df.loc[:,stats_details].to_json()

@@ -324,9 +324,10 @@ def run(params_iso,x,y,adress, color):
                 counter_polys += 1 
                 
             #EXPORT TO GEOJSON
-#            cds = dict_geojson(options_iso_surf, colors_geo)
-#            print (cds)
-#            write_geojson(cds, params_iso["id"], unique_id)
+            cds = dict_geojson(options_iso_surf, colors_geo)
+            dir_geojson = os.path.join(export_no_tiles, "geojson")
+            write_geojson(cds, params_iso["id"], unique_id, dir_geojson)
+            unique_id += 1
             
             ###########################################################
             # SIMPLIFIED VERSIONS
@@ -880,6 +881,7 @@ if __name__ == "__main__":
             buffer_radar = param["buffer_radar"]
             step_mn = param["step"]
             simplify = param["simplify"]
+            
             if simplify == "simplify":
                 tolerance = param["tolerance"]
                 topology = param["preserve_topology"]
@@ -1074,7 +1076,6 @@ if __name__ == "__main__":
                         places = buffer_point(from_place, epsg_in, epsg_out, around[0], around[1])
                         
                         for place in places:
-                        
                             x_, y_ = transform(epsg_in,epsg_out,place[0],place[1]) 
                             x.append(x_)
                             y.append(y_)
@@ -1219,203 +1220,203 @@ if __name__ == "__main__":
                         #Make list of dict for future json export
                         l_intersections_json.append(df_stats_to_json(df_all_intersections, l_params, l_stats))
             
-            #EXPORT NO_TILES PNG
-            #Add origins points
-            if origine_screen == 1:
-                data = dict(
-                            x=x,
-                            y=y,
-                            adress=l_adress,
-                            color=l_colors
-                            )
-                source_origins.data.update(data)
-                
-                poly_circles = p_shape.circle(
-                    'x', 
-                    'y', 
-                    source=source_origins,
-                    fill_color='color', 
-                    fill_alpha = 1.0,
-                    size=10,
-                    line_color='black',
-                    line_alpha=1.0,
-                    line_width=1.0, 
-#                    legend="Origins"
-                        )
-                
-            #Set range of figure
-            if (start_x != end_x) and (start_y != end_y):
-                p_shape.x_range = Range1d(start_x, end_x)
-                p_shape.y_range = Range1d(start_y, end_y)
-            
-            p_shape.output_backend="webgl"
-            p_shape.background_fill_color = None
-            p_shape.border_fill_color = None
-            p_shape.outline_line_color = None
-            
-#            p_shape.add_tile(
-#                    tile_provider, 
-#                    alpha=0.5, 
-#                    name="no_tile",
-#                    visible=False
-#                    )
-            
-            create_dir(export_no_tiles)
-            name = export_no_tiles + identity
-            start_time = time.time()
-            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
-            dict_time["png_no_tiles"] = time_profile(start_time, option="ms")
-#            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
-#            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
-            p_shape.output_backend="svg"
-            start_time = time.time()
-            export_svgs(p_shape, filename="{}.svg".format(name), webdriver=my_webdriver)
-            dict_time["svg"] = time_profile(start_time, option="ms")
-            
-            
-            #EXPORT PARAMS TO JSON
-            params_name = export_no_tiles + identity + "_params"
-            json_name = filename="{}.json".format(params_name)
-            with open(json_name, 'w', encoding='utf-8') as outfile:
-                json.dump(param, outfile, sort_keys=True, indent=2)
-                
-            #EXPORT BUFFERS TO JSON
-            if l_buffer != []:
-                buffer_name = export_no_tiles + identity + "_buffer"
-                json_name = filename="{}.json".format(buffer_name)
-                with open(json_name, 'w', encoding='utf-8') as outfile:
-                    json.dump(l_buffer, outfile, sort_keys=True, indent=2)
-              
-            #EXPORT ISOS TO JSON
-            if l_dict_iso != []:
-                iso_name = export_no_tiles + identity + "_iso"
-                json_name = filename="{}.json".format(iso_name)
-                with open(json_name, 'w', encoding='utf-8') as outfile:
-                    json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
-                
-                #EXPORT OVERLAY TO JSON
-#                overlay_name = export_no_tiles + identity + "_overlay"
-#                json_name = filename="{}.json".format(overlay_name)
-#                with open(json_name, 'w', encoding='utf-8') as outfile:
-#                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
-                    
-            #EXPORT TO HTLM
-#            create_dir("./html/")
-#            name = "./html/" + identity + ".html"
-#            p_shape.add_tools(WheelZoomTool())
-#            p_shape.add_tools(PanTool())
+#            #EXPORT NO_TILES PNG
+#            #Add origins points
+#            if origine_screen == 1:
+#                data = dict(
+#                            x=x,
+#                            y=y,
+#                            adress=l_adress,
+#                            color=l_colors
+#                            )
+#                source_origins.data.update(data)
+#                
+#                poly_circles = p_shape.circle(
+#                    'x', 
+#                    'y', 
+#                    source=source_origins,
+#                    fill_color='color', 
+#                    fill_alpha = 1.0,
+#                    size=10,
+#                    line_color='black',
+#                    line_alpha=1.0,
+#                    line_width=1.0, 
+##                    legend="Origins"
+#                        )
+#                
+#            #Set range of figure
+#            if (start_x != end_x) and (start_y != end_y):
+#                p_shape.x_range = Range1d(start_x, end_x)
+#                p_shape.y_range = Range1d(start_y, end_y)
 #            
-#            html = file_html(p_shape, CDN, identity)
-#            with open(name, "w") as f:
-#                f.write(html)
-            
-            #EXPORT WITH_TILES PNG
-            #Add origins points
-            if origine_screen == 1:
-                data = dict(
-                            x=x,
-                            y=y,
-                            adress=l_adress,
-                            color=l_colors
-                            )
-                source_origins.data.update(data)
-                
-                poly_circles = p_shape.circle(
-                    'x', 
-                    'y', 
-                    source=source_origins,
-                    fill_color='color', 
-                    fill_alpha = 1.0,
-                    size=10,
-                    line_color='black',
-                    line_alpha=1.0,
-                    line_width=1.0, 
-#                    legend="Origins"
-                        )
-            
-            p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
-            
-            #Set range of figure
-            if (start_x != end_x) and (start_y != end_y):
-                p_shape.x_range = Range1d(start_x, end_x)
-                p_shape.y_range = Range1d(start_y, end_y)
-                
-#            else:
-#                x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
-#                y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
-#                p_shape.x_range = Range1d(x_range_start, x_range_end)
-#                p_shape.y_range = Range1d(y_range_start, y_range_end)
-                
-            p_shape.background_fill_color = None
-            p_shape.border_fill_color = None
-            p_shape.output_backend="webgl"
-            
-            create_dir(export_with_tiles)
-            name = export_with_tiles + identity
-            start_time = time.time()
-            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
-            dict_time["png_with_tiles"] = time_profile(start_time, option="ms")
-#            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
-#            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
-                
-            #EXPORT PARAMS TO JSON
-            params_name = export_with_tiles + identity + "_params"
-            json_name = filename="{}.json".format(params_name)
-            with open(json_name, 'w', encoding='utf-8') as outfile:
-                json.dump(param, outfile, sort_keys=True, indent=2)
-                
-            #EXPORT ISOS TO JSON
-            if l_dict_iso != []:
-                iso_name = export_with_tiles + identity + "_iso"
-                json_name = filename="{}.json".format(iso_name)
-                with open(json_name, 'w', encoding='utf-8') as outfile:
-                    json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
-                
-                #EXPORT OVERLAY TO JSON
-#                overlay_name = export_with_tiles + identity + "_overlay"
-#                json_name = filename="{}.json".format(overlay_name)
+#            p_shape.output_backend="webgl"
+#            p_shape.background_fill_color = None
+#            p_shape.border_fill_color = None
+#            p_shape.outline_line_color = None
+#            
+##            p_shape.add_tile(
+##                    tile_provider, 
+##                    alpha=0.5, 
+##                    name="no_tile",
+##                    visible=False
+##                    )
+#            
+#            create_dir(export_no_tiles)
+#            name = export_no_tiles + identity
+#            start_time = time.time()
+#            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+#            dict_time["png_no_tiles"] = time_profile(start_time, option="ms")
+##            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
+##            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
+#            p_shape.output_backend="svg"
+#            start_time = time.time()
+#            export_svgs(p_shape, filename="{}.svg".format(name), webdriver=my_webdriver)
+#            dict_time["svg"] = time_profile(start_time, option="ms")
+#            
+#            
+#            #EXPORT PARAMS TO JSON
+#            params_name = export_no_tiles + identity + "_params"
+#            json_name = filename="{}.json".format(params_name)
+#            with open(json_name, 'w', encoding='utf-8') as outfile:
+#                json.dump(param, outfile, sort_keys=True, indent=2)
+#                
+#            #EXPORT BUFFERS TO JSON
+#            if l_buffer != []:
+#                buffer_name = export_no_tiles + identity + "_buffer"
+#                json_name = filename="{}.json".format(buffer_name)
 #                with open(json_name, 'w', encoding='utf-8') as outfile:
-#                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
-            
-            #EXPORT ONLY TILES
-            x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
-            y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
-            
-            p_shape = make_plot(params_plot)
-            #Delete logo and toolbar
-            p_shape.toolbar.logo = None
-            p_shape.toolbar_location = None
-            p_shape.x_range = Range1d(x_range_start, x_range_end)
-            p_shape.y_range = Range1d(y_range_start, y_range_end)
-            
-            p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
-            
-            create_dir(export_only_tiles)
-            name = export_only_tiles + identity
-            
-            start_time = time.time()
-            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
-            dict_time["only_tiles"] = time_profile(start_time, option="ms")
-            
-            
-            #RESET
-            p_shape = make_plot(params_plot)
-            #Delete logo and toolbar
-            p_shape.toolbar.logo = None
-            p_shape.toolbar_location = None
-            
-            #MEASURE ALL OVERLAYS AND COLORS
-    #        zip_gdf = pairwise(list_gdf)
-    #        for x in zip_gdf: 
-    #            x[0]['time'] = None
-    #            x[1]['time'] = None
-    #            source_intersection, gdf_overlay = overlay(x[0], x[1], how, coeff_ampl, coeff_conv, color_switch)
-    #            list_gdf.append(gdf_overlay)
-                
-    #        gdfs = pd.concat(list_gdf)
-            
-            exe_duration = time.time() - start_time
-            dict_all_times[param["id"]] = dict_time
+#                    json.dump(l_buffer, outfile, sort_keys=True, indent=2)
+#              
+#            #EXPORT ISOS TO JSON
+#            if l_dict_iso != []:
+#                iso_name = export_no_tiles + identity + "_iso"
+#                json_name = filename="{}.json".format(iso_name)
+#                with open(json_name, 'w', encoding='utf-8') as outfile:
+#                    json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
+#                
+#                #EXPORT OVERLAY TO JSON
+##                overlay_name = export_no_tiles + identity + "_overlay"
+##                json_name = filename="{}.json".format(overlay_name)
+##                with open(json_name, 'w', encoding='utf-8') as outfile:
+##                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
+#                    
+#            #EXPORT TO HTLM
+##            create_dir("./html/")
+##            name = "./html/" + identity + ".html"
+##            p_shape.add_tools(WheelZoomTool())
+##            p_shape.add_tools(PanTool())
+##            
+##            html = file_html(p_shape, CDN, identity)
+##            with open(name, "w") as f:
+##                f.write(html)
+#            
+#            #EXPORT WITH_TILES PNG
+#            #Add origins points
+#            if origine_screen == 1:
+#                data = dict(
+#                            x=x,
+#                            y=y,
+#                            adress=l_adress,
+#                            color=l_colors
+#                            )
+#                source_origins.data.update(data)
+#                
+#                poly_circles = p_shape.circle(
+#                    'x', 
+#                    'y', 
+#                    source=source_origins,
+#                    fill_color='color', 
+#                    fill_alpha = 1.0,
+#                    size=10,
+#                    line_color='black',
+#                    line_alpha=1.0,
+#                    line_width=1.0, 
+##                    legend="Origins"
+#                        )
+#            
+#            p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
+#            
+#            #Set range of figure
+#            if (start_x != end_x) and (start_y != end_y):
+#                p_shape.x_range = Range1d(start_x, end_x)
+#                p_shape.y_range = Range1d(start_y, end_y)
+#                
+##            else:
+##                x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
+##                y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
+##                p_shape.x_range = Range1d(x_range_start, x_range_end)
+##                p_shape.y_range = Range1d(y_range_start, y_range_end)
+#                
+#            p_shape.background_fill_color = None
+#            p_shape.border_fill_color = None
+#            p_shape.output_backend="webgl"
+#            
+#            create_dir(export_with_tiles)
+#            name = export_with_tiles + identity
+#            start_time = time.time()
+#            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+#            dict_time["png_with_tiles"] = time_profile(start_time, option="ms")
+##            export_png(p_shape, filename="{}.gif".format(name), webdriver=my_webdriver)
+##            export_png(p_shape, filename="{}.bmp".format(name), webdriver=my_webdriver)
+#                
+#            #EXPORT PARAMS TO JSON
+#            params_name = export_with_tiles + identity + "_params"
+#            json_name = filename="{}.json".format(params_name)
+#            with open(json_name, 'w', encoding='utf-8') as outfile:
+#                json.dump(param, outfile, sort_keys=True, indent=2)
+#                
+#            #EXPORT ISOS TO JSON
+#            if l_dict_iso != []:
+#                iso_name = export_with_tiles + identity + "_iso"
+#                json_name = filename="{}.json".format(iso_name)
+#                with open(json_name, 'w', encoding='utf-8') as outfile:
+#                    json.dump(l_dict_iso, outfile, sort_keys=True, indent=2)
+#                
+#                #EXPORT OVERLAY TO JSON
+##                overlay_name = export_with_tiles + identity + "_overlay"
+##                json_name = filename="{}.json".format(overlay_name)
+##                with open(json_name, 'w', encoding='utf-8') as outfile:
+##                    json.dump(dict_intersection, outfile, sort_keys=True, indent=2)
+#            
+#            #EXPORT ONLY TILES
+#            x_range_start, x_range_end = p_shape.x_range.start, p_shape.x_range.end
+#            y_range_start, y_range_end = p_shape.y_range.start, p_shape.y_range.end
+#            
+#            p_shape = make_plot(params_plot)
+#            #Delete logo and toolbar
+#            p_shape.toolbar.logo = None
+#            p_shape.toolbar_location = None
+#            p_shape.x_range = Range1d(x_range_start, x_range_end)
+#            p_shape.y_range = Range1d(y_range_start, y_range_end)
+#            
+#            p_shape.add_tile(tile_provider, alpha=params["fig_params"]["alpha_tile"], name="tile")
+#            
+#            create_dir(export_only_tiles)
+#            name = export_only_tiles + identity
+#            
+#            start_time = time.time()
+#            export_png(p_shape, filename="{}.png".format(name), webdriver=my_webdriver)
+#            dict_time["only_tiles"] = time_profile(start_time, option="ms")
+#            
+#            
+#            #RESET
+#            p_shape = make_plot(params_plot)
+#            #Delete logo and toolbar
+#            p_shape.toolbar.logo = None
+#            p_shape.toolbar_location = None
+#            
+#            #MEASURE ALL OVERLAYS AND COLORS
+#    #        zip_gdf = pairwise(list_gdf)
+#    #        for x in zip_gdf: 
+#    #            x[0]['time'] = None
+#    #            x[1]['time'] = None
+#    #            source_intersection, gdf_overlay = overlay(x[0], x[1], how, coeff_ampl, coeff_conv, color_switch)
+#    #            list_gdf.append(gdf_overlay)
+#                
+#    #        gdfs = pd.concat(list_gdf)
+#            
+#            exe_duration = time.time() - start_time
+#            dict_all_times[param["id"]] = dict_time
             
             
     #        gdfs.to_csv("test.csv")
@@ -1450,6 +1451,7 @@ if __name__ == "__main__":
         json.dump(places_cache, outfile, sort_keys=True, indent=2)
         
     #EXPORT TO ONE JSON INTERSECTION FILE
+    create_dir(export_no_tiles)
     intersection_name = export_no_tiles + "intersections.json"
     if l_intersections_json != []:
         with open(intersection_name, 'w', encoding='utf-8') as outfile:
