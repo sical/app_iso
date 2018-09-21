@@ -1203,6 +1203,7 @@ if __name__ == "__main__":
                             df_all_intersections["area_sum"] = [0 for i in range(0, nb_element)]
                             df_all_intersections["nb_poly"] = [0 for i in range(0, nb_element)]
                             df_all_intersections = df_all_intersections.reset_index()
+                            
 #                            print (df_all_intersections)
 #                            df_all_intersections = pd.DataFrame.from_dict(df_all_intersections)
 #                            print (df_all_intersections)
@@ -1443,7 +1444,7 @@ if __name__ == "__main__":
     for col in df.columns:
         new_col = col + "_format"
         df[new_col] = df[col].map(lambda x: seconds_to_time(x/1000, option="format"))
-        
+    
     df.to_csv("time_logs.csv")
     
     #WRITE PLACES_CACHE
