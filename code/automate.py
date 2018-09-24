@@ -22,7 +22,7 @@ from bokeh.models import ColumnDataSource, Range1d, WheelZoomTool, PanTool
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 from shapely.geometry import Polygon
-from geopandas import GeoDataFrame
+import geopandas as gpd
 from dotenv import load_dotenv
 from pathlib import Path
 import json
@@ -283,7 +283,7 @@ def run(params_iso,x,y,adress, color):
         
         df = pd.DataFrame.from_dict(dict_poly, orient="index")
         crs = {'init':'epsg:3857'}
-        gdf = GeoDataFrame(df, crs=crs, geometry=df['geometry'])
+        gdf = gpd.GeoDataFrame(df, crs=crs, geometry=df['geometry'])
         source = convert_GeoPandas_to_Bokeh_format(gdf)
         
         color = 'color'
@@ -628,9 +628,9 @@ def run(params_iso,x,y,adress, color):
     p_shape.legend.visible = False
     
     if data_intersection is None:
-        return p_shape, dict_source, None
+        return p_shape, dict_source, None, gdf_poly
     else:
-        return p_shape, dict_source, data_intersection.data
+        return p_shape, dict_source, data_intersection.data, gdf_poly
 
 ###################################################
 ###################################################
@@ -811,6 +811,7 @@ if __name__ == "__main__":
     if export_auto is True:
         start_time = time.time()
         for i,param in enumerate(params_auto):
+            gdf_isos = []
             
             #Recreate dict params
             proj = {
@@ -981,8 +982,7 @@ if __name__ == "__main__":
                         if nb == jump_nb-1:
                             end_loop = True
                         
-                        p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
-                        
+                        p_shape, dict_source, dict_intersection, gdf_poly = run(params_iso, x,y,l_adress, color)
                         
                         if step_mn == 0 and params_iso["durations"] == []:
                             del dict_source['xs']
@@ -1107,7 +1107,7 @@ if __name__ == "__main__":
                                 'id': param["id"]
                                     }     
                             
-                            p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress,color)
+                            p_shape, dict_source, dict_intersection, gdf_poly = run(params_iso, x,y,l_adress,color)
                             
                             if step_mn == 0 and params_iso["durations"] == []:
                                 del dict_source['xs']
@@ -1161,7 +1161,8 @@ if __name__ == "__main__":
                             'id': param["id"]
                                 }    
 
-                        p_shape, dict_source, dict_intersection = run(params_iso, x,y,l_adress, color)
+                        p_shape, dict_source, dict_intersection, gdf_poly = run(params_iso, x,y,l_adress, color)
+                        gdf_isos.append(gdf_poly)
                         
                         #INTERSECTIONS, ONLY WORKS IF DURATIONS, STEP, JUMP AND AROUND ARE EMPTY
                         if intersection_index != 0 and dict_intersection is not None:
@@ -1182,7 +1183,7 @@ if __name__ == "__main__":
                                 del dict_source['ys']
                                 del dict_intersection['xs']
                                 del dict_intersection['ys']
-                                l_dict_iso.append(dict_source)
+                                l_dict_iso.append(dict_source) 
     #                            print (pd.DataFrame.from_dict(dict_intersection))
                                 l_intersections.append(pd.DataFrame.from_dict(dict_intersection))
                         
@@ -1220,6 +1221,32 @@ if __name__ == "__main__":
                         
                         #Make list of dict for future json export
                         l_intersections_json.append(df_stats_to_json(df_all_intersections, l_params, l_stats))
+
+            #EMPTINESS ISO
+            gdf_emptiness = pd.concat(gdf_isos, ignore_index=True)
+            l_durations = gdf_emptiness["time"].unique()
+            dict_gdf_isos = {
+                    x:{
+                            "union":None,
+                            "list":[]
+                            } for x in l_durations
+                    }
+            
+            for dur in l_durations:
+                dict_gdf_isos[dur]["list"].append(gdf_emptiness.loc[gdf_emptiness["time"]==dur])
+                
+            union = None
+            for x in l_durations:
+                for poly in dict_gdf_isos[x]["list"]:
+                    if union is None:
+                        union = poly
+                    else:
+                        print (union)
+                        union = gpd.overlay(union, poly, how="union")
+                dict_gdf_isos[x]["union"] = union
+            
+            print (dict_gdf_isos)
+            
             
 #            #EXPORT NO_TILES PNG
 #            #Add origins points
