@@ -5,6 +5,7 @@ Created on Thu Apr 12 13:31:04 2018
 @author: thomas
 """
 import os
+import itertools
 import math
 import pandas as pd
 import geopandas as gpd
@@ -1066,4 +1067,12 @@ def df_stats_to_json(df, params, stats):
                     "synthesis": json.loads(dict_stats_synth)
                     }
             }
-        
+
+def pairwise(iterable):
+    """
+    Source: https://stackoverflow.com/a/5434936
+    """
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    
+    return zip(a, b)  
