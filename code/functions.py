@@ -1076,3 +1076,37 @@ def pairwise(iterable):
     next(b, None)
     
     return zip(a, b)  
+
+def extract_poly_coords(geom):
+    """
+    https://stackoverflow.com/a/21922058
+    """
+    if geom.type == 'Polygon':
+        exterior_coords = geom.exterior.coords[:]
+        interior_coords = []
+        for interior in geom.interiors:
+            interior_coords += interior.coords[:]
+    elif geom.type == 'MultiPolygon':
+        exterior_coords = []
+        interior_coords = []
+        for part in geom:
+            epc = extract_poly_coords(part)  # Recursive call
+            exterior_coords += epc['exterior_coords']
+            interior_coords += epc['interior_coords']
+    else:
+        raise ValueError('Unhandled geometry type: ' + repr(geom.type))
+    return {'exterior_coords': exterior_coords,
+            'interior_coords': interior_coords}
+
+def delete_major_poly(geom):
+    max_area = 0 
+    list_interiors = list(geom.interiors)
+    for inner_ring in list_interiors:
+        area = Polygon(inner_ring.coords).area
+        if area > max_area:
+            max_area = area
+            index_ = list_interiors.index(inner_ring)
+    
+    del list_interiors[index_]
+    
+    return Polygon(shell=geom.exterior, holes=list_interiors)
