@@ -1197,10 +1197,6 @@ if __name__ == "__main__":
                             df_all_intersections["nb_poly"] = [0 for i in range(0, nb_element)]
                             df_all_intersections = df_all_intersections.reset_index()
                             
-#                            print (df_all_intersections)
-#                            df_all_intersections = pd.DataFrame.from_dict(df_all_intersections)
-#                            print (df_all_intersections)
-                            
                         else:
                             df_all_intersections = df_all_intersections.loc[df_all_intersections["intersection_index"] == intersection_index]
                             df_all_intersections["area_sum"] = df_all_intersections["area"].sum()
@@ -1225,26 +1221,16 @@ if __name__ == "__main__":
                             } for x in l_durations
                     }
             
-            p = r'C:\Users\thomas\Documents\code\iso\app_iso\code\output_png\test_intersection\data\no_tiles\geojson_cut'
-            
             for dur in l_durations:
                 increm = 0 
                 for iso in gdf_isos:
                     increm +=1
                     index_ = str(dur) + "_" + str(increm)
-                    print (index_)
-                    #Rebuild poly with no holes (cutted by Navitia when more than one boundary)
+                    
                     if dict_gdf_isos[dur]["list"] == []:
                         add_iso = iso.loc[iso["time"]==dur]
-                    else:
-                        new_iso = gpd.overlay(add_iso, iso.loc[iso["time"]==dur], how="intersection")
-                        add_iso = copy.deepcopy(new_iso)
                         
                     dict_gdf_isos[dur]["list"].append(add_iso)
-                    n = p + "/" + str(index_) + ".geojson"
-                    
-                    with open(n, 'w') as outfile:
-                        geojson.dump(json.loads(add_iso.to_json()), outfile)
 
             #intersection of iso with same duration
             for x in l_durations:
@@ -1252,30 +1238,9 @@ if __name__ == "__main__":
                 for poly in dict_gdf_isos[x]["list"]: #PB HERE !!!!
                     if intersection is None:
                         intersection = copy.deepcopy(poly)
-#                        print (intersection.to_json())
-#                        print ("*******************************")
-#                        print ("*******************************")
-#                        print ("*******************************")
-#                        print ("*******************************")
                     else:
                         intersection = gpd.overlay(intersection, poly, how="intersection")
-#                        print (intersection.to_json())
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
-#                print ("=============================")
                 dict_gdf_isos[x]["intersection"] = intersection
-#                print (intersection.to_json())
             
             #Symmetric difference 
             ## Create base polygon
@@ -1302,7 +1267,7 @@ if __name__ == "__main__":
                     dict_gdf_isos[v]["difference"] = gpd.overlay(
                             dict_gdf_isos[v]["intersection"], 
                             dict_gdf_isos[w]["intersection"],
-                            how="difference"
+                            how="symmetric_difference"
                             )
                     dict_gdf_isos[v]["difference"] = dict_gdf_isos[v]["difference"].assign(
                             fill = pd.Series(
