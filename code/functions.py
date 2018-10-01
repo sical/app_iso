@@ -1098,8 +1098,29 @@ def extract_poly_coords(geom):
     return {'exterior_coords': exterior_coords,
             'interior_coords': interior_coords}
 
+def fill_holes_major_poly(multipoly):
+    #Get major poly
+    max_area = 0
+    multis = [poly for poly in multipoly]
+    
+    for poly in multipoly:
+        if list(poly.interiors) != []:
+            if poly.area > max_area:
+                max_area = poly.area
+                poly_to_fill = poly
+                index_ = multis.index(poly)
+            
+    #Delete major hole in this poly
+    if max_area != 0:
+        poly_filled = delete_major_poly(poly_to_fill)
+        multis[index_] = poly_filled
+    
+    return MultiPolygon(multis)
+            
+
 def delete_major_poly(geom):
     max_area = 0 
+    
     list_interiors = list(geom.interiors)
     for inner_ring in list_interiors:
         area = Polygon(inner_ring.coords).area

@@ -17,7 +17,7 @@ from pyproj import transform, Proj
 import pandas as pd
 import copy
 
-from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats, explode, measure_differential, simplify, pairwise, delete_major_poly
+from functions import _cutoffs, _palette, _convert_epsg, create_pts, create_polys, convert_GeoPandas_to_Bokeh_format, buildings_to_datasource, network_to_datasource, gdf_to_geojson, colors_blend, get_stats, explode, measure_differential, simplify, pairwise, fill_holes_major_poly
 
 #SPEEDS (km/h)
 #Sources:
@@ -314,17 +314,24 @@ def get_iso(params, gdf_poly_mask, id_):
         gdf_poly.crs = {'init': inProj}
         gdf_poly = gdf_poly.to_crs({'init': outProj})
         
-        dict_gdf_poly = {x:None for x in durations}
+#        dict_gdf_poly = {x:None for x in durations}
         for dur in durations:
-            dict_gdf_poly[dur] = gdf_poly.loc[gdf_poly["time"] == dur]
-        zip_durations = pairwise(sorted(durations, reverse=True))
+            if durations.index(dur) != 0:
+                gdf_poly.loc[gdf_poly["time"] == dur, "geometry"] = gdf_poly.loc[gdf_poly["time"] == dur, "geometry"].apply(lambda x: fill_holes_major_poly(x))
         
-        l_gdf_poly = []
+#        zip_durations = pairwise(sorted(durations, reverse=True))
         
-        for key, value in dict_gdf_poly.items():
-            value = value.apply(lambda x: delete_major_poly(x["geometry"]), axis=1)
-            print (value)
-    
+#        l_gdf_poly = []
+        
+#        for key, value in dict_gdf_poly.items():
+#            value = value.apply(lambda x: fill_holes_major_poly(x["geometry"]), axis=1)
+#            print (type(value))
+#            print ("######################")
+#            print ("######################")
+#            print ("######################")
+#            print ("######################")
+#            print ("######################")
+                   
 #        for v,w in zip_durations:
 #            l = []
 #            l.extend([x.buffer(1000) for x in dict_gdf_poly[w]["geometry"]])
@@ -348,12 +355,12 @@ def get_iso(params, gdf_poly_mask, id_):
 #            l_gdf_poly.append(gdf_union)
 #        gdf_union = pd.concat(l_gdf_poly)
         
-        p = r'C:\Users\thomas\Documents\code\iso\app_iso\code\output_png\test_intersection\data\no_tiles\geojson_cut'
-        
-        n = p + "/" + str(address) + ".geojson"
-                    
-        with open(n, 'w') as outfile:
-            geojson.dump(json.loads(gdf_poly.to_json()), outfile)
+#        p = r'C:\Users\thomas\Documents\code\iso\app_iso\code\output_png\test_intersection\data\no_tiles\geojson_cut'
+#        
+#        n = p + "/" + str(address) + ".geojson"
+#                    
+#        with open(n, 'w') as outfile:
+#            geojson.dump(json.loads(gdf_poly.to_json()), outfile)
         
         # TODO ADD INTERSECTION CALCUL TO GET STATS
 #        source_intersections, gdf_poly_mask = overlay(

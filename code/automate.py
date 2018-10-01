@@ -1054,7 +1054,7 @@ if __name__ == "__main__":
                 p_shape.legend.location = "top_right"
                 p_shape.legend.click_policy="hide"
                 p_shape.legend.visible = False
-                        
+                                    
             else:
                 if around != []:
                     dict_time = {}
@@ -1219,70 +1219,113 @@ if __name__ == "__main__":
             l_durations = list(gdf_emptiness["time"].unique())
             dict_gdf_isos = {
                     x:{
-                            "union":None,
+                            "intersection":None,
                             "difference": None,
                             "list":[]
                             } for x in l_durations
                     }
             
+            p = r'C:\Users\thomas\Documents\code\iso\app_iso\code\output_png\test_intersection\data\no_tiles\geojson_cut'
+            
             for dur in l_durations:
-                dict_gdf_isos[dur]["list"].append(gdf_emptiness.loc[gdf_emptiness["time"]==dur])
-                
-            union = None
-            #Union of iso with same duration
-            for x in l_durations:
-                for poly in dict_gdf_isos[x]["list"]:
-                    if union is None:
-                        union = poly
+                increm = 0 
+                for iso in gdf_isos:
+                    increm +=1
+                    index_ = str(dur) + "_" + str(increm)
+                    print (index_)
+                    #Rebuild poly with no holes (cutted by Navitia when more than one boundary)
+                    if dict_gdf_isos[dur]["list"] == []:
+                        add_iso = iso.loc[iso["time"]==dur]
                     else:
-                        union = gpd.overlay(union, poly, how="union")
-                dict_gdf_isos[x]["union"] = union
+                        new_iso = gpd.overlay(add_iso, iso.loc[iso["time"]==dur], how="intersection")
+                        add_iso = copy.deepcopy(new_iso)
+                        
+                    dict_gdf_isos[dur]["list"].append(add_iso)
+                    n = p + "/" + str(index_) + ".geojson"
+                    
+                    with open(n, 'w') as outfile:
+                        geojson.dump(json.loads(add_iso.to_json()), outfile)
+
+            #intersection of iso with same duration
+            for x in l_durations:
+                intersection = None
+                for poly in dict_gdf_isos[x]["list"]: #PB HERE !!!!
+                    if intersection is None:
+                        intersection = copy.deepcopy(poly)
+#                        print (intersection.to_json())
+#                        print ("*******************************")
+#                        print ("*******************************")
+#                        print ("*******************************")
+#                        print ("*******************************")
+                    else:
+                        intersection = gpd.overlay(intersection, poly, how="intersection")
+#                        print (intersection.to_json())
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+#                print ("=============================")
+                dict_gdf_isos[x]["intersection"] = intersection
+#                print (intersection.to_json())
             
             #Symmetric difference 
             ## Create base polygon
-            back_poly = dict_gdf_isos[l_durations[0]]["union"].centroid.buffer(50000)
-            crs = {'init': 'epsg:3857'}
-            df = pd.DataFrame()
-            gdf = gpd.GeoDataFrame(df, crs=crs, geometry=back_poly)
-            dict_gdf_isos[100000] = {
-                    "union": gdf,
-                    "difference": None,
-                    "list": None
-                    }
-            l_durations.append(100000)
-            zip_durations = pairwise(sorted(l_durations, reverse=True))
-            
-            opacity = 90
-            opacity_minus = opacity//len(l_durations)
-            
-            for v,w in zip_durations:
-                dict_gdf_isos[v]["difference"] = gpd.overlay(
-                        dict_gdf_isos[v]["union"], 
-                        dict_gdf_isos[w]["union"],
-                        how="symmetric_difference"
-                        )
-                dict_gdf_isos[v]["difference"] = dict_gdf_isos[v]["difference"].assign(
-                        fill = pd.Series(
-                                ["purple" for x in dict_gdf_isos[v]["difference"]["geometry"]]
-                                ).values
-                        )
-                dict_gdf_isos[v]["difference"] = dict_gdf_isos[v]["difference"].assign(
-                        fill_opacity = pd.Series(
-                                [opacity for x in dict_gdf_isos[v]["difference"]["geometry"]]
-                                ).values
-                        )
-                opacity -= opacity_minus
+            if not dict_gdf_isos[l_durations[-1]]["intersection"].empty:
+                intersection_poly = dict_gdf_isos[l_durations[-1]]["intersection"]
+                intersection_poly["area"] = intersection_poly["geometry"].area
+                max_area = intersection_poly["area"].max()
+                back_poly = intersection_poly.loc[intersection_poly["area"] == max_area].centroid.buffer(200000)
+                crs = {'init': 'epsg:3857'}
+                df = pd.DataFrame()
+                gdf = gpd.GeoDataFrame(df, crs=crs, geometry=back_poly)
+                dict_gdf_isos[100000] = {
+                        "intersection": gdf,
+                        "difference": None,
+                        "list": None
+                        }
+                l_durations.append(100000)
+                zip_durations = pairwise(sorted(l_durations, reverse=True))
                 
-            #Write geojson
-            dir_geojson_cut = os.path.join(export_no_tiles, "geojson_cut")
-            create_dir(dir_geojson_cut)
-
-            for key,value in dict_gdf_isos.items():
-                name_iso_overlay = dir_geojson_cut + "/" + str(key) + ".geojson"
+                opacity = 90
+                opacity_minus = opacity//len(l_durations)
                 
-                if value["difference"] is not None:
-                    with open(name_iso_overlay, 'w') as outfile:
-                        geojson.dump(json.loads(value["difference"].to_json()), outfile)
+                for v,w in zip_durations:
+                    dict_gdf_isos[v]["difference"] = gpd.overlay(
+                            dict_gdf_isos[v]["intersection"], 
+                            dict_gdf_isos[w]["intersection"],
+                            how="difference"
+                            )
+                    dict_gdf_isos[v]["difference"] = dict_gdf_isos[v]["difference"].assign(
+                            fill = pd.Series(
+                                    ["purple" for x in dict_gdf_isos[v]["difference"]["geometry"]]
+                                    ).values
+                            )
+                    dict_gdf_isos[v]["difference"] = dict_gdf_isos[v]["difference"].assign(
+                            fill_opacity = pd.Series(
+                                    [opacity for x in dict_gdf_isos[v]["difference"]["geometry"]]
+                                    ).values
+                            )
+                    opacity -= opacity_minus
+                    
+                #Write geojson
+                dir_geojson_cut = os.path.join(export_no_tiles, "geojson_cut")
+                create_dir(dir_geojson_cut)
+    
+                for key,value in dict_gdf_isos.items():
+                    name_iso_overlay = dir_geojson_cut + "/" + str(key) + ".geojson"
+                    
+                    if value["difference"] is not None:
+                        with open(name_iso_overlay, 'w') as outfile:
+                            geojson.dump(json.loads(value["difference"].to_json()), outfile)
             
             
 #            #EXPORT NO_TILES PNG
