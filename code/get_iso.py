@@ -276,8 +276,8 @@ def get_iso(params, gdf_poly_mask, id_):
                     cutoffs,
                     str_modes
             )
-#            print (url)
-#            print ("#########################")
+            print (url)
+            print ("#########################")
             
             headers = {
                     'accept': 'application/json',
@@ -318,6 +318,7 @@ def get_iso(params, gdf_poly_mask, id_):
         for dur in durations:
             if durations.index(dur) != 0:
                 gdf_poly.loc[gdf_poly["time"] == dur, "geometry"] = gdf_poly.loc[gdf_poly["time"] == dur, "geometry"].apply(lambda x: fill_holes_major_poly(x))
+                
         
 #        zip_durations = pairwise(sorted(durations, reverse=True))
         

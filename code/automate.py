@@ -1240,7 +1240,7 @@ if __name__ == "__main__":
                         intersection = copy.deepcopy(poly)
                     else:
                         intersection = gpd.overlay(intersection, poly, how="intersection")
-                dict_gdf_isos[x]["intersection"] = intersection
+                dict_gdf_isos[x]["intersection"] = intersection 
             
             #Symmetric difference 
             ## Create base polygon
@@ -1267,7 +1267,7 @@ if __name__ == "__main__":
                     dict_gdf_isos[v]["difference"] = gpd.overlay(
                             dict_gdf_isos[v]["intersection"], 
                             dict_gdf_isos[w]["intersection"],
-                            how="symmetric_difference"
+                            how="difference"
                             )
                     dict_gdf_isos[v]["difference"] = dict_gdf_isos[v]["difference"].assign(
                             fill = pd.Series(
