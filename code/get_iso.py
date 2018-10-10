@@ -269,7 +269,7 @@ def get_iso(params, gdf_poly_mask, id_):
 #            print ("l_cuts", l_cuts)
 #            print ("cut", cut)
 #            print ("cutoffs", cutoffs)
-            url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}'.format(
+            url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}{}'.format(
                     id_,
                     from_place,
                     date_time,

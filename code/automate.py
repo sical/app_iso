@@ -1264,6 +1264,19 @@ if __name__ == "__main__":
                 opacity_minus = opacity//len(l_durations)
                 
                 for v,w in zip_durations:
+                    if w == l_durations[0]:
+                        dict_gdf_isos[w]["difference"] = dict_gdf_isos[w]["intersection"]
+                        dict_gdf_isos[w]["difference"] = dict_gdf_isos[w]["difference"].assign(
+                            fill = pd.Series(
+                                    ["purple" for x in dict_gdf_isos[w]["difference"]["geometry"]]
+                                    ).values
+                            )
+                        dict_gdf_isos[w]["difference"] = dict_gdf_isos[w]["difference"].assign(
+                                fill_opacity = pd.Series(
+                                        [opacity for x in dict_gdf_isos[w]["difference"]["geometry"]]
+                                        ).values
+                                ) 
+                                
                     dict_gdf_isos[v]["difference"] = gpd.overlay(
                             dict_gdf_isos[v]["intersection"], 
                             dict_gdf_isos[w]["intersection"],
@@ -1278,7 +1291,7 @@ if __name__ == "__main__":
                             fill_opacity = pd.Series(
                                     [opacity for x in dict_gdf_isos[v]["difference"]["geometry"]]
                                     ).values
-                            )
+                            )   
                     opacity -= opacity_minus
                     
                 #Write geojson
