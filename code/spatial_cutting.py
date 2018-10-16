@@ -7,7 +7,7 @@ Created on Wed Oct 10 12:38:20 2018
 
 import osmnx as ox
 import geopandas as gpd
-from shapely.geometry import Polygon, MultiPolygon
+#from shapely.geometry import Polygon, MultiPolygon
 import pandas as pd
 
 def gdf_bool_to_int(gdf):
@@ -38,41 +38,40 @@ def gdf_bool_to_int(gdf):
 class SpatialCut:
     def __init__(
             self, 
-            geojson_bbox, 
-            timeout, geojsons, 
-            id_field, 
-            network_output, 
+            bbox_file, 
+            timeout, 
+            spatial_cuts,
             epsg_in, 
-            epsg_out
+            epsg_out=None
             ):
         
-        self.geojson_bbox = gpd.read_file(geojson_bbox)
-        self.geojson_bbox.crs = {"init":epsg_in}
-        geojsons = [gpd.read_file(x) for x in geojsons]
+        self.bbox_file = gpd.read_file(bbox_file)
+        self.bbox_file.crs = {"init":epsg_in}
+        spatial_cuts = [gpd.read_file(x) for x in spatial_cuts]
         
-        for geo in geojsons:
+        for geo in spatial_cuts:
             geo.crs = {"init":epsg_in}
 
         if epsg_out != None:
-            self.geojson_bbox = self.geojson_bbox.to_crs(
+            self.bbox_file = self.bbox_file.to_crs(
                     {"init":epsg_out}
                     )
             
-            self.geojsons = []
-            for geo in geojsons:
-                self.geojsons.append(
+            self.spatial_cuts = []
+            for geo in spatial_cuts:
+                self.spatial_cuts.append(
                         geo.to_crs({"init":epsg_out})
                         )
         else:
-            self.geojsons = geojsons
+            self.spatial_cuts = spatial_cuts
             
         self.timeout = timeout
-        self.id_field = id_field
-        self.network_output = network_output
-        
-
+    
+    def _bbox(self):
+        return self.bbox_file["geometry"].values[0]
+    
     def get_network_from_poly(self):
-        poly = self.geojson_bbox["geometry"].values[0]
+        poly = self._bbox()
         
         G = ox.graph_from_polygon(
                 poly,
@@ -83,77 +82,76 @@ class SpatialCut:
         self.lines = gdf_graph[1]
         self.points = gdf_graph[0]
         
-#        return self.gdf_graph
+    def get_buildings_from_poly(self):
+        poly = self._bbox()
+        self.buildings = ox.buildings_from_polygon(poly)
+        
+    def get_network_duration(self):
+        return self._get_value_by_intersect(self.lines)
     
-    def get_value_by_intersect(self):
+    def get_buildings_duration(self):
+        return self._get_value_by_intersect(self.buildings)
+    
+    def get_spatial_duration(self, spatial):
+        return self._get_value_by_intersect(spatial)
+    
+    def _get_value_by_intersect(self, spatial_objects):
         """
         Sources: https://github.com/gboeing/urban-data-science/blob/master/19-Spatial-Analysis-and-Cartography/rtree-spatial-indexing.ipynb
                  https://geoffboeing.com/2016/10/r-tree-spatial-index-python/
         """
         #Build R-tree index
-        sindex = self.lines.sindex
-        dict_ = {}
-        self.lines["duration"] = 0 
+        sindex = spatial_objects.sindex
+        spatial_objects["duration"] = 0 
         
-        for gdf in self.geojsons:
-#            print (gdf)
-#            print (self.gdf_graph[1])
+        for gdf in self.spatial_cuts:
             duration = gdf["time"][0]
             lines_within_geometry = pd.DataFrame()
-            print (duration)
             
             for geometry in gdf["geometry"]:
-                # make the geometry a multipolygon if it's not already
-#                if isinstance(geometry, Polygon):
-#                    geometry = MultiPolygon([geometry])
-                
-#                #Make sub polygons
+                #Make sub polygons
                 geometry_cut = ox.quadrat_cut_geometry(geometry, quadrat_width=0.1)
-                
-                #CHANGE NOW
                 
                 # find the points that intersect with each subpolygon and add them to points_within_geometry
                 for poly in geometry_cut:
                     possible_matches_index = list(sindex.intersection(poly.bounds))
-                    possible_matches = self.lines.iloc[possible_matches_index]
+                    possible_matches = spatial_objects.iloc[possible_matches_index]
                     precise_matches = possible_matches[possible_matches.intersects(poly)]
-                    # buffer by the <1 micron dist to account for any space lost in the quadrat cutting
-                    # otherwise may miss point(s) that lay directly on quadrat line
-    #                    poly = poly.buffer(1e-14).buffer(0)
-    #                
-    #                    # find approximate matches with r-tree, then precise matches from those approximate ones
-    #                    possible_matches_index = list(sindex.intersection(poly.bounds))
-    #                    possible_matches = self.lines.iloc[possible_matches_index]
-    #                    precise_matches = possible_matches[possible_matches.intersects(poly)]
+
                     lines_within_geometry = lines_within_geometry.append(precise_matches)
-                    print (len(lines_within_geometry))
-                    
-    #                    overlay_ids = gpd.overlay(self.lines, gdf, how="intersection")[self.id_field]
-    #                    self.gdf_graph.loc[self.gdf_graph[self.id_field].isin(overlay_ids)]["duration"] = duration
-#            print (len(lines_within_geometry))
-#            print ("#################################################")
             
-            # Add duration value in the new field duration in self.lines
+            # Add duration value in the new field duration in spatial_objects
             ## Get osmid of lines_within_geometry
             ids = lines_within_geometry.index.tolist()
-            self.lines.loc[self.lines.index.isin(ids), "duration"] = self.lines.loc[self.lines.index.isin(ids), "duration"].apply(lambda x: duration)
+            spatial_objects.loc[spatial_objects.index.isin(ids), "duration"] = spatial_objects.loc[spatial_objects.index.isin(ids), "duration"].apply(lambda x: duration)
         
-#            if type(lines_within_geometry) == list  and lines_within_geometry != []:
-#                dict_[duration] = pd.concat(lines_within_geometry)
-#            else:
-#                dict_[duration] = None
-##            print (dict_)
-#        
-#        self.gdf_export = gpd.GeoDataFrame.from_dict(dict_, orient="index")
-
-#        with open(self.network_output, "w") as f:
-#            f.write(self.gdf_export.to_json())
-        
-#        self.lines.to_file(self.network_output, driver="GeoJSON")
-        
-        return gdf_bool_to_int(self.lines)
+        return gdf_bool_to_int(spatial_objects)
     
-    def run(self):
-        self.get_network_from_poly()
-        return self.get_value_by_intersect()
+    def apply_duration(self, network=True, buildings=True, spatial_inputs=[]):
+        dict_ = {}
+        if spatial_inputs == []:
+            if network == True and buildings == True:
+                self.get_network_from_poly()
+                self.get_buildings_from_poly()
+                
+                dict_["network"] = self.get_network_duration()
+                dict_["buildings"] = self.get_buildings_duration()
+            
+            elif network == False and buildings == True:
+                self.get_buildings_from_poly()
+                
+                dict_["network"] = None
+                dict_["buildings"] = self.get_buildings_duration()
+            
+            elif network == True and buildings == False:
+                self.get_network_from_poly()
+                
+                dict_["network"] = self.get_network_duration()
+                dict_["buildings"] = None
+        else:
+            for spatial in spatial_inputs:
+                dict_[spatial] = self.get_spatial_duration(spatial)
+            
+        return dict_
+            
         
