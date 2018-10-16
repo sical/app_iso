@@ -10,6 +10,31 @@ import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon
 import pandas as pd
 
+def gdf_bool_to_int(gdf):
+    """
+    For a given GeoDataFrame, returns a copy that
+    recasts all `bool`-type columns as `int`.
+
+    GeoDataFrame -> GeoDataFrame
+    
+    Source: https://github.com/geopandas/geopandas/issues/437#issuecomment-341184104
+    """
+    df = gdf.copy()
+    coltypes = gpd.io.file.infer_schema(df)['properties']
+    to_drop = []
+    for c in coltypes.items():
+        if c[1] == 'bool':
+            colname = c[0]
+            df[colname] = df[colname].astype('int')
+        elif c[1] == "str":
+            colname = c[0]
+            to_drop.append(colname)
+    
+    df = df.drop(columns=to_drop)
+    
+    return df
+
+
 class SpatialCut:
     def __init__(
             self, 
@@ -101,6 +126,7 @@ class SpatialCut:
     #                    possible_matches = self.lines.iloc[possible_matches_index]
     #                    precise_matches = possible_matches[possible_matches.intersects(poly)]
                     lines_within_geometry = lines_within_geometry.append(precise_matches)
+                    print (len(lines_within_geometry))
                     
     #                    overlay_ids = gpd.overlay(self.lines, gdf, how="intersection")[self.id_field]
     #                    self.gdf_graph.loc[self.gdf_graph[self.id_field].isin(overlay_ids)]["duration"] = duration
@@ -109,9 +135,8 @@ class SpatialCut:
             
             # Add duration value in the new field duration in self.lines
             ## Get osmid of lines_within_geometry
-            osmids = lines_within_geometry["osmid"].values
-            print (osmids)
-            self.lines.loc[self.lines["osmid"] == osmids]["duration"] = duration
+            ids = lines_within_geometry.index.tolist()
+            self.lines.loc[self.lines.index.isin(ids), "duration"] = self.lines.loc[self.lines.index.isin(ids), "duration"].apply(lambda x: duration)
         
 #            if type(lines_within_geometry) == list  and lines_within_geometry != []:
 #                dict_[duration] = pd.concat(lines_within_geometry)
@@ -124,9 +149,9 @@ class SpatialCut:
 #        with open(self.network_output, "w") as f:
 #            f.write(self.gdf_export.to_json())
         
-        self.lines.to_file(self.network_output, driver="GeoJSON")
+#        self.lines.to_file(self.network_output, driver="GeoJSON")
         
-        return self.lines
+        return gdf_bool_to_int(self.lines)
     
     def run(self):
         self.get_network_from_poly()
