@@ -9,6 +9,8 @@ import osmnx as ox
 import geopandas as gpd
 #from shapely.geometry import Polygon, MultiPolygon
 import pandas as pd
+import overpass
+import time
 
 def gdf_bool_to_int(gdf):
     """
@@ -33,6 +35,42 @@ def gdf_bool_to_int(gdf):
     df = df.drop(columns=to_drop)
     
     return df
+
+def get_transit_network(
+        bbox,
+        endpoint="https://overpass-api.de/api/interpreter",
+        timeout=40, 
+        modes=["tram","subway","bus"]
+        ):
+    
+    dict_ = {}
+    bbox=45.756832,4.853087,45.766805,4.865903
+    api = overpass.API(endpoint=endpoint, debug=True)
+    requ2 = """
+    (
+  node["railway"="station"]["station"!~"subway"](45.756832,4.853087,45.766805,4.865903);
+  node["railway"="station"]["station"="subway"](45.756832,4.853087,45.766805,4.865903);
+  way["railway"="rail"](45.756832,4.853087,45.766805,4.865903);
+  
+);
+    """
+    dict_["test"] = api.get(requ2)
+    
+#    for mode in modes:
+#        requ = """
+#            (
+#            node["type"="route"]["route"="{}"](45.756832,4.853087,45.766805,4.865903);
+#            way["type"="route"]["route"="{}"](45.756832,4.853087,45.766805,4.865903);
+#              relation["type"="route"]["route"="{}"](45.756832,4.853087,45.766805,4.865903);
+#            );
+#            
+#        """.format(mode,mode,mode)
+#        
+#        print (requ)
+#        
+#        dict_[mode] = api.get(requ)
+        
+    return dict_
 
 
 class SpatialCut:
