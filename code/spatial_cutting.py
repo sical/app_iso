@@ -40,20 +40,46 @@ def get_transit_network(
         bbox,
         endpoint="https://overpass-api.de/api/interpreter",
         timeout=40, 
-        modes=["tram","subway","bus"]
+        modes=["tram","subway","bus"],
+        network=""
         ):
+    
+    """
+    Get the transit networks (tramway, bus, subway, train, ...)
+    and return GeoJSON of nodes and lines
+    
+    @bbox[tuple]: coordinates of bounding box: 
+        EPSG: 4326, 
+        format: south,west,north,east
+        ex: 45.746312,4.840357,45.766805,4.865903
+    @endpoint[str]: endpoint overpass:
+        see https://wiki.openstreetmap.org/wiki/Overpass_API#Public%20Overpass%20API%20instances
+        default: "https://overpass-api.de/api/interpreter"
+    @timeout[int]: timeout for overpass request:
+        default: 40
+    @modes[list of str]: each mode for network request:
+        default: ["tram","subway","bus"]
+    @network[str]: network name:
+        default: ""
+        ex: "TCL"
+        
+    Returns dict of modes/GeoJSON
+    """
     
     dict_ = {}
     api = overpass.API(endpoint=endpoint, timeout=timeout)
+    if network != "":
+            network = "[network={}]".format(network)
     
     for mode in modes:
         requ = """
             (
-              relation["type"="route"]["route"="{}"]{};
+              rel{}["type"="route"]["route"="{}"]{};
             );
             (._;>;);
+            out geom;
             
-        """.format(mode, bbox)
+        """.format(network, mode, bbox)
         
         dict_[mode] = api.get(requ)
         
