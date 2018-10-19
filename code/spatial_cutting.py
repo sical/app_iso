@@ -37,7 +37,7 @@ def gdf_bool_to_int(gdf):
     return df
 
 def get_transit_network(
-        bbox,
+        bbox="",
         endpoint="https://overpass-api.de/api/interpreter",
         timeout=40, 
         modes=["tram","subway","bus"],
@@ -51,7 +51,8 @@ def get_transit_network(
     @bbox[tuple]: coordinates of bounding box: 
         EPSG: 4326, 
         format: south,west,north,east
-        ex: 45.746312,4.840357,45.766805,4.865903
+        ex: 45.746312,4.840357,45.766805,4.865903,
+        default: ""
     @endpoint[str]: endpoint overpass:
         see https://wiki.openstreetmap.org/wiki/Overpass_API#Public%20Overpass%20API%20instances
         default: "https://overpass-api.de/api/interpreter"

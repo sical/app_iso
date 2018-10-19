@@ -1,0 +1,71 @@
+{
+	"type": "object ",
+	" properties ": {
+		" id ": {
+			" type ": " string "
+		},
+		" how ": {
+			" type ": " string "
+		},
+		" colors_iso ": {
+			" type ": " array ",
+			" items ": {
+				" type ": " string "
+			}
+		},
+		" colors_intersection": {
+			" type ": " array ",
+			" items ": {
+				" type ": " string "
+			}
+		},
+		" opacity_isos ": {
+			" type ": " string "
+		},
+		" opacity_intersection ": {
+			" type ": " string "
+		},
+		" region_id ": {
+			" type ": " string "
+		},
+		" date ": {
+			" type ": " string "
+		},
+		" adresses": {
+			" type ": " array ",
+			" items ": {
+				" type ": " string "
+			}
+		},
+		" time ": {
+			" type ": " string "
+		},
+		" durations": {
+			" type ": " array ",
+			" items ": {
+				" type ": " integer "
+			}
+		},
+		" tolerance ": {
+			" type ": " number "
+		},
+		" preserve_topology ": {
+			" type ": " boolean "
+		},
+		" excluded_modes": {
+			" type ": " array ",
+			" items ": {
+				" type ": " string "
+			}
+		},
+		" inProj ": {
+			" type ": " string "
+		},
+		" outProj ": {
+			" type ": " string "
+		},
+		" distance_bbox ": {
+			" type ": " number "
+		}
+	}
+}
