@@ -1,71 +1,68 @@
 {
-	"type": "object ",
-	" properties ": {
-		" id ": {
-			" type ": " string "
+	"type":"object",
+	"properties": {
+		"id": {
+			"type":"string"
 		},
-		" how ": {
-			" type ": " string "
+		"how": {
+			"type":"string"
 		},
-		" colors_iso ": {
-			" type ": " array ",
-			" items ": {
-				" type ": " string "
+		"colors_iso": {
+			"type":"array",
+			"items": {
+				"type":"string"
 			}
 		},
-		" colors_intersection": {
-			" type ": " array ",
-			" items ": {
-				" type ": " string "
+		"colors_intersection": {
+			"type":"string"
+		},
+		"opacity_isos": {
+			"type":"number"
+		},
+		"opacity_intersection": {
+			"type":"number"
+		},
+		"region_id": {
+			"type":"string"
+		},
+		"date": {
+			"type":"string"
+		},
+		"adresses": {
+			"type":"array",
+			"items": {
+				"type":"string"
 			}
 		},
-		" opacity_isos ": {
-			" type ": " string "
+		"time": {
+			"type":"string"
 		},
-		" opacity_intersection ": {
-			" type ": " string "
-		},
-		" region_id ": {
-			" type ": " string "
-		},
-		" date ": {
-			" type ": " string "
-		},
-		" adresses": {
-			" type ": " array ",
-			" items ": {
-				" type ": " string "
+		"durations": {
+			"type":"array",
+			"items": {
+				"type":"integer"
 			}
 		},
-		" time ": {
-			" type ": " string "
+		"tolerance": {
+			"type":"number"
 		},
-		" durations": {
-			" type ": " array ",
-			" items ": {
-				" type ": " integer "
+		"preserve_topology": {
+			"type":"boolean"
+		},
+		"excluded_modes": {
+			"type":"array",
+			"items": {
+				"type":"string"
 			}
 		},
-		" tolerance ": {
-			" type ": " number "
+		"inProj": {
+			"type":"string"
 		},
-		" preserve_topology ": {
-			" type ": " boolean "
+		"outProj": {
+			"type":"string"
 		},
-		" excluded_modes": {
-			" type ": " array ",
-			" items ": {
-				" type ": " string "
-			}
-		},
-		" inProj ": {
-			" type ": " string "
-		},
-		" outProj ": {
-			" type ": " string "
-		},
-		" distance_bbox ": {
-			" type ": " number "
+		"distance_bbox": {
+			"type":"number"
 		}
 	}
 }
