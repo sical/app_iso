@@ -12,6 +12,8 @@ import geojson
 from geopy.geocoders import Nominatim
 from jsonschema import validate
 from geojson import Feature, MultiPolygon, FeatureCollection, Polygon
+import geopandas as gpd
+import pandas as pd
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
@@ -115,11 +117,11 @@ class GetIso:
         
         return cutoffs, list_time, cuts
     
-    def get_iso(self, param):
+    def get_iso(self, param, from_place):
         """
         
         """
-        self.multipolys = []
+        multipolys = []
         
         durations = [i*60 for i in param["durations"]]
         if len(durations) > 10:
@@ -132,7 +134,6 @@ class GetIso:
         if self.api == "navitia":
             str_modes = self.list_excluded(param["modes"])
             date_time = param["date"].isoformat() + "T" + param["time"]
-            from_place = self.places_cache[param["address"]]
             
             for element in l_cuts:
                 self.param_request = {
@@ -158,19 +159,36 @@ class GetIso:
                             "datetime": date_time #TODO: add style properties 
                             }
                         )
-                self.multipolys.append(multi)
+                multipolys.append(multi)
                 
-        collection = FeatureCollection(gdf_polys)
+        collection = FeatureCollection(multipolys)
         gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])
         
         gdf_poly.crs = {'init': param["inProj"]}
+        
+        return gdf_poly
     
     def get_all_isos(self, params):
         """
         
         """
+        l_all_gdf = []
         for param in self.params:
+            l_param_gdf = []
             for address in param["addresses"]:
+                from_place = self.places_cache[param["address"]]
+                gdf_poly = self.get_iso(param, from_place)
+                l_param_gdf.append(gdf_poly)
+            gdf_param = pd.concat(l_param_gdf)
+            l_all_gdf.append(gdf_param)
+            #TODO WRITE GEOJSON BY ADDRESSES AND BY DURATIONS
+            #TODO INTERSECTIONS GDF AND GEOJSONS
+            
+        
+        gdf_global = pd.concat(l_all_gdf)
+        
+        return gdf_global
+                
                 
             
             
