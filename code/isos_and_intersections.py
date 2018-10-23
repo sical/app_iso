@@ -11,6 +11,7 @@ import requests
 import geojson
 from geopy.geocoders import Nominatim
 from jsonschema import validate
+from geojson import Feature, MultiPolygon, FeatureCollection, Polygon
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
@@ -70,7 +71,7 @@ class GetIso:
         """
         if self.api == "navitia":
             url='https://api.navitia.io/v1/coverage/{}/isochrones?from={}&datetime={}{}{}'.format(
-                        self.param_request["id_"],
+                        self.param_request["region_id"],
                         self.param_request["from_place"],
                         self.param_request["date_time"],
                         self.param_request["cutoffs"],
@@ -94,7 +95,7 @@ class GetIso:
         
         return str_modes
     
-    def _cutoffs(self, durations=[]):
+    def _cutoffs(self, durations=[1200]):
         """
         Returns a string for Navitia API for step and seconds by step
         Returns a list of time values
@@ -114,51 +115,63 @@ class GetIso:
         
         return cutoffs, list_time, cuts
     
-    def get_iso(self):
+    def get_iso(self, param):
         """
         
         """
+        self.multipolys = []
         
-        durations = [i*60 for i in self.params["durations"]]
+        durations = [i*60 for i in param["durations"]]
         if len(durations) > 10:
             cutoffs, list_time, cuts = self._cutoffs(durations=durations)
             l_cuts = [cuts[x:x+10] for x in range(0, len(cuts),10)]
         else:
-            cutoffs, list_time, cuts = _cutoffs(0, 0, durations=durations)
+            cutoffs, list_time, cuts = self._cutoffs(durations=durations)
             l_cuts = [cuts,]
         
         if self.api == "navitia":
-            str_modes = self.list_excluded(modes)
-        
-        
-        url, headers = self.define_request()
-        r = requests.get(url, headers=headers)
-        code = r.status_code
-        
-        json_response = json.dumps(r.json())
-        geojson_ = geojson.loads(json_response)
-    
-        for iso,duration in zip(geojson_['isochrones'], list_time):
-            multi = Feature(
-                    geometry=MultiPolygon(
-                            iso["geojson"]["coordinates"]
-                            ), 
-                    properties={
-                        "time":duration,
-                        "address": address,
-                        "datetime": date_time
+            str_modes = self.list_excluded(param["modes"])
+            date_time = param["date"].isoformat() + "T" + param["time"]
+            from_place = self.places_cache[param["address"]]
+            
+            for element in l_cuts:
+                self.param_request = {
+                        "from_place":from_place,
+                        "date_time":date_time,
+                        "cutoffs":element,
+                        "str_modes":str_modes
                         }
-                    )
-            gdf_polys.append(multi)
+                
+                url, headers = self.define_request()
+                r = requests.get(url, headers=headers)
+                code = r.status_code
+        
+                json_response = json.dumps(r.json())
+                geojson_ = geojson.loads(json_response)
     
-    def get_all_isos(self):
+            for iso,duration in zip(geojson_['isochrones'], list_time):
+                multi = Feature(
+                        geometry=iso["geojson"],
+                        properties={
+                            "time":duration,
+                            "address": param["address"],
+                            "datetime": date_time #TODO: add style properties 
+                            }
+                        )
+                self.multipolys.append(multi)
+                
+        collection = FeatureCollection(gdf_polys)
+        gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])
+        
+        gdf_poly.crs = {'init': param["inProj"]}
+    
+    def get_all_isos(self, params):
         """
         
         """
-        
         for param in self.params:
-            if self.api == "navitia":
-                param["str_modes"] = self.list_excluded(param["modes"])
+            for address in param["addresses"]:
+                
             
             
             
