@@ -4,7 +4,7 @@ Created on Fri Oct 19 17:28:25 2018
 
 @author: thomas
 """
-
+import os
 import json
 import time
 import requests
@@ -14,6 +14,8 @@ from jsonschema import validate
 from geojson import Feature, MultiPolygon, FeatureCollection, Polygon
 import geopandas as gpd
 import pandas as pd
+
+import fill_poly_holes as fph
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
@@ -154,7 +156,7 @@ class GetIso:
                 multi = Feature(
                         geometry=iso["geojson"],
                         properties={
-                            "time":duration,
+                            "duration":duration,
                             "address": param["address"],
                             "datetime": date_time #TODO: add style properties 
                             }
@@ -167,6 +169,18 @@ class GetIso:
         gdf_poly.crs = {'init': param["inProj"]}
         
         return gdf_poly
+    
+    def polys_no_holes(self, durations, gdf):
+        for dur in durations:
+            if durations.index(dur) != 0:
+                gdf.loc[
+                        gdf["duration"] == dur, "geometry"
+                        ] = gdf.loc[
+                                gdf["duration"] == dur, "geometry"
+                                ].apply(
+                        lambda x: fph.fill_holes_major_poly(x)
+                        )
+        return gdf
     
     def get_all_isos(self, params):
         """
@@ -181,14 +195,30 @@ class GetIso:
                 l_param_gdf.append(gdf_poly)
             gdf_param = pd.concat(l_param_gdf)
             l_all_gdf.append(gdf_param)
-            #TODO WRITE GEOJSON BY ADDRESSES AND BY DURATIONS
+            
+            #Write GeoJSON by addresses
+            name_isos = param["id"] + "_isos_by_addresses.geojson"
+            name_isos = os.path.join(param["path"], name_isos)
+            gdf_param.to_file(name_isos, driver="GeoJSON")
+            
+            #Write GeoJSON by durations
+            ## Rebuild isos (fill holes)
+            gdf_param_durations = self.polys_no_holes(param["durations"], gdf_param)
+            
+            ## Write files
+            name_isos_durations = param["id"] + "_isos_by_durations.geojson"
+            name_isos_durations = os.path.join(param["path"], name_isos_durations)
+            gdf_param_durations.to_file(name_isos_durations, driver="GeoJSON")
+            
+            
+            
+            #TODO WRITE GEOJSON BY DURATIONS
             #TODO INTERSECTIONS GDF AND GEOJSONS
             
         
         gdf_global = pd.concat(l_all_gdf)
         
         return gdf_global
-                
                 
             
             
