@@ -7,6 +7,7 @@ Created on Fri Oct 19 17:28:25 2018
 import os
 import json
 import time
+import copy
 import requests
 import geojson
 from geopy.geocoders import Nominatim
@@ -168,7 +169,19 @@ class GetIso:
         
         gdf_poly.crs = {'init': param["inProj"]}
         
-        return gdf_poly
+        #Simplify
+        if param["tolerance"] != 0:
+            simplified = gdf_poly.geometry.simplify(
+                    param["tolerance"],  
+                    preserve_topology=param["preserve_topology"]
+                    )
+            simplified_gdf = copy.deepcopy(gdf_poly)
+            simplified_gdf.geometry = simplified
+            
+            return simplified_gdf
+        
+        else:
+            return gdf_poly
     
     def polys_no_holes(self, durations, gdf):
         for dur in durations:
@@ -187,33 +200,63 @@ class GetIso:
         
         """
         l_all_gdf = []
+        l_all_gdf_filled = []
+        
         for param in self.params:
             l_param_gdf = []
+            l_param_gdf_filled = []
             for address in param["addresses"]:
                 from_place = self.places_cache[param["address"]]
                 gdf_poly = self.get_iso(param, from_place)
                 l_param_gdf.append(gdf_poly)
+                
+                ## Rebuild isos (fill holes) for gdf sorted by durations
+                gdf_poly_durations = self.polys_no_holes(
+                        param["durations"], 
+                        gdf_poly
+                        )
+                
+                l_param_gdf_filled.append(gdf_poly_durations)
+                
             gdf_param = pd.concat(l_param_gdf)
+            gdf_param_filled = pd.concat(l_param_gdf_filled)
             l_all_gdf.append(gdf_param)
+            l_all_gdf_filled.append(gdf_param_filled)
             
             #Write GeoJSON by addresses
             name_isos = param["id"] + "_isos_by_addresses.geojson"
             name_isos = os.path.join(param["path"], name_isos)
             gdf_param.to_file(name_isos, driver="GeoJSON")
             
-            #Write GeoJSON by durations
-            ## Rebuild isos (fill holes)
-            gdf_param_durations = self.polys_no_holes(param["durations"], gdf_param)
+            #Write GeoJSON by duration
+            ## Sort by durations
+            gdf_param_filled.sort_values(["duration"], axis=1, inplace=True)
             
             ## Write files
             name_isos_durations = param["id"] + "_isos_by_durations.geojson"
-            name_isos_durations = os.path.join(param["path"], name_isos_durations)
-            gdf_param_durations.to_file(name_isos_durations, driver="GeoJSON")
+            name_isos_durations = os.path.join(
+                    param["path"], 
+                    name_isos_durations
+                    )
+            gdf_param_filled.to_file(
+                    name_isos_durations, 
+                    driver="GeoJSON"
+                    )
             
+            #TODO GET STATS
+            #TODO GET COMPLEXITY
+            #TODO INTERSECTIONS GDF AND GEOJSONS 
+            #Intersections by addresses/durations
+            how = param["how"]
+            if how is not None:
+                for dur in param["durations"]:
+                    #TODO INTERSECTIONS BETWEEN ISO ADDRESS FOR A SAME DURATION
+                intersection = gpd.overlay(
+                        gdf_poly, 
+                        gdf_overlay, 
+                        how=param["how"]
+                        )
             
-            
-            #TODO WRITE GEOJSON BY DURATIONS
-            #TODO INTERSECTIONS GDF AND GEOJSONS
             
         
         gdf_global = pd.concat(l_all_gdf)
