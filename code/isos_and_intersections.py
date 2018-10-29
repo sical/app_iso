@@ -250,13 +250,14 @@ class GetIso:
             how = param["how"]
             if how is not None:
                 for dur in param["durations"]:
-                    #TODO INTERSECTIONS BETWEEN ISO ADDRESS FOR A SAME DURATION
+                    
+                    #TODO INTERSECTIONS BETWEEN ISO ADDRESS FOR A SAME DURATION => DO IT WITH SHAPELY
                 intersection = gpd.overlay(
                         gdf_poly, 
                         gdf_overlay, 
                         how=param["how"]
                         )
-            
+            #TODO EMPTINESS ISO => See automate.py, 1213
             
         
         gdf_global = pd.concat(l_all_gdf)

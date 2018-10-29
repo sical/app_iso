@@ -39,3 +39,4 @@ if __name__ == "__main__":
 #    json_file = "./paracsv_to_jsonms/params_auto.json"
     params_auto = json.load(open(json_file, encoding='utf-8'))
     
+    #TODO ADD PROGRESS BAR
