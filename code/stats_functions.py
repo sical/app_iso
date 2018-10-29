@@ -4,7 +4,7 @@ Created on Mon Oct 29 15:55:39 2018
 
 @author: thomas
 """
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString, Polygon, MultiPolygon
 from shapely.ops import nearest_points
 
 def _middle_ring(pts_within, pts_contains):
@@ -71,13 +71,20 @@ def middle_multi_poly(multi_within, multi_contains):
     """
     
     """
+    polys = []
     #Get the majors poly and manage them first
     major_within = get_major_poly(multi_within)
     major_contains = get_major_poly(multi_contains)
     
+    if major_within.within(major_contains) is True:
+        new_major_poly = middle_poly(major_within, major_contains)
+        polys.append(new_major_poly)
+        
     
+    for poly_within in multi_within.remove(major_within):
+        for poly_contains in multi_contains.remove(major_contains):
+            if poly_within.within(poly_contains) is True:
+                polys.append(middle_poly(poly_within, poly_contains))
     
-    for poly_within in multi_within:
-        for poly_contains in multi_contains:
-            if poly_within.within(poly_contains) is True and 
+    return MultiPolygon(polys)
     
