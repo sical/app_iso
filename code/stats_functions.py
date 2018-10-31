@@ -4,15 +4,36 @@ Created on Mon Oct 29 15:55:39 2018
 
 @author: thomas
 """
-from shapely.geometry import LineString, Polygon, MultiPolygon, Point, MultiPoint
+from shapely.geometry import LineString, Polygon, MultiPolygon, Point, MultiPoint, MultiLineString
 from shapely.geometry.polygon import LinearRing
 from shapely.ops import nearest_points, transform
 from functools import partial
 import pyproj
 
+    
+
 class GetMiddleMultiPoly:
-    def __init__(self):
-        pass
+    def __init__(self, multis):
+        """
+        
+        """
+        self.multis = multis
+        
+    def iterate_for_middle(self):
+        """
+        
+        """
+        new_middle = self.middle_multi_poly(self.multis[0], self.multis[1])
+        
+        if len(self.multis) > 2:
+            self.multis.remove(self.multis[0])
+            self.multis.remove(self.multis[1])
+            
+            for i in self.multis:
+                new_middle = self.middle_multi_poly(new_middle, i)
+        
+        return new_middle
+    
     
     def get_multi_poly(self, spatial_object):
         """
@@ -128,13 +149,12 @@ class GetMiddleMultiPoly:
         """
         l_polys = []
         for poly in multi_poly:
-            if list(poly.interiors) != []:
-                l_polys.append(
-                        Polygon(
-                                poly.exterior,
-                                []
-                                )
-                        )
+            l_polys.append(
+                    Polygon(
+                            poly.exterior,
+                            []
+                            )
+                    )
         
         return MultiPolygon(l_polys)
     
@@ -150,12 +170,25 @@ class GetMiddleMultiPoly:
         self.multi_contains = self.delete_inner_holes(multi_contains)
         
         polys = []
+        
         #Get the majors poly and manage them first
-        major_within = self.get_major_poly(self.multi_within)
-        major_contains = self.get_major_poly(self.multi_contains)
+        if len(list(self.multi_within)) > 1:
+            major_within = self.get_major_poly(self.multi_within)
+        else:
+            major_within = self.multi_within[0]
+            
+        if len(list(self.multi_contains)) > 1:
+            major_contains = self.get_major_poly(self.multi_contains)
+        else:
+            major_contains = self.multi_contains[0]
         
         
-        if major_within.within(major_contains) is True:
+        if (
+                major_within.within(major_contains) is True
+                ) or (
+                        self.get_offset(major_within).within(major_contains) is True
+                        ) :
+            
             new_major_poly = self.middle_poly(major_within, major_contains)
             polys.append(new_major_poly)
             
@@ -167,22 +200,17 @@ class GetMiddleMultiPoly:
             middle_multi = MultiPolygon(polys)
         
         else:
-            try:
-                if self.get_offset(major_within).within(major_contains) is True:
-                    new_major_poly = self.middle_poly(major_within, major_contains)
-                    polys.append(new_major_poly)
-            except ValueError:
-                print ("Major polygon of greater multipolygon does not contain the major polygon of smaller multipolygon.\n Program will try to check intersection")
-                if major_contains.intersects(major_within) is True:
-                    polys.append(self.middle_poly(major_within, major_contains))
-                    middle_multi = MultiPolygon(polys)
-                else:
-                    print ("No intersections, middle multipolygon can't be measured")
+            if major_contains.intersects(major_within) is True:
+                polys.append(self.middle_poly(major_within, major_contains))
+                middle_multi = MultiPolygon(polys)
+            else:
+                middle_multi = MultiPolygon([])
+                raise ValueError("No intersections, middle multipolygon can't be measured, returns empty MultiPolygon")
         
         return middle_multi
         
     
-    def get_offset(poly):
+    def get_offset(self, poly):
         """
         Get an offset polygon
         
@@ -190,4 +218,11 @@ class GetMiddleMultiPoly:
         
         Returns an offset Shapely Polygon
         """
-        return Polygon(LinearRing(poly.exterior.coords).parallel_offset(0.00001))
+        new_linear = LinearRing(poly.exterior.coords).parallel_offset(0.00001)
+        
+        if isinstance(new_linear, MultiLineString):
+            new_poly = new_linear.convex_hull
+        else:
+            new_poly = Polygon(new_linear)
+            
+        return new_poly
