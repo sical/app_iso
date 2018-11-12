@@ -25,7 +25,7 @@ if __name__ == "__main__":
         
     columns_with_array_of_str = [
         "colors_iso",
-        "adresses",
+        "addresses",
         "excluded_modes",
         "durations"
         ]
@@ -37,6 +37,6 @@ if __name__ == "__main__":
     sep = arguments["<separator>"]
     json_file = csv_to_json(infile, outfile, sep, columns_with_array_of_str)
 #    json_file = "./paracsv_to_jsonms/params_auto.json"
-    params_auto = json.load(open(json_file, encoding='utf-8'))
+#    params_auto = json.load(open(json_file, encoding='utf-8'))
     
     #TODO ADD PROGRESS BAR
