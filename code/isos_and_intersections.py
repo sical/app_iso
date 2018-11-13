@@ -12,7 +12,7 @@ import requests
 import geojson
 from geopy.geocoders import Nominatim
 from jsonschema import validate
-from geojson import Feature, MultiPolygon, FeatureCollection, Polygon
+from geojson import Feature, MultiPolygon, FeatureCollection, Polygon, Point
 import geopandas as gpd
 import pandas as pd
 from datetime import datetime
@@ -82,15 +82,25 @@ class GetIso:
         """
         #TODO: OPTIONS => Iso, journeys, ...
         if self.api == "navitia":
-            url='https://api.navitia.io/v1/coverage/{}/{}?from={}&datetime={}{}{}'.format(
-                        self.param_request["region_id"],
-                        self.param_request["option"],
-                        self.param_request["from_place"],
-                        self.param_request["date_time"],
-                        self.param_request["cutoffs"],
-                        self.param_request["str_modes"]
-                )
-                
+            if self.option == "isochrones":
+                url='https://api.navitia.io/v1/coverage/{}/{}?from={}&datetime={}{}{}'.format(
+                            self.param_request["region_id"],
+                            self.option,
+                            self.param_request["from_place"],
+                            self.param_request["date_time"],
+                            self.param_request["cutoffs"],
+                            self.param_request["str_modes"]
+                    )
+            elif self.option == "journeys":
+                duration = "&max_duration=" + str(self.param_request["max_duration"])
+                url='https://api.navitia.io/v1/coverage/{}/{}?from={}&datetime={}{}{}'.format(
+                            self.param_request["region_id"],
+                            self.option,
+                            self.param_request["from_place"],
+                            self.param_request["date_time"],
+                            duration,
+                            self.param_request["str_modes"]
+                    )
             headers = {
                     'accept': 'application/json',
                     'Authorization': self.TOKEN
@@ -133,7 +143,7 @@ class GetIso:
         """
         
         """
-        multipolys = []
+        multis = []
         
         durations = [i*60 for i in param["durations"]]
         if len(durations) > 10:
@@ -164,18 +174,16 @@ class GetIso:
                 r = requests.get(url, headers=headers)
                 code = r.status_code
                 
-                print ("PLACE", from_place)
-                print ("DATETIME", date_time)
-                print ("URL", url)
+#                print ("PLACE", from_place)
+#                print ("DATETIME", date_time)
+#                print ("URL", url)
         
                 json_response = json.dumps(r.json())
                 geojson_ = geojson.loads(json_response)
                 
-                print (geojson_)
+#                print (geojson_)
     
-            for iso,duration in zip(geojson_[param["option"]], list_time):
-                if param["option"] == "journeys":
-                    iso["geojson"] = None #TODO TRANSFORMER COORDS EN PTS GEOJSON
+            for iso,duration in zip(geojson_["isochrones"], list_time):
                 multi = Feature(
                         geometry=iso["geojson"],
                         properties={
@@ -184,9 +192,9 @@ class GetIso:
                             "datetime": date_time #TODO: add style properties 
                             }
                         )
-                multipolys.append(multi)
+                multis.append(multi)
                 
-        collection = FeatureCollection(multipolys)
+        collection = FeatureCollection(multis)
         gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])
         
         gdf_poly.crs = {'init': param["inProj"]}
@@ -204,6 +212,77 @@ class GetIso:
         
         else:
             return gdf_poly
+        
+    def get_journeys(self, param, from_place):
+        """
+        
+        """
+        multis = []
+        
+        durations = [i*60 for i in param["durations"]]
+        geojsons = []
+        
+        if self.api == "navitia":
+            str_modes = self.list_excluded(param["excluded_modes"])
+            date_time = datetime.strptime(
+                    param["date"], 
+                    '%Y-%m-%d'
+                    ).date().isoformat() + "T" + param["time"]
+            
+            for duration in durations:
+                self.param_request = {
+                        "region_id":param["region_id"],
+                        "from_place":from_place,
+                        "date_time":date_time,
+                        "max_duration":duration,
+                        "str_modes":str_modes
+                        }
+                
+                url, headers = self.define_request()
+                r = requests.get(url, headers=headers)
+                code = r.status_code
+        
+                json_response = json.dumps(r.json())
+                geojson_ = geojson.loads(json_response)
+                geojsons.append(geojson_)
+    
+            for iso,duration in zip(geojsons, durations):
+                for journey in iso["journeys"]:
+                    lon_from = journey["from"]["address"]["coord"]["lon"]
+                    lat_from = journey["from"]["address"]["coord"]["lat"]
+                    lon_to = journey["to"]["stop_point"]["coord"]["lon"]
+                    lat_to = journey["to"]["stop_point"]["coord"]["lat"]
+                    to_id = journey["to"]["stop_point"]["id"]
+                    to_name = journey["to"]["stop_point"]["name"]
+                    nb_transfers = journey["nb_transfers"]
+                    arrival_date_time = journey["arrival_date_time"]
+                    requested_date_time = journey["requested_date_time"]
+                    departure_date_time = journey["departure_date_time"]
+                    duration = journey["duration"]
+                    
+                    pt = Feature(
+                            geometry=Point((float(lon_to), float(lat_to))),
+                            properties={
+                                    "lon_from":lon_from,
+                                    "lat_from":lat_from,
+                                    "to_id":to_id,
+                                    "to_name":to_name,
+                                    "nb_transfers":nb_transfers,
+                                    "arrival_date_time":arrival_date_time,
+                                    "requested_date_time":requested_date_time,
+                                    "departure_date_time":departure_date_time,
+                                    "duration":duration
+                                    }
+                            )
+                    multis.append(pt)
+                
+        collection = FeatureCollection(multis)
+        gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])
+        
+        gdf_poly.crs = {'init': param["inProj"]}
+        
+        
+        return gdf_poly
     
     def polys_no_holes(self, durations, gdf):
         for dur in durations:
@@ -225,12 +304,17 @@ class GetIso:
         l_all_gdf_filled = []
         
         for param in self.params:
+            self.option = param["option"]
             l_param_gdf = []
             l_param_gdf_filled = []
             for address in param["addresses"]:
                 from_place = self.places_cache[address]
                 from_place = str(from_place[0]) +";"+str(from_place[1])
-                gdf_poly = self.get_iso(param, from_place)
+                if self.option == "journeys":
+                    gdf_poly = self.get_journeys(param, from_place)
+                elif self.option == "isochrones":
+                    gdf_poly = self.get_iso(param, from_place)
+                    
                 l_param_gdf.append(gdf_poly)
                 
                 ## Rebuild isos (fill holes) for gdf sorted by durations
@@ -247,24 +331,24 @@ class GetIso:
             l_all_gdf_filled.append(gdf_param_filled)
             
             #Write GeoJSON by addresses
-            name_isos = param["id"] + "_isos_by_addresses.geojson"
-            name_isos = os.path.join(param["path"], name_isos)
-            gdf_param.to_file(name_isos, driver="GeoJSON")
-            
-            #Write GeoJSON by duration
-            ## Sort by durations
-            gdf_param_filled.sort_values(["duration"], axis=1, inplace=True)
-            
-            ## Write files
-            name_isos_durations = param["id"] + "_isos_by_durations.geojson"
-            name_isos_durations = os.path.join(
-                    param["path"], 
-                    name_isos_durations
-                    )
-            gdf_param_filled.to_file(
-                    name_isos_durations, 
-                    driver="GeoJSON"
-                    )
+#            name_isos = param["id"] + "_isos_by_addresses.geojson"
+#            name_isos = os.path.join(param["path"], name_isos)
+#            gdf_param.to_file(name_isos, driver="GeoJSON")
+#            
+#            #Write GeoJSON by duration
+#            ## Sort by durations
+#            gdf_param_filled.sort_values(["duration"], axis=1, inplace=True)
+#            
+#            ## Write files
+#            name_isos_durations = param["id"] + "_isos_by_durations.geojson"
+#            name_isos_durations = os.path.join(
+#                    param["path"], 
+#                    name_isos_durations
+#                    )
+#            gdf_param_filled.to_file(
+#                    name_isos_durations, 
+#                    driver="GeoJSON"
+#                    )
             
             #TODO GET STATS
             #TODO GET COMPLEXITY
