@@ -12,7 +12,7 @@ import requests
 import geojson
 from geopy.geocoders import Nominatim
 from jsonschema import validate
-from geojson import Feature, MultiPolygon, FeatureCollection, Polygon, Point
+from geojson import Feature, MultiPolygon, FeatureCollection, Polygon, Point, LineString
 import geopandas as gpd
 import pandas as pd
 from datetime import datetime
@@ -24,6 +24,8 @@ geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/p
 #https://geopy.readthedocs.io/en/stable/#nominatim
 #VALIDATOR = json.load(open("params_json_schema.json"))
 VALIDATOR = schema
+WALK_SPEED = 5000 #m/h
+METERS_SECOND = WALK_SPEED/3600
 
 class GetIso:
     def __init__(self, params, places_cache, api="navitia", token=None):
@@ -258,23 +260,37 @@ class GetIso:
                     arrival_date_time = journey["arrival_date_time"]
                     requested_date_time = journey["requested_date_time"]
                     departure_date_time = journey["departure_date_time"]
-                    duration = journey["duration"]
+                    duration_ = journey["duration"]
                     
                     pt = Feature(
                             geometry=Point((float(lon_to), float(lat_to))),
                             properties={
                                     "lon_from":lon_from,
                                     "lat_from":lat_from,
+                                    "lon_to":lon_to,
+                                    "lat_to":lat_to,
                                     "to_id":to_id,
                                     "to_name":to_name,
                                     "nb_transfers":nb_transfers,
                                     "arrival_date_time":arrival_date_time,
                                     "requested_date_time":requested_date_time,
                                     "departure_date_time":departure_date_time,
-                                    "duration":duration
+                                    "duration":duration_,
+                                    "walkable_distance":(
+                                            duration - duration_
+                                            )*METERS_SECOND
+                                    
+                                    #TODO: ajouter durée restante à pied => duration - duration_ Pour les isos, voir notebook geoff boeing https://github.com/gboeing/osmnx-examples/blob/master/notebooks/13-isolines-isochrones.ipynb
                                     }
                             )
                     multis.append(pt)
+                    
+                    if self.option_journey is True:
+                        gdf_journeys_details = self.get_journey_details(
+                                url_journey = url + "&from=" + lon_to + ";" + lat_to,
+                                headers_journey = headers
+                                )
+                        
                 
         collection = FeatureCollection(multis)
         gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])
@@ -283,6 +299,53 @@ class GetIso:
         
         
         return gdf_poly
+    
+    def get_journey_details(self, url, headers):
+        """
+        
+        """
+        r = requests.get(url, headers=headers)
+        code = r.status_code
+
+        json_response = json.dumps(r.json())
+        journey_json = geojson.loads(json_response)
+        
+        features = []
+        
+        for journey in journey_json["journeys"]:
+            for section in journey["sections"]:
+#                lon_from = section["from"]["address"]["coord"]["lon"]
+#                lat_from = section["from"]["address"]["coord"]["lat"]
+#                name = section["from"]["name"]
+                
+                physical_modes = section["to"]["stop_point"]["physical_modes"]["name"]
+                
+                #Build line
+                line = Feature(
+                    geometry=LineString(section["geojson"]["coordinates"]),
+                    properties={
+                            "id":url,
+                            "mode":physical_modes
+                            }
+                    )
+                
+                #Build point
+                lon_to = section["to"]["stop_point"]["coord"]["lon"]
+                lat_to = section["to"]["stop_point"]["coord"]["lat"]
+                
+                pt = Feature(
+                        geometry=Point((float(lon_to), float(lat_to))),
+                        properties={
+                                "id":url,
+                                "mode":physical_modes
+                                }
+                        )
+                
+                features.append(pt)
+                features.append(line)
+                
+        
+        return features
     
     def polys_no_holes(self, durations, gdf):
         for dur in durations:
@@ -305,6 +368,7 @@ class GetIso:
         
         for param in self.params:
             self.option = param["option"]
+            self.option_journey = param["option_journey"]
             l_param_gdf = []
             l_param_gdf_filled = []
             for address in param["addresses"]:
