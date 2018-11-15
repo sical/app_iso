@@ -223,6 +223,7 @@ class GetIso:
         
         durations = [i*60 for i in param["durations"]]
         geojsons = []
+        l_gdf_journeys = []
         
         if self.api == "navitia":
             str_modes = self.list_excluded(param["excluded_modes"])
@@ -285,22 +286,33 @@ class GetIso:
                             )
                     multis.append(pt)
                     
+                    #Get pathes (linestring and nodes, modes)
                     if self.option_journey is True:
                         gdf_journeys_details = self.get_journey_details(
-                                url_journey = url + "&from=" + lon_to + ";" + lat_to,
-                                headers_journey = headers
+                                url + "&to=" + lon_to + ";" + lat_to,
+                                headers,
+                                param["inProj"],
+                                duration,
+                                from_place
                                 )
-                        
+                        if gdf_journeys_details is not None:
+                            l_gdf_journeys.append(gdf_journeys_details)
+        
+        if l_gdf_journeys != []:             
+            gdf_journeys = pd.concat(l_gdf_journeys)  
+        else:
+            gdf_journeys = None
                 
         collection = FeatureCollection(multis)
-        gdf_poly = gpd.GeoDataFrame.from_features(collection['features'])
+        gdf_pts = gpd.GeoDataFrame.from_features(collection['features'])
+        gdf_pts.crs = {'init': param["inProj"]}
         
-        gdf_poly.crs = {'init': param["inProj"]}
-        
-        
-        return gdf_poly
+        return {
+                "nodes":gdf_pts,
+                "details":gdf_journeys
+                }
     
-    def get_journey_details(self, url, headers):
+    def get_journey_details(self, url, headers, inproj, duration, from_place):
         """
         
         """
@@ -314,40 +326,70 @@ class GetIso:
         
         for journey in journey_json["journeys"]:
             for section in journey["sections"]:
-#                lon_from = section["from"]["address"]["coord"]["lon"]
-#                lat_from = section["from"]["address"]["coord"]["lat"]
-#                name = section["from"]["name"]
-                
-                physical_modes = section["to"]["stop_point"]["physical_modes"]["name"]
-                
-                #Build line
-                line = Feature(
-                    geometry=LineString(section["geojson"]["coordinates"]),
-                    properties={
-                            "id":url,
-                            "mode":physical_modes
-                            }
-                    )
-                
-                #Build point
-                lon_to = section["to"]["stop_point"]["coord"]["lon"]
-                lat_to = section["to"]["stop_point"]["coord"]["lat"]
-                
-                pt = Feature(
-                        geometry=Point((float(lon_to), float(lat_to))),
-                        properties={
-                                "id":url,
-                                "mode":physical_modes
-                                }
-                        )
-                
-                features.append(pt)
-                features.append(line)
-                
+                if "from" in section:
+                    if "stop_point" in section["from"]:
+    #                    print (section)
+        #                lon_from = section["from"]["address"]["coord"]["lon"]
+        #                lat_from = section["from"]["address"]["coord"]["lat"]
+        #                name = section["from"]["name"]
+        #                try:
+        #                    physical_modes = section["to"]["stop_point"]["physical_modes"][0]["name"]
+        #                except:
+        #                    physical_modes = section["mode"]
+                        
+                        #Build line
+                        if "display_informations" in section:
+                            infos = section["display_informations"]
+                        else:
+                            infos = {
+                                    "commercial_mode": "NR",
+                                    "direction": "NR",
+                                    "name": "NR"
+                                    }
+                        line = Feature(
+                            geometry=LineString(section["geojson"]["coordinates"]),
+                            properties={
+                                    "id":url,
+                                    "mode":infos["commercial_mode"],
+                                    "direction":infos["direction"],
+                                    "name":infos["name"]
+                                    }
+                            )
+                        
+                        #Build point
+                        try:
+                            lon_to = section["to"]["stop_point"]["coord"]["lon"]
+                            lat_to = section["to"]["stop_point"]["coord"]["lat"]
+                            name = section["to"]["stop_point"]["name"]
+                            #TODO: MANQUE INFO POUR TRIER !!!!
+                            pt = Feature(
+                                    geometry=Point((float(lon_to), float(lat_to))),
+                                    properties={
+                                            "id":url,
+                                            "name":name
+                                            }
+                                    )
+                            features.append(pt)
+                        except:
+                            pt = None
+                            
+                        features.append(line)
         
-        return features
+        if features != []:
+            gdf_features = gpd.GeoDataFrame.from_features(FeatureCollection(features))
+            gdf_features.crs = {'init': inproj}
+            gdf_features["duration"] = [duration for i in gdf_features["id"]]
+            gdf_features["from_place"] = [from_place for i in gdf_features["id"]]
+            
+        else:
+            gdf_features = None
+            
+        return gdf_features
     
     def polys_no_holes(self, durations, gdf):
+        """
+        
+        """
         for dur in durations:
             if durations.index(dur) != 0:
                 gdf.loc[
@@ -363,77 +405,114 @@ class GetIso:
         """
         
         """
-        l_all_gdf = []
-        l_all_gdf_filled = []
+        iso_cut = []
+        iso_no_cut = []
+        points = []
+        details = []
+        
+        l_all = [
+                ("isochrones_cut",iso_cut), 
+                ("isochrones_no_cut",iso_no_cut), 
+                ("journeys_points",points), 
+                ("journeys_details",details)
+                ]
+        
+        dict_global = {
+                "isochrones_cut":None,
+                "isochrones_no_cut":None,
+                "journeys_points":None,
+                "journeys_details":None
+                }
         
         for param in self.params:
             self.option = param["option"]
             self.option_journey = param["option_journey"]
-            l_param_gdf = []
-            l_param_gdf_filled = []
-            for address in param["addresses"]:
-                from_place = self.places_cache[address]
-                from_place = str(from_place[0]) +";"+str(from_place[1])
-                if self.option == "journeys":
-                    gdf_poly = self.get_journeys(param, from_place)
-                elif self.option == "isochrones":
+            
+            if self.option == "isochrones":
+                l_param_gdf = []
+                l_param_gdf_filled = []
+                
+                for address in param["addresses"]:
+                    from_place = self.places_cache[address]
+                    from_place = str(from_place[0]) +";"+str(from_place[1])
                     gdf_poly = self.get_iso(param, from_place)
+                        
+                    l_param_gdf.append(gdf_poly)
                     
-                l_param_gdf.append(gdf_poly)
+                    ## Rebuild isos (fill holes) for gdf sorted by durations
+                    gdf_poly_durations = self.polys_no_holes(
+                            param["durations"], 
+                            gdf_poly
+                            )
+                    
+                    l_param_gdf_filled.append(gdf_poly_durations)
+                    
+                gdf_param = pd.concat(l_param_gdf)
+                gdf_param_filled = pd.concat(l_param_gdf_filled)
+                iso_cut.append(gdf_param)
+                iso_no_cut.append(gdf_param_filled)
                 
-                ## Rebuild isos (fill holes) for gdf sorted by durations
-                gdf_poly_durations = self.polys_no_holes(
-                        param["durations"], 
-                        gdf_poly
-                        )
+                #Write GeoJSON by addresses
+    #            name_isos = param["id"] + "_isos_by_addresses.geojson"
+    #            name_isos = os.path.join(param["path"], name_isos)
+    #            gdf_param.to_file(name_isos, driver="GeoJSON")
+    #            
+    #            #Write GeoJSON by duration
+    #            ## Sort by durations
+    #            gdf_param_filled.sort_values(["duration"], axis=1, inplace=True)
+    #            
+    #            ## Write files
+    #            name_isos_durations = param["id"] + "_isos_by_durations.geojson"
+    #            name_isos_durations = os.path.join(
+    #                    param["path"], 
+    #                    name_isos_durations
+    #                    )
+    #            gdf_param_filled.to_file(
+    #                    name_isos_durations, 
+    #                    driver="GeoJSON"
+    #                    )
                 
-                l_param_gdf_filled.append(gdf_poly_durations)
+                #TODO GET STATS
+                #TODO GET COMPLEXITY
+                #TODO INTERSECTIONS GDF AND GEOJSONS 
+                #Intersections by addresses/durations
+                how = param["how"]
+    #            if how is not None:
+    #                for dur in param["durations"]:
+    #                    
+    #                #TODO INTERSECTIONS BETWEEN ISO ADDRESS FOR A SAME DURATION => DO IT WITH SHAPELY
+    #                intersection = gpd.overlay(
+    #                        gdf_poly, 
+    #                        gdf_overlay, 
+    #                        how=param["how"]
+    #                        )
+                #TODO EMPTINESS ISO => See automate.py, 1213
                 
-            gdf_param = pd.concat(l_param_gdf)
-            gdf_param_filled = pd.concat(l_param_gdf_filled)
-            l_all_gdf.append(gdf_param)
-            l_all_gdf_filled.append(gdf_param_filled)
             
-            #Write GeoJSON by addresses
-#            name_isos = param["id"] + "_isos_by_addresses.geojson"
-#            name_isos = os.path.join(param["path"], name_isos)
-#            gdf_param.to_file(name_isos, driver="GeoJSON")
-#            
-#            #Write GeoJSON by duration
-#            ## Sort by durations
-#            gdf_param_filled.sort_values(["duration"], axis=1, inplace=True)
-#            
-#            ## Write files
-#            name_isos_durations = param["id"] + "_isos_by_durations.geojson"
-#            name_isos_durations = os.path.join(
-#                    param["path"], 
-#                    name_isos_durations
-#                    )
-#            gdf_param_filled.to_file(
-#                    name_isos_durations, 
-#                    driver="GeoJSON"
-#                    )
-            
-            #TODO GET STATS
-            #TODO GET COMPLEXITY
-            #TODO INTERSECTIONS GDF AND GEOJSONS 
-            #Intersections by addresses/durations
-            how = param["how"]
-#            if how is not None:
-#                for dur in param["durations"]:
-#                    
-#                #TODO INTERSECTIONS BETWEEN ISO ADDRESS FOR A SAME DURATION => DO IT WITH SHAPELY
-#                intersection = gpd.overlay(
-#                        gdf_poly, 
-#                        gdf_overlay, 
-#                        how=param["how"]
-#                        )
-            #TODO EMPTINESS ISO => See automate.py, 1213
-            
+            elif self.option == "journeys":
+                l_points = []
+                l_journeys = []
+                
+                for address in param["addresses"]:
+                    from_place = self.places_cache[address]
+                    from_place = str(from_place[0]) +";"+str(from_place[1])
+                    dict_journeys = self.get_journeys(param, from_place)
+                    
+                    l_points.append(dict_journeys["nodes"])
+                    l_journeys.append(dict_journeys["details"])
+                
+                gdf_points = pd.concat(l_points)
+                gdf_journeys = pd.concat(l_journeys)
+                points.append(gdf_points)
+                details.append(gdf_journeys)
         
-        gdf_global = pd.concat(l_all_gdf)
+        for i in l_all:
+            if i[1] != []:
+                dict_global[i[0]] = pd.concat(i[1])
+            else:
+                dict_global[i[0]] = None
         
-        return gdf_global
+        return dict_global
                 
             
             
