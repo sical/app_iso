@@ -215,7 +215,7 @@ class GetIso:
         else:
             return gdf_poly
         
-    def get_journeys(self, param, from_place):
+    def get_journeys(self, param, from_place, address):
         """
         
         """
@@ -266,6 +266,7 @@ class GetIso:
                     pt = Feature(
                             geometry=Point((float(lon_to), float(lat_to))),
                             properties={
+                                    "address_from":address,
                                     "lon_from":lon_from,
                                     "lat_from":lat_from,
                                     "lon_to":lon_to,
@@ -293,7 +294,8 @@ class GetIso:
                                 headers,
                                 param["inProj"],
                                 duration,
-                                from_place
+                                from_place,
+                                address
                                 )
                         if gdf_journeys_details is not None:
                             l_gdf_journeys.append(gdf_journeys_details)
@@ -312,7 +314,15 @@ class GetIso:
                 "details":gdf_journeys
                 }
     
-    def get_journey_details(self, url, headers, inproj, duration, from_place):
+    def get_journey_details(
+            self, 
+            url, 
+            headers, 
+            inproj, 
+            duration, 
+            from_place,
+            address
+            ):
         """
         
         """
@@ -352,7 +362,10 @@ class GetIso:
                                     "id":url,
                                     "mode":infos["commercial_mode"],
                                     "direction":infos["direction"],
-                                    "name":infos["name"]
+                                    "name":infos["name"],
+                                    "address_from":address,
+                                    "duration":duration,
+                                    "type":"line"
                                     }
                             )
                         
@@ -366,7 +379,12 @@ class GetIso:
                                     geometry=Point((float(lon_to), float(lat_to))),
                                     properties={
                                             "id":url,
-                                            "name":name
+                                            "mode":infos["commercial_mode"],
+                                            "direction":infos["direction"],
+                                            "address_from":address,
+                                            "duration":duration,
+                                            "name":name,
+                                            "type":"point"
                                             }
                                     )
                             features.append(pt)
@@ -408,20 +426,23 @@ class GetIso:
         iso_cut = []
         iso_no_cut = []
         points = []
-        details = []
+        details_pts = []
+        details_lines = []
         
         l_all = [
                 ("isochrones_cut",iso_cut), 
                 ("isochrones_no_cut",iso_no_cut), 
                 ("journeys_points",points), 
-                ("journeys_details",details)
+                ("journeys_details_pts",details_pts),
+                ("journeys_details_lines",details_lines)
                 ]
         
         dict_global = {
                 "isochrones_cut":None,
                 "isochrones_no_cut":None,
                 "journeys_points":None,
-                "journeys_details":None
+                "journeys_details_points":None,
+                "journeys_details_lines":None,
                 }
         
         for param in self.params:
@@ -491,29 +512,37 @@ class GetIso:
             
             elif self.option == "journeys":
                 l_points = []
-                l_journeys = []
+                l_journeys_pts = []
+                l_journeys_lines = []
                 
                 for address in param["addresses"]:
                     from_place = self.places_cache[address]
                     from_place = str(from_place[0]) +";"+str(from_place[1])
-                    dict_journeys = self.get_journeys(param, from_place)
-                    
+                    dict_journeys = self.get_journeys(param, from_place, address)
                     l_points.append(dict_journeys["nodes"])
-                    l_journeys.append(dict_journeys["details"])
-                
-                gdf_points = pd.concat(l_points)
-                gdf_journeys = pd.concat(l_journeys)
-                points.append(gdf_points)
-                details.append(gdf_journeys)
+                    
+                    l_journeys_pts.append(
+                            dict_journeys["details"].loc[
+                                    dict_journeys["details"]["type"] == "point"
+                                    ]
+                            )
+                    l_journeys_lines.append(
+                            dict_journeys["details"].loc[
+                                    dict_journeys["details"]["type"] == "line"
+                                    ]
+                            ) 
+                points.append(pd.concat(l_points))
+                details_pts.append(pd.concat(l_journeys_pts))
+                details_lines.append(pd.concat(l_journeys_lines))
         
         for i in l_all:
             if i[1] != []:
-                dict_global[i[0]] = pd.concat(i[1])
+                gdf = pd.concat(i[1])
+                gdf = gdf.reset_index()
+                gdf.crs = {'init': param["inProj"]}
+                gdf = gdf.to_crs({'init': param["outProj"]})
+                dict_global[i[0]] = gdf
             else:
                 dict_global[i[0]] = None
         
         return dict_global
-                
-            
-            
-            
