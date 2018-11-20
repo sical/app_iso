@@ -180,4 +180,4 @@ def gdf_to_geojson(gdf, properties, epsg):
             else:
                 feature.pop(properties, None)
     
-    return json.dumps(geojson_)
+    return geojson.dumps(geojson_, ensure_ascii=False)

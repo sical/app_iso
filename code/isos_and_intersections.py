@@ -220,6 +220,9 @@ class GetIso:
         
         """
         multis = []
+        self.urls = []
+        self.pts_properties = []
+        self.lines_properties = []
         
         durations = [i*60 for i in param["durations"]]
         geojsons = []
@@ -263,6 +266,9 @@ class GetIso:
                     departure_date_time = journey["departure_date_time"]
                     duration_ = journey["duration"]
                     
+                    if "\'" in to_name:
+                        to_name = to_name.replace("\'", "")
+                    
                     pt = Feature(
                             geometry=Point((float(lon_to), float(lat_to))),
                             properties={
@@ -272,7 +278,7 @@ class GetIso:
                                     "lon_to":lon_to,
                                     "lat_to":lat_to,
                                     "to_id":to_id,
-                                    "to_name":to_name,
+                                    "to_name":to_name.replace("\'","'"),
                                     "nb_transfers":nb_transfers,
                                     "arrival_date_time":arrival_date_time,
                                     "requested_date_time":requested_date_time,
@@ -288,9 +294,15 @@ class GetIso:
                     multis.append(pt)
                     
                     #Get pathes (linestring and nodes, modes)
-                    if self.option_journey is True:
+                    #TODO: TRIER POUR ELIMINER LES DOUBLONS OU NE PAS LES INTEGRER
+                    url_details = url + "&to=" + lon_to + ";" + lat_to
+                    if (
+                            self.option_journey is True
+                            ) and (
+                                    url_details not in self.urls
+                                    ):
                         gdf_journeys_details = self.get_journey_details(
-                                url + "&to=" + lon_to + ";" + lat_to,
+                                url_details,
                                 headers,
                                 param["inProj"],
                                 duration,
@@ -299,6 +311,9 @@ class GetIso:
                                 )
                         if gdf_journeys_details is not None:
                             l_gdf_journeys.append(gdf_journeys_details)
+                            
+                        self.urls.append(url_details)
+                        
         
         if l_gdf_journeys != []:             
             gdf_journeys = pd.concat(l_gdf_journeys)  
@@ -328,70 +343,81 @@ class GetIso:
         """
         r = requests.get(url, headers=headers)
         code = r.status_code
-
-        json_response = json.dumps(r.json())
-        journey_json = geojson.loads(json_response)
+        
+        try:
+            json_response = json.dumps(r.json())
+            journey_json = geojson.loads(json_response)
+        except: 
+            raise ValueError("Error on:\n" + url)
         
         features = []
         
-        for journey in journey_json["journeys"]:
-            for section in journey["sections"]:
-                if "from" in section:
-                    if "stop_point" in section["from"]:
-    #                    print (section)
-        #                lon_from = section["from"]["address"]["coord"]["lon"]
-        #                lat_from = section["from"]["address"]["coord"]["lat"]
-        #                name = section["from"]["name"]
-        #                try:
-        #                    physical_modes = section["to"]["stop_point"]["physical_modes"][0]["name"]
-        #                except:
-        #                    physical_modes = section["mode"]
-                        
-                        #Build line
-                        if "display_informations" in section:
-                            infos = section["display_informations"]
-                        else:
-                            infos = {
-                                    "commercial_mode": "NR",
-                                    "direction": "NR",
-                                    "name": "NR"
-                                    }
-                        line = Feature(
-                            geometry=LineString(section["geojson"]["coordinates"]),
-                            properties={
-                                    "id":url,
-                                    "mode":infos["commercial_mode"],
-                                    "direction":infos["direction"],
-                                    "name":infos["name"],
-                                    "address_from":address,
-                                    "duration":duration,
-                                    "type":"line"
-                                    }
-                            )
-                        
-                        #Build point
-                        try:
-                            lon_to = section["to"]["stop_point"]["coord"]["lon"]
-                            lat_to = section["to"]["stop_point"]["coord"]["lat"]
-                            name = section["to"]["stop_point"]["name"]
-                            #TODO: MANQUE INFO POUR TRIER !!!!
-                            pt = Feature(
-                                    geometry=Point((float(lon_to), float(lat_to))),
-                                    properties={
-                                            "id":url,
-                                            "mode":infos["commercial_mode"],
-                                            "direction":infos["direction"],
-                                            "address_from":address,
-                                            "duration":duration,
-                                            "name":name,
-                                            "type":"point"
-                                            }
-                                    )
-                            features.append(pt)
-                        except:
-                            pt = None
+        if "journeys" in journey_json:
+            for journey in journey_json["journeys"]:
+                for section in journey["sections"]:
+                    if "from" in section:
+                        if "stop_point" in section["from"]:
+        #                    print (section)
+            #                lon_from = section["from"]["address"]["coord"]["lon"]
+            #                lat_from = section["from"]["address"]["coord"]["lat"]
+            #                name = section["from"]["name"]
+            #                try:
+            #                    physical_modes = section["to"]["stop_point"]["physical_modes"][0]["name"]
+            #                except:
+            #                    physical_modes = section["mode"]
                             
-                        features.append(line)
+                            #Build line
+                            if "display_informations" in section:
+                                infos = section["display_informations"]
+                            else:
+                                infos = {
+                                        "commercial_mode": "NR",
+                                        "direction": "NR",
+                                        "name": "NR"
+                                        }
+                            properties={
+                                        "id":url,
+                                        "mode":infos["commercial_mode"],
+                                        "direction":infos["direction"],
+                                        "name":infos["name"],
+                                        "address_from":address,
+                                        "duration":duration,
+                                        "type":"line"
+                                        }
+                            line = Feature(
+                                geometry=LineString(section["geojson"]["coordinates"]),
+                                properties=properties
+                                )
+                            
+                            if properties not in self.lines_properties:
+                                features.append(line)
+                                self.lines_properties.append(properties)
+                            
+                            #Build point
+                            try:
+                                lon_to = section["to"]["stop_point"]["coord"]["lon"]
+                                lat_to = section["to"]["stop_point"]["coord"]["lat"]
+                                name = section["to"]["stop_point"]["name"]
+                                #TODO: MANQUE INFO POUR TRIER !!!!
+                                properties={
+                                                "id":url,
+                                                "mode":infos["commercial_mode"],
+                                                "direction":infos["direction"],
+                                                "address_from":address,
+                                                "duration":duration,
+                                                "name":name,
+                                                "type":"point"
+                                                }
+                                pt = Feature(
+                                        geometry=Point((float(lon_to), float(lat_to))),
+                                        properties=properties
+                                        )
+                                if properties not in self.pts_properties:
+                                    features.append(pt)
+                                    self.pts_properties.append(properties)
+                            except:
+                                pt = None
+                        
         
         if features != []:
             gdf_features = gpd.GeoDataFrame.from_features(FeatureCollection(features))
@@ -521,19 +547,22 @@ class GetIso:
                     dict_journeys = self.get_journeys(param, from_place, address)
                     l_points.append(dict_journeys["nodes"])
                     
-                    l_journeys_pts.append(
-                            dict_journeys["details"].loc[
-                                    dict_journeys["details"]["type"] == "point"
-                                    ]
-                            )
-                    l_journeys_lines.append(
-                            dict_journeys["details"].loc[
-                                    dict_journeys["details"]["type"] == "line"
-                                    ]
-                            ) 
+                    if dict_journeys["details"] is not None:
+                        l_journeys_pts.append(
+                                dict_journeys["details"].loc[
+                                        dict_journeys["details"]["type"] == "point"
+                                        ]
+                                )
+                        l_journeys_lines.append(
+                                dict_journeys["details"].loc[
+                                        dict_journeys["details"]["type"] == "line"
+                                        ]
+                                ) 
                 points.append(pd.concat(l_points))
-                details_pts.append(pd.concat(l_journeys_pts))
-                details_lines.append(pd.concat(l_journeys_lines))
+                if l_journeys_pts != []:
+                    details_pts.append(pd.concat(l_journeys_pts))
+                if l_journeys_lines != []:
+                    details_lines.append(pd.concat(l_journeys_lines))
         
         for i in l_all:
             if i[1] != []:
