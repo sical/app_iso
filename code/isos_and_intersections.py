@@ -19,6 +19,7 @@ from datetime import datetime
 
 import fill_poly_holes as fph
 from schema import schema
+from osmnx_based_functions import make_iso_lines, get_graph_from_envelope
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
@@ -284,6 +285,7 @@ class GetIso:
                                     "requested_date_time":requested_date_time,
                                     "departure_date_time":departure_date_time,
                                     "duration":duration_,
+                                    "time_left":duration - duration_,
                                     "walkable_distance":(
                                             duration - duration_
                                             )*METERS_SECOND
@@ -445,6 +447,9 @@ class GetIso:
                         )
         return gdf
     
+    
+    
+    
     def get_all_isos(self):
         """
         
@@ -474,6 +479,7 @@ class GetIso:
         for param in self.params:
             self.option = param["option"]
             self.option_journey = param["option_journey"]
+            self.option_isolines = param["option_isolines"]
             
             if self.option == "isochrones":
                 l_param_gdf = []
@@ -557,12 +563,14 @@ class GetIso:
                                 dict_journeys["details"].loc[
                                         dict_journeys["details"]["type"] == "line"
                                         ]
-                                ) 
+                                )
+                             
                 points.append(pd.concat(l_points))
                 if l_journeys_pts != []:
                     details_pts.append(pd.concat(l_journeys_pts))
                 if l_journeys_lines != []:
                     details_lines.append(pd.concat(l_journeys_lines))
+                    
         
         for i in l_all:
             if i[1] != []:
