@@ -13,6 +13,7 @@ from shapely.ops import cascaded_union
 from shapely.geometry import Point, LineString
 from pyproj import Proj, transform
 
+
 def get_graph_from_envelope(gdf, crs_init='epsg:3857', to_latlong=True):
     """
     Return a NetworkX graph (walk) from a points GeoDataframe
@@ -52,6 +53,26 @@ def _get_buffer(gdf):
     
     return poly
 
+def get_graph_from_point(point, distance):
+    """
+    
+    """
+    inProj = Proj(init="epsg:4326")
+    outProj = Proj(init="epsg:3857")
+    x,y = transform(inProj,outProj,point[0],point[1])
+    point = Point((x,y))
+    buffer = _buffering(point, distance)
+    
+    poly, _ = ox.project_geometry(
+                buffer.envelope, 
+                crs={'init':"epsg:3857"}, 
+                to_latlong=True
+                )
+    
+    #Get the graph
+    G = ox.graph_from_polygon(poly, network_type="walk")
+    
+    return G
 
 def make_iso_lines(G, oris, trip_times, inproj=None, outproj=None):
     """
@@ -80,10 +101,21 @@ def make_iso_lines(G, oris, trip_times, inproj=None, outproj=None):
         center_node = ox.get_nearest_node(G, (ori[0], ori[1]))
         
         for trip_time in sorted(trip_times, reverse=True):
-            subgraph = nx.ego_graph(G, center_node, radius=trip_time, distance='time')
+            subgraph = nx.ego_graph(
+                    G, center_node, 
+                    radius=trip_time, 
+                    distance='time'
+                    )
 
-            node_points = [Point((data['x'], data['y'])) for node, data in subgraph.nodes(data=True)]
-            nodes_gdf = gpd.GeoDataFrame({'id': subgraph.nodes()}, geometry=node_points)
+            node_points = [
+                    Point(
+                            (data['x'], data['y'])
+                            ) for node, data in subgraph.nodes(data=True)
+                    ]
+            nodes_gdf = gpd.GeoDataFrame(
+                    {'id': subgraph.nodes()}, 
+                    geometry=node_points
+                    )
             nodes_gdf = nodes_gdf.set_index('id')
 
 #            edge_lines = []
@@ -102,6 +134,75 @@ def make_iso_lines(G, oris, trip_times, inproj=None, outproj=None):
                     ys.append([f.y,t.y])
                     
                 durations.append(trip_time)
+
+    data = {
+#            "geometry":edge_lines,
+            "durations":durations,
+            "xs":xs,
+            "ys":ys
+        }   
+        
+    return data
+
+def isolines_df(G, ori, trip_time, inproj=None, outproj=None):
+    """
+    @G (NetworkX Graph): graph used to get isolines
+    @ori (Point): Shapely Point
+    @trip_time (int): durations
+    @inproj (str): input projection, if reprojection necessary, default None
+    @outproj (str): output projection, if reprojection necessary, default None
+    
+    Sources:
+        https://github.com/gboeing/osmnx-examples/blob/master/notebooks/13-isolines-isochrones.ipynb
+        http://kuanbutts.com/2017/12/16/osmnx-isochrones/
+        
+    Adaptation: thomas
+        
+    Returns dict of "xs", "ys" (for Bokeh ColumnDatasource), durations and LineStrings
+    
+    """
+    xs = []
+    ys = []
+    durations = []
+    if inproj is not None:
+        inProj = Proj(init=inproj)
+        outProj = Proj(init=outproj)
+    
+    center_node = ox.get_nearest_node(G, (ori.x, ori.y))
+    
+    subgraph = nx.ego_graph(
+            G, center_node, 
+            radius=trip_time, 
+            distance='time'
+            )
+
+    node_points = [
+            Point(
+                    (data['x'], data['y'])
+                    ) for node, data in subgraph.nodes(data=True)
+            ]
+    nodes_gdf = gpd.GeoDataFrame(
+            {'id': subgraph.nodes()}, 
+            geometry=node_points
+            )
+    nodes_gdf = nodes_gdf.set_index('id')
+
+#            edge_lines = []
+    for n_fr, n_to in subgraph.edges():
+        f = nodes_gdf.loc[n_fr].geometry
+        t = nodes_gdf.loc[n_to].geometry
+#                edge_lines.append(LineString([f,t]))
+        
+        if inproj is not None:
+            fx,fy = transform(inProj,outProj,f.x,f.y)
+            tx,ty = transform(inProj,outProj,t.x,t.y)
+            xs.append([fx,tx])
+            ys.append([fy,ty])
+        else:
+            xs.append([f.x,t.x])
+            ys.append([f.y,t.y])
+            
+        durations.append(trip_time)
 
     data = {
 #            "geometry":edge_lines,

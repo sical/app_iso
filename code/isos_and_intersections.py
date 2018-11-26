@@ -16,10 +16,11 @@ from geojson import Feature, MultiPolygon, FeatureCollection, Polygon, Point, Li
 import geopandas as gpd
 import pandas as pd
 from datetime import datetime
+import numpy as np
 
 import fill_poly_holes as fph
 from schema import schema
-from osmnx_based_functions import make_iso_lines, get_graph_from_envelope
+from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, isolines_df, get_graph_from_point
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
@@ -27,6 +28,7 @@ geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/p
 VALIDATOR = schema
 WALK_SPEED = 5000 #m/h
 METERS_SECOND = WALK_SPEED/3600
+DISTANCE = 5000
 
 class GetIso:
     def __init__(self, params, places_cache, api="navitia", token=None):
@@ -295,6 +297,8 @@ class GetIso:
                             )
                     multis.append(pt)
                     
+                    
+                    
                     #Get pathes (linestring and nodes, modes)
                     #TODO: TRIER POUR ELIMINER LES DOUBLONS OU NE PAS LES INTEGRER
                     url_details = url + "&to=" + lon_to + ";" + lat_to
@@ -459,6 +463,7 @@ class GetIso:
         points = []
         details_pts = []
         details_lines = []
+        self.G = None
         
         l_all = [
                 ("isochrones_cut",iso_cut), 
@@ -481,12 +486,16 @@ class GetIso:
             self.option_journey = param["option_journey"]
             self.option_isolines = param["option_isolines"]
             
+            ##############
+            # ISO OPTION #
+            ##############
             if self.option == "isochrones":
                 l_param_gdf = []
                 l_param_gdf_filled = []
                 
                 for address in param["addresses"]:
                     from_place = self.places_cache[address]
+                        
                     from_place = str(from_place[0]) +";"+str(from_place[1])
                     gdf_poly = self.get_iso(param, from_place)
                         
@@ -541,16 +550,35 @@ class GetIso:
     #                        )
                 #TODO EMPTINESS ISO => See automate.py, 1213
                 
-            
+            ##################
+            # JOURNEY OPTION #
+            ##################
             elif self.option == "journeys":
                 l_points = []
                 l_journeys_pts = []
                 l_journeys_lines = []
                 
                 for address in param["addresses"]:
-                    from_place = self.places_cache[address]
-                    from_place = str(from_place[0]) +";"+str(from_place[1])
+                    from_place_tuple = self.places_cache[address]
+                    from_place = str(from_place_tuple[0]) +";"+str(from_place_tuple[1])
                     dict_journeys = self.get_journeys(param, from_place, address)
+                    
+                    if self.option_isolines is True:
+                        if self.G is None:
+                            self.G = get_graph_from_point(from_place_tuple, DISTANCE)
+                        
+                        print (dict_journeys["nodes"]["geometry"].count())
+                        dict_journeys["nodes"]["graph"] = [self.G for i in dict_journeys["nodes"]["geometry"]]
+                        dict_journeys["nodes"]["isolines"] = np.vectorize(
+                                isolines_df
+                                )(
+                                        dict_journeys["nodes"]["graph"],
+                                        dict_journeys["nodes"]["geometry"], 
+                                        dict_journeys["nodes"]["time_left"], 
+                                        )
+                        
+                        dict_journeys["nodes"]["isolines"].apply(pd.Series)
+                                            
                     l_points.append(dict_journeys["nodes"])
                     
                     if dict_journeys["details"] is not None:
