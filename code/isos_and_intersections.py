@@ -17,6 +17,7 @@ import geopandas as gpd
 import pandas as pd
 from datetime import datetime
 import numpy as np
+import osmnx as ox
 
 import fill_poly_holes as fph
 from schema import schema
@@ -286,6 +287,7 @@ class GetIso:
                                     "arrival_date_time":arrival_date_time,
                                     "requested_date_time":requested_date_time,
                                     "departure_date_time":departure_date_time,
+                                    "max_duration":duration,
                                     "duration":duration_,
                                     "time_left":duration - duration_,
                                     "walkable_distance":(
@@ -567,13 +569,18 @@ class GetIso:
                         if self.G is None:
                             self.G = get_graph_from_point(from_place_tuple, DISTANCE)
                         
-                        print (dict_journeys["nodes"]["geometry"].count())
+                        pts = dict_journeys["nodes"]["geometry"].values.tolist()
+                        X = [pt.x for pt in pts]
+                        Y = [pt.y for pt in pts]
+                        
+#                        print (dict_journeys["nodes"]["geometry"].count())
                         dict_journeys["nodes"]["graph"] = [self.G for i in dict_journeys["nodes"]["geometry"]]
+                        dict_journeys["nodes"]["center_nodes"] = ox.get_nearest_nodes(self.G, X, Y, method="kdtree")
                         dict_journeys["nodes"]["isolines"] = np.vectorize(
                                 isolines_df
                                 )(
                                         dict_journeys["nodes"]["graph"],
-                                        dict_journeys["nodes"]["geometry"], 
+                                        dict_journeys["nodes"]["center_nodes"], 
                                         dict_journeys["nodes"]["time_left"], 
                                         )
                         

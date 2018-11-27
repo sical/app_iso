@@ -13,6 +13,9 @@ from shapely.ops import cascaded_union
 from shapely.geometry import Point, LineString
 from pyproj import Proj, transform
 
+import time
+from functions import time_profile
+
 
 def get_graph_from_envelope(gdf, crs_init='epsg:3857', to_latlong=True):
     """
@@ -74,7 +77,7 @@ def get_graph_from_point(point, distance):
     
     return G
 
-def make_iso_lines(G, oris, trip_times, inproj=None, outproj=None):
+def make_iso_lines(G, oris, trip_times, inproj="epsg:4326", outproj="epsg:3857"):
     """
     @G (NetworkX Graph): graph used to get isolines
     @trip_times (list): durations values
@@ -144,7 +147,7 @@ def make_iso_lines(G, oris, trip_times, inproj=None, outproj=None):
         
     return data
 
-def isolines_df(G, ori, trip_time, inproj=None, outproj=None):
+def isolines_df(G, center_node, trip_time, inproj=None, outproj=None):
     """
     @G (NetworkX Graph): graph used to get isolines
     @ori (Point): Shapely Point
@@ -161,6 +164,8 @@ def isolines_df(G, ori, trip_time, inproj=None, outproj=None):
     Returns dict of "xs", "ys" (for Bokeh ColumnDatasource), durations and LineStrings
     
     """
+    start = time.time()
+    
     xs = []
     ys = []
     durations = []
@@ -168,25 +173,41 @@ def isolines_df(G, ori, trip_time, inproj=None, outproj=None):
         inProj = Proj(init=inproj)
         outProj = Proj(init=outproj)
     
-    center_node = ox.get_nearest_node(G, (ori.x, ori.y))
+#    center_node = ox.get_nearest_node(G, (ori.x, ori.y))
+    
+    print ("1", time_profile(start, option="format"))
+    start = time.time()
     
     subgraph = nx.ego_graph(
             G, center_node, 
             radius=trip_time, 
             distance='time'
             )
-
+    
+    print ("2", time_profile(start, option="format"))
+    start = time.time()
+    
     node_points = [
             Point(
                     (data['x'], data['y'])
                     ) for node, data in subgraph.nodes(data=True)
             ]
+    
+    print ("3", time_profile(start, option="format"))
+    start = time.time()
+    
     nodes_gdf = gpd.GeoDataFrame(
             {'id': subgraph.nodes()}, 
             geometry=node_points
             )
+    
+    print ("4", time_profile(start, option="format"))
+    start = time.time()
+    
     nodes_gdf = nodes_gdf.set_index('id')
-
+    
+    print ("5", time_profile(start, option="format"))
+    start = time.time()
 #            edge_lines = []
     for n_fr, n_to in subgraph.edges():
         f = nodes_gdf.loc[n_fr].geometry
@@ -203,6 +224,9 @@ def isolines_df(G, ori, trip_time, inproj=None, outproj=None):
             ys.append([f.y,t.y])
             
         durations.append(trip_time)
+    
+    print ("6", time_profile(start, option="format"))
+    print ("###################")
 
     data = {
 #            "geometry":edge_lines,
