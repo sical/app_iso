@@ -77,55 +77,38 @@ def get_graph_from_point(point, distance):
     
     return G
 
-def make_iso_lines(G, oris, trip_times, inproj="epsg:4326", outproj="epsg:3857"):
+def make_iso_lines(G, oris, trip_times, inproj=None, outproj=None):
     """
-    @G (NetworkX Graph): graph used to get isolines
-    @trip_times (list): durations values
-    @inproj (str): input projection, if reprojection necessary, default None
-    @outproj (str): output projection, if reprojection necessary, default None
-    
     Sources:
         https://github.com/gboeing/osmnx-examples/blob/master/notebooks/13-isolines-isochrones.ipynb
         http://kuanbutts.com/2017/12/16/osmnx-isochrones/
-        
-    Adaptation: thomas
-        
-    Returns dict of "xs", "ys" (for Bokeh ColumnDatasource), durations and LineStrings
     
     """
     xs = []
     ys = []
     durations = []
     if inproj is not None:
-        inProj = Proj(init=inproj)
-        outProj = Proj(init=outproj)
+        inProj = Proj(init="epsg:3857")
+        outProj = Proj(init="epsg:4326")
     
-    for ori in oris:
-        center_node = ox.get_nearest_node(G, (ori[0], ori[1]))
-        
-        for trip_time in sorted(trip_times, reverse=True):
-            subgraph = nx.ego_graph(
-                    G, center_node, 
-                    radius=trip_time, 
-                    distance='time'
-                    )
+    X = [ori[0] for ori in oris]
+    Y = [ori[1] for ori in oris]
 
-            node_points = [
-                    Point(
-                            (data['x'], data['y'])
-                            ) for node, data in subgraph.nodes(data=True)
-                    ]
-            nodes_gdf = gpd.GeoDataFrame(
-                    {'id': subgraph.nodes()}, 
-                    geometry=node_points
-                    )
+    center_nodes = ox.get_nearest_nodes(G, X, Y, method="kdtree")
+        
+    for center_node in center_nodes:
+        for trip_time in sorted(trip_times, reverse=True):
+            subgraph = nx.ego_graph(G, center_node, radius=trip_time, distance='time')
+
+            node_points = [Point((data['x'], data['y'])) for node, data in subgraph.nodes(data=True)]
+            nodes_gdf = gpd.GeoDataFrame({'id': subgraph.nodes()}, geometry=node_points)
             nodes_gdf = nodes_gdf.set_index('id')
 
-#            edge_lines = []
+            edge_lines = []
             for n_fr, n_to in subgraph.edges():
                 f = nodes_gdf.loc[n_fr].geometry
                 t = nodes_gdf.loc[n_to].geometry
-#                edge_lines.append(LineString([f,t]))
+                edge_lines.append(LineString([f,t]))
                 
                 if inproj is not None:
                     fx,fy = transform(inProj,outProj,f.x,f.y)
@@ -139,7 +122,7 @@ def make_iso_lines(G, oris, trip_times, inproj="epsg:4326", outproj="epsg:3857")
                 durations.append(trip_time)
 
     data = {
-#            "geometry":edge_lines,
+            "geometry":edge_lines,
             "durations":durations,
             "xs":xs,
             "ys":ys

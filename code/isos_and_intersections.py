@@ -568,23 +568,36 @@ class GetIso:
                     if self.option_isolines is True:
                         if self.G is None:
                             self.G = get_graph_from_point(from_place_tuple, DISTANCE)
+                            self.G = ox.project_graph(self.G)
+                            meters_per_minute = WALK_SPEED/60
+                            for u, v, k, data in self.G.edges(data=True, keys=True):
+                                data['time'] = data['length'] / meters_per_minute
                         
                         pts = dict_journeys["nodes"]["geometry"].values.tolist()
                         X = [pt.x for pt in pts]
                         Y = [pt.y for pt in pts]
                         
 #                        print (dict_journeys["nodes"]["geometry"].count())
-                        dict_journeys["nodes"]["graph"] = [self.G for i in dict_journeys["nodes"]["geometry"]]
+#                        dict_journeys["nodes"]["graph"] = [self.G for i in dict_journeys["nodes"]["geometry"]]
                         dict_journeys["nodes"]["center_nodes"] = ox.get_nearest_nodes(self.G, X, Y, method="kdtree")
-                        dict_journeys["nodes"]["isolines"] = np.vectorize(
-                                isolines_df
-                                )(
-                                        dict_journeys["nodes"]["graph"],
-                                        dict_journeys["nodes"]["center_nodes"], 
-                                        dict_journeys["nodes"]["time_left"], 
-                                        )
+#                        dict_journeys["nodes"]["isolines"] = np.vectorize(
+#                                isolines_df
+#                                )(
+#                                        dict_journeys["nodes"]["graph"],
+#                                        dict_journeys["nodes"]["center_nodes"], 
+#                                        dict_journeys["nodes"]["time_left"], 
+#                                        )
+                        print ("youpi")
+                        dict_journeys["nodes"]["isolines"] = dict_journeys["nodes"].apply(
+                                lambda x: isolines_df(
+                                        self.G,
+                                        x["center_nodes"],
+                                        x["time_left"]
+                                        ),
+                                axis=1
+                                )
                         
-                        dict_journeys["nodes"]["isolines"].apply(pd.Series)
+#                        dict_journeys["nodes"]["isolines"].apply(pd.Series)
                                             
                     l_points.append(dict_journeys["nodes"])
                     
