@@ -18,18 +18,18 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 import osmnx as ox
+from pyproj import Proj, transform
 
 import fill_poly_holes as fph
 from schema import schema
 from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, isolines_df, get_graph_from_point
+from constants import WALK_SPEED, DISTANCE, METERS_SECOND
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
 #https://geopy.readthedocs.io/en/stable/#nominatim
 #VALIDATOR = json.load(open("params_json_schema.json"))
 VALIDATOR = schema
-WALK_SPEED = 5000 #m/h
-METERS_SECOND = WALK_SPEED/3600
-DISTANCE = 5000
+
 
 class GetIso:
     def __init__(self, params, places_cache, api="navitia", token=None):
@@ -465,7 +465,8 @@ class GetIso:
         points = []
         details_pts = []
         details_lines = []
-        self.G = None
+#        self.G = None
+        dict_isolines = {}
         
         l_all = [
                 ("isochrones_cut",iso_cut), 
@@ -566,37 +567,47 @@ class GetIso:
                     dict_journeys = self.get_journeys(param, from_place, address)
                     
                     if self.option_isolines is True:
-                        if self.G is None:
-                            self.G = get_graph_from_point(from_place_tuple, DISTANCE)
-                            self.G = ox.project_graph(self.G)
-                            meters_per_minute = WALK_SPEED/60
-                            for u, v, k, data in self.G.edges(data=True, keys=True):
-                                data['time'] = data['length'] / meters_per_minute
+#                        if self.G is None:
+#                            print ("HOP")
+#                            self.G = get_graph_from_point(from_place_tuple, DISTANCE, epsg={"init":"epsg:3857"})
+##                            self.G = ox.project_graph(self.G)
+#                            meters_per_minute = WALK_SPEED/60
+#                            for u, v, k, data in self.G.edges(data=True, keys=True):
+#                                data['time'] = data['length'] / meters_per_minute
                         
-                        pts = dict_journeys["nodes"]["geometry"].values.tolist()
-                        X = [pt.x for pt in pts]
-                        Y = [pt.y for pt in pts]
+#                        pts = dict_journeys["nodes"]["geometry"].values.tolist()
+#                        X = [pt.x for pt in pts]
+#                        Y = [pt.y for pt in pts]
+                        
+#                        pts = [transform(Proj(init="epsg:4326"),Proj(init="epsg:3857"),pt.x,pt.y) for pt in pts]
+#                        oris = [(pt[0], pt[1]) for pt in pts]
                         
 #                        print (dict_journeys["nodes"]["geometry"].count())
 #                        dict_journeys["nodes"]["graph"] = [self.G for i in dict_journeys["nodes"]["geometry"]]
-                        dict_journeys["nodes"]["center_nodes"] = ox.get_nearest_nodes(self.G, X, Y, method="kdtree")
+#                        dict_journeys["nodes"]["center_nodes"] = ox.get_nearest_nodes(self.G, X, Y, method="kdtree")
 #                        dict_journeys["nodes"]["isolines"] = np.vectorize(
-#                                isolines_df
+#                                make_iso_lines
 #                                )(
-#                                        dict_journeys["nodes"]["graph"],
-#                                        dict_journeys["nodes"]["center_nodes"], 
+#                                        dict_journeys["nodes"]["geometry"],
 #                                        dict_journeys["nodes"]["time_left"], 
 #                                        )
-                        print ("youpi")
                         dict_journeys["nodes"]["isolines"] = dict_journeys["nodes"].apply(
-                                lambda x: isolines_df(
-                                        self.G,
-                                        x["center_nodes"],
+                                lambda x: make_iso_lines(
+                                        x["geometry"],
                                         x["time_left"]
                                         ),
                                 axis=1
                                 )
-                        
+#                        for dur in param["durations"]:
+#                            key = param["id"], address, dur
+#                            dict_isolines[key] = make_iso_lines(
+#                                    self.G, 
+#                                    oris, 
+#                                    [], 
+#                                    df=dict_journeys["nodes"],
+##                                    inproj="epsg:4326",
+##                                    outproj="epsg:3857"
+#                                    )
 #                        dict_journeys["nodes"]["isolines"].apply(pd.Series)
                                             
                     l_points.append(dict_journeys["nodes"])
@@ -629,5 +640,7 @@ class GetIso:
                 dict_global[i[0]] = gdf
             else:
                 dict_global[i[0]] = None
+        
+        dict_global["isolines"] = dict_isolines
         
         return dict_global
