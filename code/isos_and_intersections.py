@@ -575,7 +575,7 @@ class GetIso:
 #                            for u, v, k, data in self.G.edges(data=True, keys=True):
 #                                data['time'] = data['length'] / meters_per_minute
                         
-#                        pts = dict_journeys["nodes"]["geometry"].values.tolist()
+                        pts = dict_journeys["nodes"]["geometry"].values.tolist()
 #                        X = [pt.x for pt in pts]
 #                        Y = [pt.y for pt in pts]
                         
@@ -591,13 +591,13 @@ class GetIso:
 #                                        dict_journeys["nodes"]["geometry"],
 #                                        dict_journeys["nodes"]["time_left"], 
 #                                        )
-                        dict_journeys["nodes"]["isolines"] = dict_journeys["nodes"].apply(
-                                lambda x: make_iso_lines(
-                                        x["geometry"],
-                                        x["time_left"]
-                                        ),
-                                axis=1
-                                )
+#                        dict_journeys["nodes"]["isolines"] = dict_journeys["nodes"].apply(
+#                                lambda x: make_iso_lines(
+#                                        x["geometry"],
+#                                        x["time_left"]
+#                                        ),
+#                                axis=1
+#                                )
 #                        for dur in param["durations"]:
 #                            key = param["id"], address, dur
 #                            dict_isolines[key] = make_iso_lines(
@@ -609,6 +609,23 @@ class GetIso:
 ##                                    outproj="epsg:3857"
 #                                    )
 #                        dict_journeys["nodes"]["isolines"].apply(pd.Series)
+                        #TODO: CHANGEMENT ICI POUR PRENDRE EN COMPTE NOUVELLE FONCTION
+#                        for dur in param["durations"]:
+#                            for pt in pts:
+#                                key = param["id"], address, dur
+#                                dict_isolines[key] = make_iso_lines(
+#                                        pt, 
+#                                        [], 
+#    
+#                                        )
+                                
+                        for dur in param["durations"]:
+                            key = param["id"], address, dur
+                            dict_isolines[key] = make_iso_lines(
+                                    pts, 
+                                    [],
+                                    df=dict_journeys["nodes"]
+                                    )
                                             
                     l_points.append(dict_journeys["nodes"])
                     
