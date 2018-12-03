@@ -81,7 +81,7 @@ def get_graph_from_point(point, distance, epsg=None):
     
     return G
 
-def make_iso_lines(pts, trip_times, df=None, inproj=None, outproj=None):
+def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
     """
     Sources:
         https://github.com/gboeing/osmnx-examples/blob/master/notebooks/13-isolines-isochrones.ipynb
@@ -99,6 +99,19 @@ def make_iso_lines(pts, trip_times, df=None, inproj=None, outproj=None):
 #    X = [ori[0] for ori in oris]
 #    Y = [ori[1] for ori in oris]
     
+    start = time.time()
+    
+    G = get_graph_from_point((pts[0].x, pts[0].y), DISTANCE, epsg={"init":"epsg:3857"})
+    meters_per_minute = WALK_SPEED/60
+    
+    print ("Get G", time_profile(start, option="format"))
+    start = time.time()
+    
+    for u, v, k, data in G.edges(data=True, keys=True):
+        data['time'] = data['length'] / meters_per_minute
+        
+    print ("Add data", time_profile(start, option="format"))
+    start = time.time()
     
     
 #    center_nodes = ox.get_nearest_nodes(G, X, Y, method="kdtree")
@@ -112,18 +125,18 @@ def make_iso_lines(pts, trip_times, df=None, inproj=None, outproj=None):
 #        df["center_nodes"] = center_nodes
         
     for pt in pts:
-        start = time.time()
-        G = get_graph_from_point((pt.x, pt.y), DISTANCE, epsg={"init":"epsg:3857"})
-        meters_per_minute = WALK_SPEED/60
-        
-        print ("Get G", time_profile(start, option="format"))
-        start = time.time()
-        
-        for u, v, k, data in G.edges(data=True, keys=True):
-            data['time'] = data['length'] / meters_per_minute
-            
-        print ("Add data", time_profile(start, option="format"))
-        start = time.time()
+#        start = time.time()
+#        G = get_graph_from_point((pt.x, pt.y), DISTANCE, epsg={"init":"epsg:3857"})
+#        meters_per_minute = WALK_SPEED/60
+#        
+#        print ("Get G", time_profile(start, option="format"))
+#        start = time.time()
+#        
+#        for u, v, k, data in G.edges(data=True, keys=True):
+#            data['time'] = data['length'] / meters_per_minute
+#            
+#        print ("Add data", time_profile(start, option="format"))
+#        start = time.time()
         
         pt_proj = Point(transform(Proj(init="epsg:4326"), Proj(init="epsg:3857"), pt.x, pt.y))
         center_node = ox.get_nearest_node(G, (pt_proj.x, pt_proj.y))
@@ -135,6 +148,7 @@ def make_iso_lines(pts, trip_times, df=None, inproj=None, outproj=None):
             trip = df.loc[df["geometry"] == pt]["time_left"].values[0]
 #            trip_times = [trip]
             trip_time = trip
+            print ("TRIP:", trip_time)
         
         subgraph = nx.ego_graph(G, center_node, radius=trip_time//60, distance='time')
         
@@ -147,13 +161,13 @@ def make_iso_lines(pts, trip_times, df=None, inproj=None, outproj=None):
         start = time.time()
 
         
-        if len(node_points) > 1:
+        if len(node_points) > 1: #TODO: Améliorations à prévoir ici
             nodes_gdf = gpd.GeoDataFrame({'id': subgraph.nodes()}, geometry=node_points)
             nodes_gdf = nodes_gdf.set_index('id')
             edge_lines = []
             for n_fr, n_to, data in subgraph.edges(data=True):
-                f = nodes_gdf.loc[n_fr].geometry
-                t = nodes_gdf.loc[n_to].geometry
+                f = nodes_gdf.at[(n_fr,'geometry')]
+                t = nodes_gdf.at[(n_to,'geometry')]
                 edge_lines.append(LineString([f,t]))
                 
                 
@@ -173,7 +187,9 @@ def make_iso_lines(pts, trip_times, df=None, inproj=None, outproj=None):
     
     
         edges_gdf = gpd.GeoDataFrame(geometry=edge_lines)
-        polys.append(edges_gdf.buffer(DIST_BUFF).unary_union)     
+        l_polys = edges_gdf.buffer(DIST_BUFF).values.tolist()
+#        polys.append(edges_gdf.buffer(DIST_BUFF).unary_union)   
+        polys.append(cascaded_union(l_polys))
         
         print ("Edges gdf and polys", time_profile(start, option="format"))
         start = time.time()
@@ -187,8 +203,7 @@ def make_iso_lines(pts, trip_times, df=None, inproj=None, outproj=None):
             "durations":durations,
             "xs":xs,
             "ys":ys,
-            "buffer":polys,
-            "G":G
+            "buffer":polys
         }   
         
     return data
