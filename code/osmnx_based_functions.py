@@ -12,11 +12,11 @@ import geopandas as gpd
 from shapely.ops import cascaded_union
 from shapely.geometry import Point, LineString
 from pyproj import Proj, transform
+import networkx as nx
 
 import time
 from functions import time_profile
 from constants import WALK_SPEED, DISTANCE, METERS_SECOND, DIST_BUFF
-
 
 def get_graph_from_envelope(gdf, crs_init='epsg:3857', to_latlong=True):
     """
@@ -56,6 +56,21 @@ def _get_buffer(gdf):
     poly = gpd.GeoSeries(cascaded_union(gdf["geometry"]))
     
     return poly
+
+def graph_with_time(point, distance, path, epsg=None):
+    """
+    
+    """
+    G = get_graph_from_point(point, distance, epsg=epsg)
+    meters_per_minute = WALK_SPEED/60
+
+    for u, v, k, data in G.edges(data=True, keys=True):
+        data['time'] = data['length'] / meters_per_minute
+    
+    nx.write_yaml(G,path)
+    
+    return G
+    
 
 def get_graph_from_point(point, distance, epsg=None):
     """
@@ -101,17 +116,18 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
     
     start = time.time()
     
-    G = get_graph_from_point((pts[0].x, pts[0].y), DISTANCE, epsg={"init":"epsg:3857"})
-    meters_per_minute = WALK_SPEED/60
-    
-    print ("Get G", time_profile(start, option="format"))
-    start = time.time()
-    
-    for u, v, k, data in G.edges(data=True, keys=True):
-        data['time'] = data['length'] / meters_per_minute
+    if G is None:
+        G = get_graph_from_point((pts[0].x, pts[0].y), DISTANCE, epsg={"init":"epsg:3857"})
+        meters_per_minute = WALK_SPEED/60
         
-    print ("Add data", time_profile(start, option="format"))
-    start = time.time()
+        print ("Get G", time_profile(start, option="format"))
+        start = time.time()
+        
+        for u, v, k, data in G.edges(data=True, keys=True):
+            data['time'] = data['length'] / meters_per_minute
+            
+        print ("Add data", time_profile(start, option="format"))
+        start = time.time()
     
     
 #    center_nodes = ox.get_nearest_nodes(G, X, Y, method="kdtree")

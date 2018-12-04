@@ -19,6 +19,7 @@ from datetime import datetime
 import numpy as np
 import osmnx as ox
 from pyproj import Proj, transform
+import networkx as nx
 
 import fill_poly_holes as fph
 from schema import schema
@@ -618,13 +619,20 @@ class GetIso:
 #                                        [], 
 #    
 #                                        )
-                                
+                        if param["graph_path"] != "no_graph":
+                            print (param["graph_path"])
+                            G = nx.read_yaml(param["graph_path"])
+                            print ("YES")
+                        else:
+                            G = None
+                            print ("NO")
                         for dur in param["durations"]:
                             key = param["id"], address, dur
                             dict_isolines[key] = make_iso_lines(
                                     pts, 
                                     [],
-                                    df=dict_journeys["nodes"]
+                                    df=dict_journeys["nodes"],
+                                    G = G
                                     )
                                             
                     l_points.append(dict_journeys["nodes"])
