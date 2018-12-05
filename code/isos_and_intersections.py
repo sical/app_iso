@@ -250,6 +250,7 @@ class GetIso:
                         }
                 
                 url, headers = self.define_request()
+                print ("URL",url)
                 r = requests.get(url, headers=headers)
                 code = r.status_code
         
@@ -498,7 +499,7 @@ class GetIso:
                 l_param_gdf_filled = []
                 
                 for address in param["addresses"]:
-                    from_place = self.places_cache[address]
+                    from_place = self.geocode(address)
                         
                     from_place = str(from_place[0]) +";"+str(from_place[1])
                     gdf_poly = self.get_iso(param, from_place)
@@ -563,7 +564,7 @@ class GetIso:
                 l_journeys_lines = []
                 
                 for address in param["addresses"]:
-                    from_place_tuple = self.places_cache[address]
+                    from_place_tuple = self.geocode(address)
                     from_place = str(from_place_tuple[0]) +";"+str(from_place_tuple[1])
                     dict_journeys = self.get_journeys(param, from_place, address)
                     
@@ -620,12 +621,10 @@ class GetIso:
 #    
 #                                        )
                         if param["graph_path"] != "no_graph":
-                            print (param["graph_path"])
                             G = nx.read_yaml(param["graph_path"])
-                            print ("YES")
                         else:
                             G = None
-                            print ("NO")
+
                         for dur in param["durations"]:
                             key = param["id"], address, dur
                             dict_isolines[key] = make_iso_lines(
