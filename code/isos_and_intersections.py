@@ -20,6 +20,7 @@ import numpy as np
 import osmnx as ox
 from pyproj import Proj, transform
 import networkx as nx
+import shapely.geometry as shp_geom
 
 import fill_poly_holes as fph
 from schema import schema
@@ -323,7 +324,32 @@ class GetIso:
                             l_gdf_journeys.append(gdf_journeys_details)
                             
                         self.urls.append(url_details)
-                        
+                
+                #Add origin point
+                pt_ori = Feature(
+                        geometry = shp_geom.Point((float(lon_from), float(lat_from))),
+                        properties={
+                                "address_from":address,
+                                "lon_from":lon_from,
+                                "lat_from":lat_from,
+                                "lon_to":lon_from,
+                                "lat_to":lat_from,
+                                "to_id":"",
+                                "to_name":"",
+                                "nb_transfers":0,
+                                "arrival_date_time":"",
+                                "requested_date_time":"",
+                                "departure_date_time":"",
+                                "max_duration":duration,
+                                "duration":duration,
+                                "time_left":duration,
+                                "walkable_distance":(
+                                        duration
+                                        )*METERS_SECOND
+                                }
+                        )
+                multis.append(pt_ori)
+                
         
         if l_gdf_journeys != []:             
             gdf_journeys = pd.concat(l_gdf_journeys)  
@@ -576,8 +602,9 @@ class GetIso:
 #                            meters_per_minute = WALK_SPEED/60
 #                            for u, v, k, data in self.G.edges(data=True, keys=True):
 #                                data['time'] = data['length'] / meters_per_minute
-                        
+                            
                         pts = dict_journeys["nodes"]["geometry"].values.tolist()
+                        
 #                        X = [pt.x for pt in pts]
 #                        Y = [pt.y for pt in pts]
                         

@@ -96,6 +96,14 @@ def get_graph_from_point(point, distance, epsg=None):
     
     return G
 
+def _get_geom_df(gdf, node):
+    """
+    @node(str): source or target
+    
+    """
+
+    return gdf.at[(node, "geometry")]
+
 def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
     """
     Sources:
@@ -108,6 +116,9 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
     durations = []
     polys = []
     edge_lines = []
+    X = []
+    Y = []
+    l_gdf = []
     
     if inproj is not None:
         inProj = Proj(init="epsg:3857")
@@ -117,6 +128,8 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
 #    Y = [ori[1] for ori in oris]
     
     start = time.time()
+    
+    print ("NUMBER", G.number_of_edges())
     
     if G is None:
         G = get_graph_from_point((pts[0].x, pts[0].y), DISTANCE, epsg={"init":"epsg:3857"})
@@ -132,7 +145,14 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
         start = time.time()
     
     
-#    center_nodes = ox.get_nearest_nodes(G, X, Y, method="kdtree")
+    #Get center nodes
+    for pt in pts:
+        pt_proj = Point(transform(Proj(init="epsg:4326"), Proj(init="epsg:3857"), pt.x, pt.y))
+        X.append(pt_proj.x)
+        Y.append(pt_proj.y)
+        
+    
+    center_nodes = ox.get_nearest_nodes(G, X, Y, method="kdtree")
     
 #    print ("1", time_profile(start, option="format"))
 #    start = time.time()
@@ -142,7 +162,7 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
 #    if df is not None:
 #        df["center_nodes"] = center_nodes
         
-    for pt in pts:
+    for center_node in center_nodes:
 #        start = time.time()
 #        G = get_graph_from_point((pt.x, pt.y), DISTANCE, epsg={"init":"epsg:3857"})
 #        meters_per_minute = WALK_SPEED/60
@@ -156,10 +176,10 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
 #        print ("Add data", time_profile(start, option="format"))
 #        start = time.time()
         
-        pt_proj = Point(transform(Proj(init="epsg:4326"), Proj(init="epsg:3857"), pt.x, pt.y))
-        center_node = ox.get_nearest_node(G, (pt_proj.x, pt_proj.y))
+#        pt_proj = Point(transform(Proj(init="epsg:4326"), Proj(init="epsg:3857"), pt.x, pt.y))
+#        center_node = ox.get_nearest_node(G, (pt_proj.x, pt_proj.y), method="euclidean")
         
-        print ("Get center node", time_profile(start, option="format"))
+#        print ("Get center node", time_profile(start, option="format"))
         start = time.time()
         
         if df is not None:
@@ -181,48 +201,87 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
         if len(node_points) > 1: 
             nodes_gdf = gpd.GeoDataFrame({'id': subgraph.nodes()}, geometry=node_points)
             nodes_gdf = nodes_gdf.set_index('id')
-            for n_fr, n_to, data in subgraph.edges(data=True):
-                f = nodes_gdf.at[(n_fr,'geometry')]
-                t = nodes_gdf.at[(n_to,'geometry')]
-                edge_lines.append(LineString([f,t]))
-                
-                if inproj is not None:
-                    fx,fy = transform(inProj,outProj,f.x,f.y)
-                    tx,ty = transform(inProj,outProj,t.x,t.y)
-                    xs.append([fx,tx])
-                    ys.append([fy,ty])
-                else:
-                    xs.append([f.x,t.x])
-                    ys.append([f.y,t.y])
-                    
-                durations.append(data["time"])
-        
-        print ("TOTAL",len(edge_lines))
-        print ("Edges lines", time_profile(start, option="format"))
-        start = time.time()
-    
-    
-#        edges_gdf = gpd.GeoDataFrame(geometry=edge_lines)
-#        l_polys = edges_gdf.buffer(DIST_BUFF).values.tolist()
-#        polys.append(edges_gdf.buffer(DIST_BUFF).unary_union)   
-#        polys.append(cascaded_union(l_polys))
-        
-        print ("Edges gdf and polys", time_profile(start, option="format"))
-        start = time.time()
+            
+            df_edges = nx.to_pandas_edgelist(subgraph)
+            df_edges["from"] = df_edges.apply(
+                    lambda x: _get_geom_df(
+                            nodes_gdf,
+                            x["source"]
+                            ),
+                    axis=1
+                    )
+
+            df_edges["to"] = df_edges.apply(
+                    lambda x: _get_geom_df(
+                            nodes_gdf,
+                            x["target"]
+                            ),
+                    axis=1
+                    )
+                                
+#            df_edges["xs"] = df_edges.apply(
+#                    lambda x: (x["from"].y, x["to"].y),
+#                    axis=1
+#                    )
+#            
+#            df_edges["ys"] = df_edges.apply(
+#                    lambda x: (x["from"].y, x["to"].y),
+#                    axis=1
+#                    )
+            
+            df_edges["line"] = df_edges.apply(
+                    lambda x: LineString([x["from"], x["to"]]),
+                    axis=1
+                    )
+            
+            l_gdf.append(df_edges)
+            
+            
+#            for n_fr, n_to, data in subgraph.edges(data=True):
+#                f = nodes_gdf.at[(n_fr,'geometry')]
+#                t = nodes_gdf.at[(n_to,'geometry')]
+#                edge_lines.append(LineString([f,t]))
+#                
+#                if inproj is not None:
+#                    fx,fy = transform(inProj,outProj,f.x,f.y)
+#                    tx,ty = transform(inProj,outProj,t.x,t.y)
+#                    xs.append([fx,tx])
+#                    ys.append([fy,ty])
+#                else:
+#                    xs.append([f.x,t.x])
+#                    ys.append([f.y,t.y])
+#                    
+#                durations.append(data["time"])
+#        
+#        print ("TOTAL",len(edge_lines))
+#        print ("Edges lines", time_profile(start, option="format"))
+#        start = time.time()
+#    
+#    
+##        edges_gdf = gpd.GeoDataFrame(geometry=edge_lines)
+##        l_polys = edges_gdf.buffer(DIST_BUFF).values.tolist()
+##        polys.append(edges_gdf.buffer(DIST_BUFF).unary_union)   
+##        polys.append(cascaded_union(l_polys))
+#        
+#        print ("Edges gdf and polys", time_profile(start, option="format"))
+#        start = time.time()
         
 #        print ("5", time_profile(start, option="format"))
 #        start = time.time()
     
     
-    data = {
-            "geometry":edge_lines,
-            "durations":durations,
-            "xs":xs,
-            "ys":ys,
-            "buffer":polys
-        }   
-        
-    return data
+#    data = {
+#            "geometry":edge_lines,
+#            "durations":durations,
+#            "xs":xs,
+#            "ys":ys,
+#            "buffer":polys
+#        }   
+    
+#    gdf = gpd.pd.concat(l_gdf).drop_duplicates(inplace=True)
+    gdf = gpd.pd.concat(l_gdf, sort=False)
+    return gdf
+
 
 #def make_iso_lines(point, trip_time, inproj=None, outproj=None):
 #    """
