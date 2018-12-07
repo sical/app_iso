@@ -173,7 +173,7 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
 #    if df is not None:
 #        df["center_nodes"] = center_nodes
         
-    for center_node in center_nodes:
+    for center_node,pt in zip(center_nodes,pts):
 #        start = time.time()
 #        G = get_graph_from_point((pt.x, pt.y), DISTANCE, epsg={"init":"epsg:3857"})
 #        meters_per_minute = WALK_SPEED/60

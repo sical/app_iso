@@ -21,6 +21,7 @@ import osmnx as ox
 from pyproj import Proj, transform
 import networkx as nx
 import shapely.geometry as shp_geom
+from shapely.ops import cascaded_union
 
 import fill_poly_holes as fph
 from schema import schema
@@ -677,9 +678,14 @@ class GetIso:
                             nodes_buff = nodes_buff.rename(
                                     columns={'buffer': 'geometry'}
                                     ).set_geometry('geometry')
+                            
+                            nodes_buff = cascaded_union(nodes_buff["geometry"].values.tolist())
+                            
+                            nodes_buff_light = gpd.GeoDataFrame(geometry=[nodes_buff])
+                            gdf_isolines_light = gdf_isolines[["geometry"]]
                             sym_diff = gpd.overlay(
-                                    nodes_buff, 
-                                    gdf_isolines, 
+                                    gdf_isolines_light, 
+                                    nodes_buff_light,
                                     how="symmetric_difference"
                                     )
                             
