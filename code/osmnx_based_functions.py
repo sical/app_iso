@@ -104,6 +104,17 @@ def _get_geom_df(gdf, node):
 
     return gdf.at[(node, "geometry")]
 
+def getLineCoords(row, geom, coord_type):
+        """
+        Returns a list of coordinates ('x' or 'y') of a LineString geometry
+        Source: https://automating-gis-processes.github.io/2016/Lesson5-interactive-map-bokeh.html
+        
+        """
+        if coord_type == 'x':
+            return list( row[geom].coords.xy[0] )
+        elif coord_type == 'y':
+            return list( row[geom].coords.xy[1] )
+
 def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
     """
     Sources:
@@ -279,9 +290,41 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
 #        }   
     
 #    gdf = gpd.pd.concat(l_gdf).drop_duplicates(inplace=True)
+            
+    print ("Lines calcul 1", time_profile(start, option="format"))
+    start = time.time()
+    
     gdf = gpd.pd.concat(l_gdf, sort=False)
-    return gdf
-
+    gdf_lines = gdf[["source", "target", "from", "to", "line", "time"]]
+    gdf_lines.drop_duplicates(subset=["source","target"],inplace=True)
+    gdf_lines['xs'] = gdf_lines.apply(getLineCoords, geom='line', coord_type='x', axis=1)
+    gdf_lines['ys'] = gdf_lines.apply(getLineCoords, geom='line', coord_type='y', axis=1)
+    
+    print ("Lines calcul 2", time_profile(start, option="format"))
+    start = time.time()
+    
+    gdf_polys = gdf_lines[["source", "target","line", "time"]]
+    gdf_polys["polys"] = gdf_polys.apply(
+                    lambda x: x["line"].buffer(DIST_BUFF),
+                    axis=1
+                    )
+    
+    polys = cascaded_union(gdf_polys["polys"].values.tolist())
+    gdf_polys = gpd.GeoDataFrame(geometry=[polys])
+    gdf_polys.crs = {'init': "epsg:3857"}
+    
+    gdf_lines.drop(['line','from','to'], axis=1, inplace=True)
+    
+    print ("polys", time_profile(start, option="format"))
+    start = time.time()
+    
+    return {
+            "gdf_lines":gdf_lines,
+            "polys":gdf_polys
+            }
+    
+def buffering(point, distance):
+    return point.buffer(distance, resolution=16)
 
 #def make_iso_lines(point, trip_time, inproj=None, outproj=None):
 #    """

@@ -24,7 +24,7 @@ import shapely.geometry as shp_geom
 
 import fill_poly_holes as fph
 from schema import schema
-from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, isolines_df, get_graph_from_point
+from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, isolines_df, get_graph_from_point, buffering
 from constants import WALK_SPEED, DISTANCE, METERS_SECOND
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
@@ -651,7 +651,8 @@ class GetIso:
                             G = nx.read_yaml(param["graph_path"])
                         else:
                             G = None
-
+                        
+                        #Get isolines and buffered isolines
                         for dur in param["durations"]:
                             key = param["id"], address, dur
                             dict_isolines[key] = make_iso_lines(
@@ -660,6 +661,29 @@ class GetIso:
                                     df=dict_journeys["nodes"],
                                     G = G
                                     )
+                            gdf_isolines = dict_isolines[key]["polys"]
+                            #Get difference between isochrones polys and buffered isolines
+                            nodes_buff = dict_journeys["nodes"].loc[
+                                    dict_journeys["nodes"]["max_duration"] == dur*60
+                                    ]
+                            nodes_buff = nodes_buff.to_crs({"init":"epsg:3857"})
+                            nodes_buff["buffer"] = np.vectorize(buffering)(
+                                    nodes_buff["geometry"], 
+                                    nodes_buff["walkable_distance"]
+                                    )
+                            nodes_buff = nodes_buff.rename(
+                                    columns={'geometry': 'pts'}
+                                    )
+                            nodes_buff = nodes_buff.rename(
+                                    columns={'buffer': 'geometry'}
+                                    ).set_geometry('geometry')
+                            sym_diff = gpd.overlay(
+                                    nodes_buff, 
+                                    gdf_isolines, 
+                                    how="symmetric_difference"
+                                    )
+                            
+                            dict_isolines[key]["sym_diff"] = sym_diff
                                             
                     l_points.append(dict_journeys["nodes"])
                     
