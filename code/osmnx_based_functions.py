@@ -13,10 +13,12 @@ from shapely.ops import cascaded_union
 from shapely.geometry import Point, LineString
 from pyproj import Proj, transform
 import networkx as nx
+import pandas as pd
 
 import time
 from functions import time_profile
 from constants import WALK_SPEED, DISTANCE, METERS_SECOND, DIST_BUFF
+from graph_utils import graph_to_df
 
 def get_graph_from_envelope(gdf, crs_init='epsg:3857', to_latlong=True):
     """
@@ -57,7 +59,7 @@ def _get_buffer(gdf):
     
     return poly
 
-def graph_with_time(point, distance, path, epsg=None):
+def graph_with_time(point, distance, edges_path, nodes_path, epsg=None):
     """
     
     """
@@ -67,7 +69,9 @@ def graph_with_time(point, distance, path, epsg=None):
     for u, v, k, data in G.edges(data=True, keys=True):
         data['time'] = data['length'] / meters_per_minute
     
-    nx.write_yaml(G,path)
+#    nx.write_yaml(G,path)
+    
+    graph_to_df(G, edges_path, nodes_path)
     
     return G
     
@@ -140,8 +144,6 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
     
     start = time.time()
     
-    print ("NUMBER", G.number_of_edges())
-    
     if G is None:
         G = get_graph_from_point((pts[0].x, pts[0].y), DISTANCE, epsg={"init":"epsg:3857"})
         meters_per_minute = WALK_SPEED/60
@@ -202,8 +204,21 @@ def make_iso_lines(pts, trip_times, G=None, df=None, inproj=None, outproj=None):
         
         print ("Subgraph", time_profile(start, option="format"))
         start = time.time()
+        
+#        print ("SUB")
+#        for node, data in  subgraph.nodes(data=True):
+#            print (node)
+#            print (data)
+#            print ("======================")
 
-        node_points = [Point((data['x'], data['y'])) for node, data in subgraph.nodes(data=True)]
+        node_points = [
+                Point(
+                        (
+                                data['x'],
+                                data['y']
+                                )
+                        ) for node, data in subgraph.nodes(data=True)
+                ]
         
         print ("Nodes points", time_profile(start, option="format"))
         start = time.time()
@@ -415,6 +430,58 @@ def buffering(point, distance):
 #        }   
 #        
 #    return data
+    
+def spatial_cut(cutter, cutted):
+    """
+    Sources: https://github.com/gboeing/urban-data-science/blob/master/19-Spatial-Analysis-and-Cartography/rtree-spatial-indexing.ipynb
+             https://geoffboeing.com/2016/10/r-tree-spatial-index-python/
+    """
+    #Build R-tree index
+    sindex = cutted.sindex
+    
+    sym_diff_union = pd.DataFrame()
+    sym_diff_intersection = pd.DataFrame()
+    sym_diff_difference = pd.DataFrame()
+    
+    for geometry in cutter["geometry"]:
+        #Make sub polygons
+        geometry_cut = ox.quadrat_cut_geometry(geometry, quadrat_width=1000)
+        
+        # find the points that intersect with each subpolygon and add them to points_within_geometry
+        for poly in geometry_cut:
+            possible_matches_index = list(sindex.intersection(poly.bounds))
+            possible_matches = cutted.iloc[possible_matches_index]
+            precise_matches = possible_matches[possible_matches.intersects(poly)]
+            
+            gdf_poly = gpd.GeoDataFrame(crs={"init":"epsg:3857"}, geometry = [poly])
+            sym_diff_union_overlay = gpd.overlay(
+                    gdf_poly, 
+                    precise_matches, 
+                    how="union"
+                    )
+            sym_diff_intersection_overlay = gpd.overlay(
+                    precise_matches, 
+                    gdf_poly, 
+                    how="intersection"
+                    )
+            sym_diff_difference_overlay = gpd.overlay(
+                    sym_diff_union_overlay, 
+                    sym_diff_intersection_overlay, 
+                    how="symmetric_difference"
+                    )
+
+            sym_diff_union = sym_diff_union.append(sym_diff_union_overlay)
+            sym_diff_intersection = sym_diff_intersection.append(sym_diff_intersection_overlay)
+            sym_diff_difference = sym_diff_difference.append(sym_diff_difference_overlay)
+    
+#    polys = [poly.buffer(1) for poly in sym_diff_gdf["geometry"].values.tolist()]
+#    poly = cascaded_union(polys)
+    
+    return {
+            "union":sym_diff_union,
+            "intersection":sym_diff_intersection,
+            "difference":sym_diff_difference
+            }
 
 def isolines_df(G, center_node, trip_time, inproj=None, outproj=None):
     """

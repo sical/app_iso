@@ -22,10 +22,12 @@ from pyproj import Proj, transform
 import networkx as nx
 import shapely.geometry as shp_geom
 from shapely.ops import cascaded_union
+from functions import time_profile
 
 import fill_poly_holes as fph
 from schema import schema
-from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, isolines_df, get_graph_from_point, buffering
+from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, isolines_df, get_graph_from_point, buffering, spatial_cut
+from graph_utils import df_to_graph
 from constants import WALK_SPEED, DISTANCE, METERS_SECOND
 
 geolocator = Nominatim(user_agent="app") #https://operations.osmfoundation.org/policies/nominatim/
@@ -648,8 +650,14 @@ class GetIso:
 #                                        [], 
 #    
 #                                        )
-                        if param["graph_path"] != "no_graph":
-                            G = nx.read_yaml(param["graph_path"])
+                        if param["edges_path"] != "no_graph":
+#                            G = nx.read_yaml(param["graph_path"])
+                            G = df_to_graph(
+                                    param["edges_path"], 
+                                    param["nodes_path"], 
+                                    source="source", 
+                                    target="target"
+                                    )
                         else:
                             G = None
                         
@@ -683,13 +691,27 @@ class GetIso:
                             
                             nodes_buff_light = gpd.GeoDataFrame(geometry=[nodes_buff])
                             gdf_isolines_light = gdf_isolines[["geometry"]]
+                            
+                            start = time.time()
+                            
+#                            sym_diff = spatial_cut(nodes_buff_light, gdf_isolines_light)
+                            
                             sym_diff = gpd.overlay(
                                     gdf_isolines_light, 
                                     nodes_buff_light,
                                     how="symmetric_difference"
                                     )
                             
+                            intersect = gpd.overlay(
+                                    gdf_isolines_light, 
+                                    nodes_buff_light,
+                                    how="difference"
+                                    )
+                            
+                            print ("sym_diff", time_profile(start, option="format"))
+                            
                             dict_isolines[key]["sym_diff"] = sym_diff
+                            dict_isolines[key]["difference"] = intersect
                                             
                     l_points.append(dict_journeys["nodes"])
                     

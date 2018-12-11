@@ -175,7 +175,13 @@ class SpatialCut:
             # Add duration value in the new field duration in spatial_objects
             ## Get osmid of lines_within_geometry
             ids = lines_within_geometry.index.tolist()
-            spatial_objects.loc[spatial_objects.index.isin(ids), "duration"] = spatial_objects.loc[spatial_objects.index.isin(ids), "duration"].apply(lambda x: duration)
+            spatial_objects.loc[
+                    spatial_objects.index.isin(ids), 
+                    "duration"
+                    ] = spatial_objects.loc[
+                            spatial_objects.index.isin(ids), 
+                            "duration"
+                            ].apply(lambda x: duration)
         
         return gdf_bool_to_int(spatial_objects)
     
