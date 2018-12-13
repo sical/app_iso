@@ -26,7 +26,7 @@ from functions import time_profile
 
 import fill_poly_holes as fph
 from schema import schema
-from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, isolines_df, get_graph_from_point, buffering, spatial_cut
+from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, get_graph_from_point, buffering, spatial_cut
 from graph_utils import df_to_graph
 from constants import WALK_SPEED, DISTANCE, METERS_SECOND
 
@@ -670,7 +670,8 @@ class GetIso:
                                     df=dict_journeys["nodes"],
                                     G = G
                                     )
-                            gdf_isolines = dict_isolines[key]["polys"]
+                            gdf_isolines = dict_isolines[key]["polys_union"]
+
                             #Get difference between isochrones polys and buffered isolines
                             nodes_buff = dict_journeys["nodes"].loc[
                                     dict_journeys["nodes"]["max_duration"] == dur*60
@@ -688,13 +689,36 @@ class GetIso:
                                     ).set_geometry('geometry')
                             
                             nodes_buff = cascaded_union(nodes_buff["geometry"].values.tolist())
-                            
+#                            
                             nodes_buff_light = gpd.GeoDataFrame(geometry=[nodes_buff])
+#                            nodes_buff_light = nodes_buff
+                            
                             gdf_isolines_light = gdf_isolines[["geometry"]]
                             
                             start = time.time()
                             
 #                            sym_diff = spatial_cut(nodes_buff_light, gdf_isolines_light)
+                            
+                            #ESSAI SIMPLIFICATION FORME POUR AMELIORER VITESSE
+                            gdf_isolines_light["simplified"] = gdf_isolines_light["geometry"].simplify(
+                                    tolerance=100
+                                    )
+                            nodes_buff_light["simplified"] = nodes_buff_light["geometry"].simplify(
+                                    tolerance=100
+                                    )
+                            gdf_isolines_light = gdf_isolines_light.rename(
+                                    columns={
+                                            'geometry': 'old_geometry',
+                                            'simplified':'geometry'
+                                            }
+                                    ).set_geometry('geometry')
+                            nodes_buff_light = nodes_buff_light.rename(
+                                    columns={
+                                            'geometry': 'old_geometry',
+                                            'simplified':'geometry'
+                                            }
+                                    ).set_geometry('geometry')
+                            ##################
                             
                             sym_diff = gpd.overlay(
                                     gdf_isolines_light, 
@@ -703,8 +727,8 @@ class GetIso:
                                     )
                             
                             intersect = gpd.overlay(
-                                    gdf_isolines_light, 
                                     nodes_buff_light,
+                                    gdf_isolines_light, 
                                     how="difference"
                                     )
                             
