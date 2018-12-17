@@ -181,3 +181,64 @@ def gdf_to_geojson(gdf, properties, epsg):
                 feature.pop(properties, None)
     
     return geojson.dumps(geojson_, ensure_ascii=False)
+
+def get_poly_coords(poly):
+    
+    if poly.geom_type == "Polygon":
+        if poly.interiors:
+            xs_coords = [
+                [poly.exterior.xy[0].tolist()],
+                [[xy[0] for xy in p.coords] for p in poly.interiors]
+            ]
+
+            ys_coords =  [
+                [poly.exterior.xy[1].tolist()],
+                [[xy[1] for xy in p.coords] for p in poly.interiors]
+            ]
+        else:
+            xs_coords = [
+                [poly.exterior.xy[0].tolist()]
+            ]
+
+            ys_coords =  [
+                [poly.exterior.xy[1].tolist()]
+            ]
+        
+    elif poly.geom_type == "MultiPolygon":
+        xs_coords = []
+        ys_coords = []
+        for po in poly:
+            if po.interiors:
+                xs_coords.extend([
+                    [po.exterior.xy[0].tolist()],
+                    [[xy[0] for xy in p.coords] for p in po.interiors]]
+                )
+
+                ys_coords.extend([
+                    [po.exterior.xy[1].tolist()],
+                    [[xy[1] for xy in p.coords] for p in po.interiors]]
+                )
+            else:
+                xs_coords.extend([
+                    [po.exterior.xy[0].tolist()]
+                ])
+
+                ys_coords.extend([
+                    [po.exterior.xy[1].tolist()]
+                ])
+    
+    return [xs_coords], [ys_coords]
+
+def multi_gdf_to_multi_bokeh(gdf):
+    xs, ys = [], []
+    gdf["coords"] = gdf.apply(lambda x: get_poly_coords(x["geometry"]), axis=1)
+    l = gdf["coords"].values.tolist()
+    
+    for coord in l:
+        xs.append(coord[0][0])
+        ys.append(coord[1][0])
+        
+    return {
+        "xs": xs,
+        "ys": ys
+    }

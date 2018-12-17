@@ -66,6 +66,8 @@ class GetIso:
         
         """
         if address not in self.places_cache:
+            print (address)
+            print (self.places_cache)
             location = geolocator.geocode(address)
             if location is None:
                 print ('Error on : ' + address)
