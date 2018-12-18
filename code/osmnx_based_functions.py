@@ -12,7 +12,6 @@ import geopandas as gpd
 from shapely.ops import cascaded_union
 from shapely.geometry import Point, LineString
 from pyproj import Proj, transform
-import networkx as nx
 import pandas as pd
 import multiprocessing as mp
 import threading

@@ -22,8 +22,8 @@ from pyproj import Proj, transform
 import networkx as nx
 import shapely.geometry as shp_geom
 from shapely.ops import cascaded_union
-from functions import time_profile
 
+from functions import time_profile
 import fill_poly_holes as fph
 from schema import schema
 from osmnx_based_functions import make_iso_lines, get_graph_from_envelope, get_graph_from_point, buffering, spatial_cut
@@ -398,14 +398,6 @@ class GetIso:
                 for section in journey["sections"]:
                     if "from" in section:
                         if "stop_point" in section["from"]:
-        #                    print (section)
-            #                lon_from = section["from"]["address"]["coord"]["lon"]
-            #                lat_from = section["from"]["address"]["coord"]["lat"]
-            #                name = section["from"]["name"]
-            #                try:
-            #                    physical_modes = section["to"]["stop_point"]["physical_modes"][0]["name"]
-            #                except:
-            #                    physical_modes = section["mode"]
                             
                             #Build line
                             if "display_informations" in section:
@@ -487,8 +479,29 @@ class GetIso:
         return gdf
     
     
-    
-    
+    def overlays(self, gdf_1, gdf_2):
+        """
+        
+        """
+        dict_overlays = {}
+        hows = ["union", "symmetric_difference", "difference", "intersection"]
+        
+        for how in hows:
+            gdf = gpd.overlay(
+                    gdf_1, 
+                    gdf_2,
+                    how=how
+                    )
+            dict_overlays[how] = gpd.GeoDataFrame(
+                    geometry=[
+                            cascaded_union(
+                                    gdf["geometry"].values.tolist()
+                                    )
+                            ]
+                    )
+        
+        return dict_overlays
+            
     def get_all_isos(self):
         """
         
@@ -550,40 +563,12 @@ class GetIso:
                 iso_cut.append(gdf_param)
                 iso_no_cut.append(gdf_param_filled)
                 
-                #Write GeoJSON by addresses
-    #            name_isos = param["id"] + "_isos_by_addresses.geojson"
-    #            name_isos = os.path.join(param["path"], name_isos)
-    #            gdf_param.to_file(name_isos, driver="GeoJSON")
-    #            
-    #            #Write GeoJSON by duration
-    #            ## Sort by durations
-    #            gdf_param_filled.sort_values(["duration"], axis=1, inplace=True)
-    #            
-    #            ## Write files
-    #            name_isos_durations = param["id"] + "_isos_by_durations.geojson"
-    #            name_isos_durations = os.path.join(
-    #                    param["path"], 
-    #                    name_isos_durations
-    #                    )
-    #            gdf_param_filled.to_file(
-    #                    name_isos_durations, 
-    #                    driver="GeoJSON"
-    #                    )
-                
                 #TODO GET STATS
                 #TODO GET COMPLEXITY
                 #TODO INTERSECTIONS GDF AND GEOJSONS 
                 #Intersections by addresses/durations
                 how = param["how"]
-    #            if how is not None:
-    #                for dur in param["durations"]:
-    #                    
     #                #TODO INTERSECTIONS BETWEEN ISO ADDRESS FOR A SAME DURATION => DO IT WITH SHAPELY
-    #                intersection = gpd.overlay(
-    #                        gdf_poly, 
-    #                        gdf_overlay, 
-    #                        how=param["how"]
-    #                        )
                 #TODO EMPTINESS ISO => See automate.py, 1213
                 
             ##################
@@ -599,61 +584,10 @@ class GetIso:
                     from_place = str(from_place_tuple[0]) +";"+str(from_place_tuple[1])
                     dict_journeys = self.get_journeys(param, from_place, address)
                     
-                    if self.option_isolines is True:
-#                        if self.G is None:
-#                            print ("HOP")
-#                            self.G = get_graph_from_point(from_place_tuple, DISTANCE, epsg={"init":"epsg:3857"})
-##                            self.G = ox.project_graph(self.G)
-#                            meters_per_minute = WALK_SPEED/60
-#                            for u, v, k, data in self.G.edges(data=True, keys=True):
-#                                data['time'] = data['length'] / meters_per_minute
-                            
+                    if self.option_isolines is True:                            
                         pts = dict_journeys["nodes"]["geometry"].values.tolist()
-                        
-#                        X = [pt.x for pt in pts]
-#                        Y = [pt.y for pt in pts]
-                        
-#                        pts = [transform(Proj(init="epsg:4326"),Proj(init="epsg:3857"),pt.x,pt.y) for pt in pts]
-#                        oris = [(pt[0], pt[1]) for pt in pts]
-                        
-#                        print (dict_journeys["nodes"]["geometry"].count())
-#                        dict_journeys["nodes"]["graph"] = [self.G for i in dict_journeys["nodes"]["geometry"]]
-#                        dict_journeys["nodes"]["center_nodes"] = ox.get_nearest_nodes(self.G, X, Y, method="kdtree")
-#                        dict_journeys["nodes"]["isolines"] = np.vectorize(
-#                                make_iso_lines
-#                                )(
-#                                        dict_journeys["nodes"]["geometry"],
-#                                        dict_journeys["nodes"]["time_left"], 
-#                                        )
-#                        dict_journeys["nodes"]["isolines"] = dict_journeys["nodes"].apply(
-#                                lambda x: make_iso_lines(
-#                                        x["geometry"],
-#                                        x["time_left"]
-#                                        ),
-#                                axis=1
-#                                )
-#                        for dur in param["durations"]:
-#                            key = param["id"], address, dur
-#                            dict_isolines[key] = make_iso_lines(
-#                                    self.G, 
-#                                    oris, 
-#                                    [], 
-#                                    df=dict_journeys["nodes"],
-##                                    inproj="epsg:4326",
-##                                    outproj="epsg:3857"
-#                                    )
-#                        dict_journeys["nodes"]["isolines"].apply(pd.Series)
-                        #TODO: CHANGEMENT ICI POUR PRENDRE EN COMPTE NOUVELLE FONCTION
-#                        for dur in param["durations"]:
-#                            for pt in pts:
-#                                key = param["id"], address, dur
-#                                dict_isolines[key] = make_iso_lines(
-#                                        pt, 
-#                                        [], 
-#    
-#                                        )
+ 
                         if param["edges_path"] != "no_graph":
-#                            G = nx.read_yaml(param["graph_path"])
                             G = df_to_graph(
                                     param["edges_path"], 
                                     param["nodes_path"], 
@@ -720,24 +654,19 @@ class GetIso:
                                             'simplified':'geometry'
                                             }
                                     ).set_geometry('geometry')
+                            
+                            dict_isolines[key]["isochrones"] = nodes_buff_light
                             ##################
                             
-                            sym_diff = gpd.overlay(
+                            #Get overlays
+                            dict_overlays = self.overlays(
                                     gdf_isolines_light, 
-                                    nodes_buff_light,
-                                    how="symmetric_difference"
+                                    nodes_buff_light
                                     )
-                            
-                            intersect = gpd.overlay(
-                                    nodes_buff_light,
-                                    gdf_isolines_light, 
-                                    how="difference"
-                                    )
-                            
-                            print ("sym_diff", time_profile(start, option="format"))
-                            
-                            dict_isolines[key]["sym_diff"] = sym_diff
-                            dict_isolines[key]["difference"] = intersect
+                            for how,value in dict_overlays.items():
+                                dict_isolines[key][how] = dict_overlays[how]
+                                
+                            print ("Overlays", time_profile(start, option="format"))
                                             
                     l_points.append(dict_journeys["nodes"])
                     
