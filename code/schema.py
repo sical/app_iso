@@ -23,21 +23,6 @@ schema={
         		"how": {
         			"type":"string"
         		},
-        		"colors_iso": {
-        			"type":"array",
-        			"items": {
-        				"type":"string"
-        			}
-        		},
-        		"colors_intersection": {
-        			"type":"string"
-        		},
-        		"opacity_isos": {
-        			"type":"number"
-        		},
-        		"opacity_intersection": {
-        			"type":"number"
-        		},
         		"region_id": {
         			"type":"string"
         		},
@@ -76,9 +61,6 @@ schema={
         		},
         		"outProj": {
         			"type":"string"
-        		},
-        		"distance_bbox": {
-        			"type":"number"
         		},
             "path": {
         			"type":"string"

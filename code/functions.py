@@ -93,6 +93,7 @@ def time_profile(start, option="all"):
 def colors_blend(c1, c2):
     if "#" in str(c1):
         c1 = hex2rgb(c1)
+        
     if "#" in str(c2):
         c2 = hex2rgb(c2)
     
@@ -1028,6 +1029,8 @@ def write_geojson(cds, id_, unique_id, directory):
     dir_json = os.path.join(directory,str(id_))
     create_dir(dir_json)
     name_geo = dir_json + "/" + str(unique_id) + ".geojson"
+    #TODO: DELETE THIS, TEMP CHANGE IF ONE ADDRESS 
+    name_geo = os.path.join(directory, (id_ + ".geojson"))
     with open(name_geo, 'w') as outfile:
         geojson.dump(geo, outfile)
         
