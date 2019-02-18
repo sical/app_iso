@@ -11,7 +11,17 @@ import pandas as pd
 import geopandas as gpd
 from tabulate import tabulate as tb
 import numpy as np
+from shapely.geometry import Point
     
+def azimuth(point1, point2):
+    '''
+    azimuth between 2 shapely points (interval 0 - 360)
+    
+    Source: https://gis.stackexchange.com/a/201042
+    '''
+    angle = np.arctan2(point2.x - point1.x, point2.y - point1.y)
+    
+    return np.degrees(angle)if angle>0 else np.degrees(angle) + 360
 
 def get_notches(poly):
     """
@@ -31,38 +41,22 @@ def get_notches(poly):
     """
     notches = 0 
     coords = poly.exterior.coords
-    for i, pt in enumerate(coords[:-1]):
-#        x_diff = coords[i+1][0] - pt[0]
-#        y_diff = coords[i+1][1] - pt[1]
-#        angle = math.atan2(y_diff, x_diff)
-#        angle = np.arctan2(x_diff, y_diff)
+    
+    for i,coord in enumerate(coords[:-2]):
+        first = Point(coord)
+        common = Point(coords[i+1])
+        last = Point(coords[i+2])
         
-        x1,x2,y1,y2 = pt[0], coords[i+1][0], pt[1], coords[i+1][1] 
+        angle = azimuth(last, common) - azimuth(first, common)
         
-        dX = x2 - x1
-        dY = y2 - y1
-        
-        angle = math.atan2(-dY, dX)
-        
-        print (angle, math.degrees(angle))
-        
-#        dot = x1*x2 + y1*y2
-#        det = x1*y2 - y1*x2
-#        
-#        angle = math.atan2(det,dot)
-#        print (dot, det, angle)
-#        print (y_diff, x_diff, angle, math.pi, notches)
-        
-        if (angle > math.pi) or (angle < -math.pi): #PB ICI: COMPRENDRE CE QUE VALENT LES VALEURS NEGATIVES
-            print ("YOUPI\n===========================")
+        if (angle > 180) or (angle < -180): 
             notches += 1
             
     if notches != 0:
         notches_norm = notches / (len(coords)-3)
     else:
         notches_norm = 0 
-        
-#    print (notches, notches_norm)
+
         
     return notches_norm
 
@@ -150,16 +144,6 @@ def get_stats(gdf, coeff_ampl, coeff_conv):
     
     gdf = gdf.reset_index()
     
-#    print ("###########################")
-##    print (gdf)
-##    print ("=========================")
-##    if nb > 1:
-##        gdf = gdf.sort_values(by='perimeter', ascending=False)
-##        gdf = gdf.iloc[[0]]s
-#    
-#    print (gdf)
-#    print ("###########################")
-    
     return {
             'area':tot_area,
             'perimeter':tot_perimeter,
@@ -187,7 +171,6 @@ def complexity(shapes, coeff_ampl, coeff_conv, images=None, str_img=None):
     
     for shape in shapes:
         shape_name = os.path.basename(shape).split(".")[0]
-        print ("SHAPE", shape_name)
         gdf = gpd.GeoDataFrame.from_file(shape)
         dict_complexity, gdf = get_stats(gdf, coeff_ampl, coeff_conv)
         name = os.path.basename(shape)
@@ -200,8 +183,6 @@ def complexity(shapes, coeff_ampl, coeff_conv, images=None, str_img=None):
         l_gdf.append(gdf)
         
         dico[shape_name] = dict_complexity 
-        
-        print ("####################################")
     
     gdf_tot = pd.concat(l_gdf)
     
