@@ -105,7 +105,9 @@ if __name__ == "__main__":
 > for *str_img* parameter, you'll need to check the format and string that matches your needs. In the example, it is set for markdown table format.
 
 
-## Example  
+## Examples
+
+> Below is a table with results on some polygons (*from [shapes](https://github.com/sical/app_iso/tree/iso_design/code/experiments/complexity/shapes) and [images](https://github.com/sical/app_iso/tree/iso_design/code/experiments/complexity/images) folders*)
 
 | img                                  | name               |   complexity |       convex |     freq |   nbvertices |   notches |    perimeter |
 |--------------------------------------|--------------------|--------------|--------------|----------|--------------|-----------|--------------|
